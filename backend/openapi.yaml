@@ -1,0 +1,83 @@
+openapi: 3.0.3
+info:
+  title: Arooth Platform API
+  version: 1.0.0
+  description: >
+    Phase 1 endpoints for homepage feed, filters, categories, and regions.
+servers:
+  - url: http://localhost:8000/api/v1
+paths:
+  /homepage/feed:
+    get:
+      summary: Unified feed of offers and requests
+      parameters:
+        - name: filter
+          in: query
+          schema:
+            type: string
+            enum: [all, requests, offers, most-sold, cheapest, most-viewed, online]
+        - name: category_id
+          in: query
+          schema:
+            type: integer
+        - name: region_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Paginated feed response
+  /categories:
+    get:
+      summary: List categories with subcategories
+      responses:
+        '200':
+          description: Success
+  /categories/{category}/subcategories:
+    get:
+      summary: List subcategories for a category
+      parameters:
+        - name: category
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+  /regions:
+    get:
+      summary: List regions with cities
+      responses:
+        '200':
+          description: Success
+  /regions/{region}/cities:
+    get:
+      summary: List cities for region
+      parameters:
+        - name: region
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+  /companies:
+    get:
+      summary: Wholesale company directory
+      responses:
+        '200':
+          description: Success
+  /search:
+    get:
+      summary: Autocomplete search
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
