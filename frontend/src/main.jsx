@@ -6,6 +6,7 @@ import "./index.css"
 import "@/lib/i18n"
 import { router } from "@/routes"
 import { AppDirectionProvider } from "@/providers/DirectionProvider"
+import { LanguageProvider } from "@/contexts/LanguageContext"
 import { AuthInit } from "@/components/AuthInit"
 import { ThemeProvider } from "@/providers/ThemeProvider"
 import { Preloader } from "@/components/Preloader"
@@ -43,10 +44,12 @@ function AppRoot() {
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
             <Toaster richColors position="top-right" />
-            <AppDirectionProvider>
-              <AuthInit />
-              <RouterProvider router={router} fallbackElement={<AppFallback />} />
-            </AppDirectionProvider>
+            <LanguageProvider>
+              <AppDirectionProvider>
+                <AuthInit />
+                <RouterProvider router={router} fallbackElement={<AppFallback />} />
+              </AppDirectionProvider>
+            </LanguageProvider>
           </ThemeProvider>
         </QueryClientProvider>
       </Suspense>

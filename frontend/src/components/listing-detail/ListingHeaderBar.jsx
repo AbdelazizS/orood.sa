@@ -59,7 +59,7 @@ export function ListingHeaderBar({ product }) {
           </Avatar>
           <div className="min-w-0 flex-1">
             <Link
-              to={`/users/${seller.id}`}
+              to={seller.username ? `/profile/${seller.username}` : "/"}
               className="text-sm font-semibold text-foreground hover:underline"
             >
               {seller.name}

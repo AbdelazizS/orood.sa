@@ -136,7 +136,7 @@ export function AdminUserDetailPage() {
 
           <div className="pt-4 border-t">
             <Button variant="outline" asChild>
-              <Link to={`/users/${user.id}`}>{t("admin.viewPublicProfile", "عرض الملف العام")}</Link>
+              <Link to={user?.username ? `/profile/${user.username}` : "/admin/users"}>{t("admin.viewPublicProfile", "عرض الملف العام")}</Link>
             </Button>
           </div>
         </CardContent>

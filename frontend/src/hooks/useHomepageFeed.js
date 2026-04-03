@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import apiClient from "@/lib/apiClient"
 import { useFiltersStore } from "@/store/useFiltersStore"
+import { useTranslation } from "react-i18next"
 
 const PER_PAGE = 12
 
@@ -32,6 +33,7 @@ const buildFeedParams = (filters, pageParam) => {
 }
 
 export const useHomepageFeed = () => {
+  const { i18n } = useTranslation()
   const filters = useFiltersStore()
   const filterKey = JSON.stringify({
     categoryId: filters.categoryId,
@@ -43,7 +45,7 @@ export const useHomepageFeed = () => {
   })
 
   const feedQuery = useInfiniteQuery({
-    queryKey: ["feed", filterKey],
+    queryKey: ["feed", filterKey, i18n.language],
     queryFn: async ({ pageParam = 1 }) => {
       const params = buildFeedParams(filters, pageParam)
       const { data } = await apiClient.get("/homepage/feed", { params })
@@ -55,7 +57,7 @@ export const useHomepageFeed = () => {
   })
 
   const categoriesQuery = useQuery({
-    queryKey: ["categories"],
+    queryKey: ["categories", i18n.language],
     queryFn: async () => {
       const { data } = await apiClient.get("/categories")
       return unwrapList(data)
@@ -64,7 +66,7 @@ export const useHomepageFeed = () => {
   })
 
   const regionsQuery = useQuery({
-    queryKey: ["regions"],
+    queryKey: ["regions", i18n.language],
     queryFn: async () => {
       const { data } = await apiClient.get("/regions")
       return unwrapList(data)
@@ -73,7 +75,7 @@ export const useHomepageFeed = () => {
   })
 
   const companiesQuery = useQuery({
-    queryKey: ["companies"],
+    queryKey: ["companies", i18n.language],
     queryFn: async () => {
       const { data } = await apiClient.get("/companies")
       return unwrapList(data)
@@ -82,7 +84,7 @@ export const useHomepageFeed = () => {
   })
 
   const featuresQuery = useQuery({
-    queryKey: ["homepage", "features"],
+    queryKey: ["homepage", "features", i18n.language],
     queryFn: async () => {
       const { data } = await apiClient.get("/homepage/features")
       return data?.data ?? { show_wholesale: true, show_company_directory: true }

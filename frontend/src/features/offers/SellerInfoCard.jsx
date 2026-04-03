@@ -32,7 +32,7 @@ export function SellerInfoCard({ product }) {
           </Avatar>
           <div className="min-w-0 flex-1">
             <Link
-              to={`/users/${seller.id}`}
+              to={seller.username ? `/profile/${seller.username}` : "/"}
               className="font-semibold hover:underline truncate block"
             >
               {seller.name}

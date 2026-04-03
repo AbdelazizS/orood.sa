@@ -179,7 +179,7 @@ export function DashboardHome() {
   const displayAlerts = alerts.slice(0, 2)
 
   const statsCards = getStatsCardsConfig(stats, user, t)
-  const profileLink = `/users/${user?.id}`
+  const profileLink = user?.username ? `/profile/${user.username}` : "/"
 
   const dateLocale = locale === "ar" ? "ar-SA" : "en-US"
 

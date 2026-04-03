@@ -34,7 +34,7 @@ export function SellerCard({ product }) {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <Link
-                to={`/users/${seller.id}`}
+                to={seller.username ? `/profile/${seller.username}` : "/"}
                 className="font-semibold hover:underline truncate"
               >
                 {seller.name}
@@ -92,7 +92,7 @@ export function SellerCard({ product }) {
               </Button>
             )}
             <Button variant="ghost" size="sm" asChild className="w-full">
-              <Link to={`/users/${seller.id}`}>
+              <Link to={seller.username ? `/profile/${seller.username}` : "/"}>
                 {t("productDetails.viewProfile", "View Profile")}
               </Link>
             </Button>

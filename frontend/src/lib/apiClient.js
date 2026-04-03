@@ -20,7 +20,7 @@ function parseJsonSafe(data) {
 
 const apiClient = axios.create({
   baseURL: API_BASE,
-  timeout: 12000,
+  timeout: 15000,
   transformResponse: [(data) => (typeof data === "string" ? parseJsonSafe(data) : data)],
 })
 
@@ -59,6 +59,13 @@ if (USE_DEMO) {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.code === "ECONNABORTED") {
+      console.error("Request timeout:", error.config?.url)
+      return Promise.reject(new Error("Request timeout - server may be slow"))
+    }
+    if (error.response?.status === 404) {
+      return Promise.reject(new Error("User not found"))
+    }
     if (error?.isDemo && error?.__demoResponse) {
       return Promise.resolve({
         data: error.__demoResponse,
@@ -70,6 +77,7 @@ apiClient.interceptors.response.use(
     }
     if (error.response?.status === 401) {
       useAuthStore.getState().logout()
+      return Promise.reject(error)
     }
     if (error.response) {
       console.error("API error:", error.response.data)

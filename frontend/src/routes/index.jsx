@@ -10,8 +10,6 @@ import { useAuthStore } from "@/store/useAuthStore"
 import { HomePage } from "@/pages/HomePage"
 import { LoginPage } from "@/pages/LoginPage"
 import { RegisterPage } from "@/pages/RegisterPage"
-import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage"
-import { VerifyEmailPage } from "@/pages/VerifyEmailPage"
 import { AddOfferPage } from "@/pages/AddOfferPage"
 import { AddListingPage } from "@/pages/AddListingPage"
 import { EditOfferPage } from "@/pages/EditOfferPage"
@@ -48,7 +46,6 @@ import { MessagesPage } from "@/pages/dashboard/MessagesPage"
 import { DashboardProfilePage } from "@/pages/dashboard/DashboardProfilePage"
 import { OrderTrackingPage } from "@/pages/dashboard/OrderTrackingPage"
 import { BalancePage } from "@/pages/dashboard/BalancePage"
-import { VerificationPage } from "@/pages/dashboard/VerificationPage"
 import { NotificationsPage } from "@/pages/dashboard/NotificationsPage"
 import { PublicProfilePage } from "@/pages/PublicProfilePage"
 
@@ -101,7 +98,6 @@ export const router = createBrowserRouter([
       { path: "products/:id/purchase", element: <ProtectedRoute><PurchasePage /></ProtectedRoute> },
       { path: "products/:id", element: <ProductDetailsPage /> },
       { path: "profile/:username", element: <PublicProfilePage /> },
-      { path: "users/:id", element: <PublicProfilePage /> },
     ],
   },
   {
@@ -116,20 +112,6 @@ export const router = createBrowserRouter([
     element: <RegisterLayout />,
     children: [
       { index: true, element: <RegisterPage /> },
-    ],
-  },
-  {
-    path: "/forgot-password",
-    element: <AuthLayout />,
-    children: [
-      { index: true, element: <ForgotPasswordPage /> },
-    ],
-  },
-  {
-    path: "/verify-email",
-    element: <AuthLayout />,
-    children: [
-      { index: true, element: <VerifyEmailPage /> },
     ],
   },
   {
@@ -150,7 +132,6 @@ export const router = createBrowserRouter([
       { path: "orders", element: <OrderTrackingPage /> },
       { path: "orders/:id", element: <OrderDetailPage /> },
       { path: "balance", element: <BalancePage /> },
-      { path: "verification", element: <VerificationPage /> },
       { path: "listings", element: <MyListingsPage /> },
       { path: "favorites", element: <BuyerFavoritesPage /> },
       { path: "saved-searches", element: <SavedSearchesPage /> },

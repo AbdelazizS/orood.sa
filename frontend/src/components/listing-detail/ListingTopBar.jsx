@@ -39,7 +39,7 @@ export function ListingTopBar({ product }) {
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            <Link to={`/users/${seller.id}`} className="font-bold text-[14px] text-foreground hover:underline truncate block">
+            <Link to={seller.username ? `/profile/${seller.username}` : "/"} className="font-bold text-[14px] text-foreground hover:underline truncate block">
               {seller.name}
             </Link>
             <div className="mt-1 flex flex-wrap items-center gap-3 text-[13px] text-muted-foreground">

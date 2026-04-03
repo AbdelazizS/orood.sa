@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ListingCardResource;
-use App\Http\Resources\PublicProfileResource;
+use App\Http\Resources\ProfileResource;
 use App\Http\Resources\ReviewResource;
 use App\Models\PageVisit;
 use App\Models\Review;
@@ -76,7 +76,7 @@ class PublicProfileController extends Controller
         $user->setAttribute('listings_count', $user->products()->where('status', 'published')->count());
 
         return response()->json([
-            'user' => new PublicProfileResource($user),
+            'user' => new ProfileResource($user),
             'listings' => ListingCardResource::collection($listings),
             'reviews' => ReviewResource::collection($reviews),
             'review_summary' => [

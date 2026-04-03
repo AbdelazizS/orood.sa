@@ -1,95 +1,66 @@
-import { useQuery } from "@tanstack/react-query"
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import apiClient from "@/lib/apiClient"
-import { getDemoResponse } from "@/lib/demoApi"
 
-/** @param {string} identifier - Username or numeric ID (for /users/:id) */
-function isById(identifier) {
-  return identifier != null && /^\d+$/.test(String(identifier))
+function isValidUsername(username) {
+  if (typeof username !== "string") return false
+  const value = username.trim()
+  if (!value) return false
+  if (value === "undefined" || value === "null") return false
+  return true
 }
 
-/** @param {string} identifier - Username or numeric ID */
-function profilePath(identifier, suffix = "") {
-  return isById(identifier)
-    ? `/profile/by-id/${identifier}${suffix}`
-    : `/profile/${identifier}${suffix}`
+function extractProfileData(response) {
+  if (response?.data?.data) return response.data.data
+  if (response?.data) return response.data
+  return response
 }
 
-/** Extract user from various Laravel response shapes */
-function extractProfile(res) {
-  const raw = res?.data ?? res
-  if (!raw || typeof raw !== "object") return null
-
-  let payload = raw
-  let user = raw.user ?? raw.data?.user
-
-  if (!user && raw.data && typeof raw.data === "object") {
-    payload = raw.data
-    user = payload.user
-  }
-
-  if (user && user.data && typeof user.data === "object") user = user.data
-  if (!user || typeof user !== "object") return null
-
-  const listings = Array.isArray(payload.listings) ? payload.listings : payload.listings?.data ?? []
-  const reviews = Array.isArray(payload.reviews) ? payload.reviews : payload.reviews?.data ?? []
-  return { ...payload, user, listings, reviews }
-}
-
-async function getDemoProfile(identifier) {
-  const fallback = await getDemoResponse("GET", profilePath(identifier))
-  return fallback?.user ? fallback : fallback?.data ?? null
-}
-
-export function useProfile(identifier) {
+export function useProfile(username) {
+  const validUsername = isValidUsername(username) ? username.trim() : ""
   return useQuery({
-    queryKey: ["profile", identifier],
+    queryKey: ["profile", validUsername],
     queryFn: async () => {
-      try {
-        const res = await apiClient.get(profilePath(identifier))
-        const data = extractProfile(res)
-        if (data?.user) return data
-      } catch (_) {}
-      const demo = await getDemoProfile(identifier)
-      if (demo?.user) return demo
-      throw new Error("Invalid profile response")
+      if (!validUsername) throw new Error("Username is required")
+
+      const response = await apiClient.get(`/api/profile/${validUsername}`)
+      const payload = response?.data
+      if (payload?.success === false) {
+        throw new Error(payload?.message || "Failed to load profile")
+      }
+      return extractProfileData(response)
     },
+    enabled: !!validUsername,
+    retry: 1,
     staleTime: 60_000,
-    enabled: !!identifier,
-    retry: 2,
-    retryDelay: 1000,
   })
 }
 
-export function useProfileListings(identifier, page = 1) {
-  return useQuery({
-    queryKey: ["profile-listings", identifier, page],
-    queryFn: async () => {
-      try {
-        const { data } = await apiClient.get(profilePath(identifier, "/listings"), { params: { page } })
-        return data
-      } catch {
-        const fallback = await getDemoResponse("GET", profilePath(identifier, "/listings"), { page })
-        return fallback ?? { listings: [], pagination: { current_page: 1, last_page: 1, total: 0 } }
-      }
+export function useProfileListings(username) {
+  const validUsername = isValidUsername(username) ? username.trim() : ""
+  return useInfiniteQuery({
+    queryKey: ["profile-listings", validUsername],
+    queryFn: async ({ pageParam = 1 }) => {
+      const response = await apiClient.get(`/api/profile/${validUsername}/listings`, { params: { page: pageParam } })
+      return response?.data?.data ?? response?.data?.listings ?? []
     },
-    placeholderData: (prev) => prev,
-    enabled: !!identifier,
+    getNextPageParam: (lastPage, allPages) => {
+      if (!Array.isArray(lastPage) || lastPage.length < 12) return undefined
+      return allPages.length + 1
+    },
+    enabled: !!validUsername,
+    retry: 1,
   })
 }
 
-export function useProfileReviews(identifier, page = 1) {
+export function useProfileReviews(username) {
+  const validUsername = isValidUsername(username) ? username.trim() : ""
   return useQuery({
-    queryKey: ["profile-reviews", identifier, page],
+    queryKey: ["profile-reviews", validUsername],
     queryFn: async () => {
-      try {
-        const { data } = await apiClient.get(profilePath(identifier, "/reviews"), { params: { page } })
-        return data
-      } catch {
-        const fallback = await getDemoResponse("GET", profilePath(identifier, "/reviews"), { page })
-        return fallback ?? { reviews: [], pagination: { current_page: 1, last_page: 1, total: 0 } }
-      }
+      const response = await apiClient.get(`/api/profile/${validUsername}/reviews`)
+      return response?.data?.data ?? response?.data?.reviews ?? []
     },
-    placeholderData: (prev) => prev,
-    enabled: !!identifier,
+    enabled: !!validUsername,
+    retry: 1,
   })
 }

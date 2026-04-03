@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { useMutation } from "@tanstack/react-query"
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import * as authService from "@/services/authService"
-import { Loader2, Mail, ArrowRight } from "lucide-react"
+import { Loader2, ArrowRight } from "lucide-react"
 
 const PASSWORD_RULES = {
   min: (p) => p.length >= 8,
@@ -71,40 +71,6 @@ export function RegisterForm() {
         password_confirmation: formData.confirmPassword,
       }),
     onSuccess: (data) => {
-      if (data?.email_verified) {
-        navigate("/", { replace: true })
-      } else {
-        setStep(2)
-        setResendCooldown(60)
-      }
-    },
-    onError: (err) => {
-      const data = err?.response?.data
-      if (data?.errors) {
-        const flat = {}
-        for (const [k, v] of Object.entries(data.errors)) {
-          flat[k] = Array.isArray(v) ? v[0] : v
-        }
-        setFieldErrors(flat)
-      }
-    },
-  })
-
-  const verifyMutation = useMutation({
-    mutationFn: () => authService.confirmEmail(formData.email, otpCode),
-    onSuccess: async (data) => {
-      if (formData.registerAsCompany && formData.companyName && formData.companyCityId) {
-        try {
-          await authService.registerCompany({
-            company_name: formData.companyName,
-            city_id: formData.companyCityId,
-            product_types: formData.companyProductTypes || undefined,
-            license: formData.companyLicense || undefined,
-          })
-        } catch {
-          // Company registration failed; user is still logged in
-        }
-      }
       navigate("/", { replace: true })
     },
     onError: (err) => {
@@ -118,22 +84,6 @@ export function RegisterForm() {
       }
     },
   })
-
-  const [resendCooldown, setResendCooldown] = useState(0)
-  const [otpCode, setOtpCode] = useState("")
-
-  const resendMutation = useMutation({
-    mutationFn: () => authService.verifyEmail(formData.email),
-    onSuccess: (data) => {
-      setResendCooldown(data?.resend_available_in ?? 60)
-    },
-  })
-
-  useEffect(() => {
-    if (resendCooldown <= 0) return
-    const timer = setInterval(() => setResendCooldown((c) => (c > 0 ? c - 1 : 0)), 1000)
-    return () => clearInterval(timer)
-  }, [resendCooldown])
 
   const handleRegister = (e) => {
     e.preventDefault()
@@ -158,85 +108,6 @@ export function RegisterForm() {
       return
     }
     registerMutation.mutate()
-  }
-
-  const handleVerify = (e) => {
-    e.preventDefault()
-    setFieldErrors({})
-    if (!otpCode || otpCode.length !== 6) {
-      setFieldErrors({ code: t("auth.otpInvalid") })
-      return
-    }
-    verifyMutation.mutate()
-  }
-
-  if (step === 2) {
-    return (
-      <div
-        className={`w-full ${FORM_MAX_WIDTH} rounded-xl border border-border bg-card p-8 shadow-sm`}
-      >
-        <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-primary/10">
-            <Mail className="size-7 text-primary" />
-          </div>
-          <h1 className="text-xl font-semibold text-foreground">{t("auth.verifyEmail")}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {t("auth.verifyEmailDescription", { email: formData.email || "your email" })}
-          </p>
-        </div>
-        <form onSubmit={handleVerify} className={SECTION_SPACING}>
-          <div className={FIELD_SPACING}>
-            <Label htmlFor="otp" className="text-sm font-medium text-foreground">
-              {t("auth.verificationCode")}
-            </Label>
-            <Input
-              id="otp"
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              placeholder="000000"
-              value={otpCode}
-              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
-              className="h-11 text-center text-2xl font-mono tracking-[0.5em]"
-              disabled={verifyMutation.isPending}
-              autoFocus
-            />
-            {fieldErrors.code && (
-              <p className="text-xs text-destructive">{fieldErrors.code}</p>
-            )}
-          </div>
-          <Button
-            type="submit"
-            size="lg"
-            className="h-11 w-full"
-            disabled={verifyMutation.isPending || otpCode.length !== 6}
-          >
-            {verifyMutation.isPending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : null}
-            <span className="ms-2">{t("auth.confirmEmail")}</span>
-            {!verifyMutation.isPending ? (
-              <ArrowRight className="ms-2 size-4 rtl:rotate-180" />
-            ) : null}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            className="w-full"
-            disabled={resendMutation.isPending || resendCooldown > 0}
-            onClick={() => resendMutation.mutate()}
-          >
-            {resendMutation.isPending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : resendCooldown > 0 ? (
-              t("auth.resendIn", { seconds: resendCooldown })
-            ) : (
-              t("auth.resendCode")
-            )}
-          </Button>
-        </form>
-      </div>
-    )
   }
 
   return (

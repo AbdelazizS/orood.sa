@@ -120,7 +120,7 @@ export function DashboardLayout({ adminLinks: isAdmin = false, children }) {
           </Link>
           {!isAdmin && user && (
             <Link
-              to={`/users/${user.id}`}
+              to={user?.username ? `/profile/${user.username}` : "/dashboard/profile"}
               className={cn(
                 "mt-3 flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-accent transition-colors overflow-hidden",
                 isCollapsed && "justify-center"

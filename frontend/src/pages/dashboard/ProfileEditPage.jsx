@@ -35,8 +35,8 @@ export function ProfileEditPage() {
     mutationFn: (payload) => apiClient.put("/profile", payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["auth", "user"] })
-      await queryClient.invalidateQueries({ queryKey: ["profile", user.id] })
-      navigate(`/users/${user.id}`)
+      await queryClient.invalidateQueries({ queryKey: ["profile", user.username] })
+      navigate(user?.username ? `/profile/${user.username}` : "/dashboard/profile")
     },
   })
 

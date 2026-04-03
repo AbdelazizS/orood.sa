@@ -24,20 +24,20 @@ export function LanguageSwitcher() {
     }
   }
 
-  const currentLabel = i18n.language === "ar" ? "العربية" : "English"
+  const currentLabel = i18n.language === "ar" ? t("common.arabic") : t("common.english")
 
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-2" aria-label="Language switcher">
+          <Button variant="outline" size="sm" className="gap-2" aria-label={t("common.language")}>
             <Languages className="size-4" />
             {currentLabel}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-[170px]">
-          <DropdownMenuItem onClick={() => changeLanguage("ar")}>العربية</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => changeLanguage("en")}>English</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => changeLanguage("ar")}>{t("common.arabic")}</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => changeLanguage("en")}>{t("common.english")}</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
       {isSwitching &&
@@ -46,7 +46,7 @@ export function LanguageSwitcher() {
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 backdrop-blur-sm transition">
             <div className="flex items-center gap-3 rounded-2xl bg-card px-8 py-5 shadow-2xl">
               <Loader2 className="size-5 animate-spin text-primary" />
-              <p className="text-lg font-semibold text-foreground">{t("common.updatingLayout")}</p>
+              <p className="text-lg font-semibold text-foreground">{t("common.changingLanguage")}</p>
             </div>
           </div>,
           document.body,

@@ -153,7 +153,7 @@ export function FilterToolbar({ regions = [], features = {} }) {
           <Link to="/add">{t("nav.addOfferAndRequest", "اضف عرض و طلب")}</Link>
         </Button>
 
-        {showWholesale && (
+        {/* {showWholesale && (
           <Button
             variant={activeFilter === "wholesale" ? "secondary" : "default"}
             className="shrink-0 rounded-md font-bold px-4 py-2 h-10"
@@ -170,7 +170,7 @@ export function FilterToolbar({ regions = [], features = {} }) {
           >
             <Link to="/#companies">{t("feed.companyDirectory", "قائمة الشركات")}</Link>
           </Button>
-        )}
+        )} */}
       </div>
     </div>
   )

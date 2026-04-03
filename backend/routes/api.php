@@ -236,3 +236,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/verifications/{document_verification}/reject', [AdminVerificationController::class, 'reject']);
     });
 });
+
+// Backward-compatible public profile endpoints without v1 prefix.
+Route::get('/profile/{username}', [PublicProfileController::class, 'show']);
+Route::get('/profile/{username}/listings', [PublicProfileController::class, 'listings']);
+Route::get('/profile/{username}/reviews', [PublicProfileController::class, 'reviews']);

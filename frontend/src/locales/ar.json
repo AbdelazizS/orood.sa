@@ -742,6 +742,11 @@
   },
   "profile": {
     "title": "الملف الشخصي",
+    "error_title": "تعذر تحميل بيانات الحساب",
+    "error_message": "حدث خطأ أثناء جلب البيانات. يرجى المحاولة مرة أخرى.",
+    "retry": "إعادة المحاولة",
+    "not_found": "المستخدم غير موجود",
+    "user_not_exist": "لا يوجد حساب بهذا الاسم",
     "edit": "تعديل الملف",
     "editDescription": "تحديث معلومات ملفك الشخصي",
     "customize": "تخصيص الملف",
@@ -986,5 +991,30 @@
     "refunded": "تم استرداد الضمان إلى الرصيد",
     "refundConfirm": "استرداد الضمان المالي؟",
     "refundConfirmDesc": "سيتم تحويل المبلغ إلى رصيدك. يمكنك سحبه لاحقاً."
+  },
+  "publicProfile": {
+    "breadcrumbHome": "الرئيسية",
+    "breadcrumbProfile": "الحساب",
+    "coverAlt": "غلاف الحساب",
+    "backHome": "الرئيسية",
+    "errorLoading": "تعذر تحميل بيانات الحساب.",
+    "retry": "إعادة المحاولة",
+    "verified": "موثق",
+    "memberSince": "عضو منذ {{year}}",
+    "about": "نبذة",
+    "listingsTitle": "الإعلانات",
+    "reviewsTitle": "التقييمات",
+    "noListings": "لا توجد إعلانات",
+    "noReviews": "لا توجد تقييمات بعد",
+    "unknownUser": "مستخدم غير معروف",
+    "ratingValue": "التقييم: {{value}}",
+    "prev": "السابق",
+    "next": "التالي",
+    "stats": {
+      "rating": "التقييم",
+      "reviews": "التقييمات",
+      "completedOrders": "الطلبات المكتملة",
+      "listings": "الإعلانات"
+    }
   }
 }

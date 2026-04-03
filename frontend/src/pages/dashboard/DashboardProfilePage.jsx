@@ -31,18 +31,18 @@ export function DashboardProfilePage() {
   const [customizationOpen, setCustomizationOpen] = useState(false)
 
   const { data: profile, isLoading } = useQuery({
-    queryKey: ["profile", user?.id],
+    queryKey: ["profile", user?.username],
     queryFn: async () => {
-      const { data } = await apiClient.get(`/users/${user.id}`)
-      return data?.data
+      const { data } = await apiClient.get(`/api/profile/${user.username}`)
+      return data?.data ?? data
     },
-    enabled: Boolean(user?.id),
+    enabled: Boolean(user?.username),
   })
 
   const updateMutation = useMutation({
     mutationFn: (payload) => apiClient.put("/profile", payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["profile", user.id] })
+      await queryClient.invalidateQueries({ queryKey: ["profile", user.username] })
       await queryClient.invalidateQueries({ queryKey: ["auth", "user"] })
       toast.success(t("profile.updated", "تم تحديث الملف الشخصي"))
     },
@@ -230,7 +230,7 @@ export function DashboardProfilePage() {
         onOpenChange={setCustomizationOpen}
         profile={profile}
         onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ["profile", user.id] })
+          queryClient.invalidateQueries({ queryKey: ["profile", user.username] })
           setCustomizationOpen(false)
         }}
       />

@@ -12,7 +12,7 @@
     "login": "Login",
     "register": "Register",
     "brandLine": "Enterprise Edition",
-    "updatingLayout": "Updating layout...",
+    "updatingLayout": "Updating layout...", "changingLanguage": "Changing language...",
     "errorTitle": "Something went wrong",
     "errorGeneric": "An unexpected error occurred.",
     "reload": "Reload page",
@@ -720,6 +720,11 @@
   },
   "profile": {
     "title": "Profile",
+    "error_title": "Failed to load profile",
+    "error_message": "An error occurred while fetching data. Please try again.",
+    "retry": "Retry",
+    "not_found": "User not found",
+    "user_not_exist": "No account exists with this username",
     "edit": "Edit Profile",
     "editDescription": "Update your profile information",
     "customize": "Customize profile",
@@ -964,5 +969,30 @@
     "refunded": "Guarantee refunded to balance",
     "refundConfirm": "Refund financial guarantee?",
     "refundConfirmDesc": "Amount will be transferred to your balance. You can withdraw later."
+  },
+  "publicProfile": {
+    "breadcrumbHome": "Home",
+    "breadcrumbProfile": "Profile",
+    "coverAlt": "Profile cover",
+    "backHome": "Home",
+    "errorLoading": "Failed to load profile data.",
+    "retry": "Retry",
+    "verified": "Verified",
+    "memberSince": "Member since {{year}}",
+    "about": "About",
+    "listingsTitle": "Listings",
+    "reviewsTitle": "Reviews",
+    "noListings": "No listings",
+    "noReviews": "No reviews yet",
+    "unknownUser": "Unknown user",
+    "ratingValue": "Rating: {{value}}",
+    "prev": "Previous",
+    "next": "Next",
+    "stats": {
+      "rating": "Rating",
+      "reviews": "Reviews",
+      "completedOrders": "Completed orders",
+      "listings": "Listings"
+    }
   }
 }

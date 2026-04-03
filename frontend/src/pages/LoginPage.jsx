@@ -87,7 +87,7 @@ export function LoginPage() {
             <ArrowRight className="ms-2 size-4 rtl:rotate-180" />
           ) : null}
         </Button>
-        <p className="text-end text-xs">
+        {/* <p className="text-end text-xs">
           {t("auth.forgotPasswordQuestion")}{" "}
           <Link
             to="/forgot-password"
@@ -95,7 +95,7 @@ export function LoginPage() {
           >
             {t("auth.recoverAccount")}
           </Link>
-        </p>
+        </p> */}
         <p className="text-center text-sm text-muted-foreground">
           {t("auth.noAccount")}{" "}
           <Link to="/register" className="font-medium text-primary hover:underline">
