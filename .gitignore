@@ -1,0 +1,14 @@
+# Repo policy: only version backend/, frontend/, README.md, and this file.
+# (Removes PDFs, task docs, duplicate root tooling, etc. from Git.)
+
+/*
+!/.gitignore
+!/README.md
+
+!/backend/
+/backend/*
+!/backend/**
+
+!/frontend/
+/frontend/*
+!/frontend/**
