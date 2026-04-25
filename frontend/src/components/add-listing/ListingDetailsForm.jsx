@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/tooltip"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ImageUpload } from "@/components/ImageUpload"
+import { useAppDirection } from "@/providers/DirectionProvider"
 
 const BOX_STYLE = "rounded-lg border border-border bg-card p-3 sm:p-4 mb-2"
 
@@ -18,6 +19,7 @@ export function ListingDetailsForm({
   title,
   description,
   imageUrls,
+  priceEnabled = false,
   price,
   includeTax,
   onChange,
@@ -25,6 +27,7 @@ export function ListingDetailsForm({
   type = "offer",
 }) {
   const { t } = useTranslation()
+  const { direction } = useAppDirection()
 
   const isValidUrl = (url) =>
     typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/"))
@@ -33,7 +36,7 @@ export function ListingDetailsForm({
 
   return (
     <TooltipProvider>
-      <div dir="rtl" className="space-y-0">
+      <div dir={direction} className="space-y-0">
         {/* Title */}
         <div className={BOX_STYLE}>
           <div className="flex items-start justify-between gap-2">
@@ -57,7 +60,7 @@ export function ListingDetailsForm({
             onChange={(e) => onChange({ title: e.target.value })}
             placeholder={t("addListing.titlePlaceholder")}
             className="mt-2 h-auto border-0 bg-transparent p-0 text-[14px] focus-visible:ring-0"
-            dir="rtl"
+            dir={direction}
             aria-invalid={!!errors.title}
           />
           {errors.title && (
@@ -88,7 +91,7 @@ export function ListingDetailsForm({
             onChange={(e) => onChange({ description: e.target.value })}
             placeholder={t("addListing.descriptionPlaceholder")}
             className="mt-2 min-h-[80px] border-0 bg-transparent p-0 text-[14px] focus-visible:ring-0"
-            dir="rtl"
+            dir={direction}
             aria-invalid={!!errors.description}
           />
           {errors.description && (
@@ -108,31 +111,57 @@ export function ListingDetailsForm({
           )}
         </div>
 
-        {/* Price */}
+        {/* Price — optional: checkbox first, then amount (per spec) */}
         <div className={BOX_STYLE}>
-          <div className="flex flex-wrap items-center gap-3 gap-y-2">
-<span className="text-[14px] font-bold text-foreground">
-            {t("addListing.priceLabel")}
-            <span className="text-destructive">*</span>
-          </span>
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={price}
-              onChange={(e) => onChange({ price: e.target.value })}
-              placeholder="1000"
-              className="h-11 w-[160px] rounded-md border border-input text-center text-[16px]"
-              dir="ltr"
+          <label className="flex cursor-pointer items-start gap-3 py-1">
+            <Checkbox
+              checked={priceEnabled}
+              onCheckedChange={(v) => onChange({ priceEnabled: !!v })}
+              className="mt-0.5 size-[18px] rounded-[3px]"
             />
-            <span className="text-[13px] leading-tight text-muted-foreground">
-              ريال<br />سعودي
+            <span className="flex flex-col gap-0.5">
+              <span className="text-[14px] font-bold text-foreground">
+                {t("addListing.priceEnabledCheckbox")}
+              </span>
+              <span className="text-[12px] text-muted-foreground">
+                {t("addListing.priceEnabledHint")}
+              </span>
             </span>
-            <label className="flex cursor-pointer items-center gap-2">
-              <Checkbox checked={includeTax} onCheckedChange={(v) => onChange({ includeTax: !!v })} className="size-[18px] rounded-[3px]" />
-              <span className="text-[14px] text-foreground">{t("addListing.priceIncludeTax")}</span>
-            </label>
-          </div>
+          </label>
+          {priceEnabled && (
+            <div className="mt-4 flex flex-wrap items-center gap-3 gap-y-2 border-t border-border pt-4">
+              <span className="text-[14px] font-bold text-foreground">
+                {t("addListing.priceAmountLabel")}
+              </span>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={price}
+                onChange={(e) => onChange({ price: e.target.value })}
+                placeholder={t("addListing.pricePlaceholder")}
+                className="h-11 w-[160px] rounded-md border border-input text-center text-[16px]"
+                dir="ltr"
+                aria-invalid={!!errors.price}
+              />
+              <span className="text-[13px] leading-tight text-muted-foreground">
+                {t("addListing.priceCurrency")}
+              </span>
+              <label className="flex cursor-pointer items-center gap-2">
+                <Checkbox
+                  checked={includeTax}
+                  onCheckedChange={(v) => onChange({ includeTax: !!v })}
+                  className="size-[18px] rounded-[3px]"
+                />
+                <span className="text-[14px] text-foreground">{t("addListing.priceIncludeTax")}</span>
+              </label>
+            </div>
+          )}
+          {errors.price && (
+            <p className="mt-2 text-sm text-destructive" role="alert">
+              {errors.price}
+            </p>
+          )}
         </div>
       </div>
     </TooltipProvider>

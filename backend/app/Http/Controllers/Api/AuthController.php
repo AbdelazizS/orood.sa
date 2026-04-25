@@ -11,9 +11,12 @@ use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Requests\RegisterCompanyRequest;
 use App\Models\Company;
+use App\Services\AdminSettingsService;
+use App\Services\PasswordPolicyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Password;
@@ -26,6 +29,10 @@ class AuthController extends Controller
     private const OTP_RATE_LIMIT = 3;
     private const OTP_RATE_DECAY = 3600; // 1 hour
 
+    public function __construct(
+        private readonly AdminSettingsService $adminSettings
+    ) {}
+
     /**
      * Register a new user, send OTP, and return token.
      */
@@ -36,8 +43,9 @@ class AuthController extends Controller
             'email' => $request->validated('email'),
             'phone' => $request->validated('phone'),
             'how_did_you_hear' => $request->validated('how_did_you_hear'),
+            'referred_by_marketer_id' => $request->validated('referred_by_marketer_id'),
             'password' => $request->validated('password'),
-            'role' => 'buyer',
+            'role' => $this->adminSettings->getString(AdminSettingsService::KEY_DEFAULT_USER_ROLE, 'buyer'),
         ]);
 
         [$verification, $code] = Verification::createForUser($user, 'email');
@@ -61,6 +69,9 @@ class AuthController extends Controller
     public function registerCompany(RegisterCompanyRequest $request): JsonResponse
     {
         $user = $request->user();
+        if (! $this->adminSettings->getBool(AdminSettingsService::KEY_ALLOW_COMPANY_REGISTRATION, true)) {
+            return response()->json(['message' => __('auth.company_registration_disabled')], 422);
+        }
         if ($user->company) {
             return response()->json(['message' => __('auth.company_already_registered')], 422);
         }
@@ -82,12 +93,23 @@ class AuthController extends Controller
             'license_url' => $licenseUrl,
         ]);
 
+        $user->forceFill([
+            'role' => 'company',
+            'company_verification_status' => 'pending',
+            'company_verification_note' => null,
+        ])->save();
+
         return response()->json([
             'message' => __('auth.company_registered'),
             'company' => [
                 'id' => $company->id,
                 'name' => $company->name,
                 'verification_status' => $company->verification_status,
+            ],
+            'company_status' => [
+                'has_company' => true,
+                'status' => 'pending',
+                'can_post_wholesale' => false,
             ],
         ], 201);
     }
@@ -184,7 +206,11 @@ class AuthController extends Controller
         $user = User::where('email', $request->validated('email'))->first();
 
         if (!$user || !Hash::check($request->validated('password'), $user->password)) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
+            return response()->json(['message' => __('auth.invalid_credentials')], 401);
+        }
+
+        if ($this->adminSettings->getBool(AdminSettingsService::KEY_EMAIL_VERIFICATION_REQUIRED, false) && ! $user->email_verified_at) {
+            return response()->json(['message' => __('auth.email_verification_required')], 403);
         }
 
         $this->revokeToken($user);
@@ -192,7 +218,7 @@ class AuthController extends Controller
         $token = $this->createToken($user);
 
         return response()->json([
-            'message' => 'Login successful',
+            'message' => __('auth.login_success'),
             'user' => $this->userResource($user),
             'token' => $token,
             'token_type' => 'Bearer',
@@ -207,10 +233,42 @@ class AuthController extends Controller
     {
         $user = $request->user();
         if ($user) {
+            $user->markPresenceOffline();
             $this->revokeToken($user);
         }
 
         return response()->json(['message' => 'Logged out successfully']);
+    }
+
+    /**
+     * Lightweight heartbeat: marks user active for listing/profile presence.
+     */
+    public function presence(Request $request): JsonResponse
+    {
+        $request->user()->markPresenceHeartbeat();
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Best-effort "went away" (tab/window close). Uses fetch keepalive from the SPA.
+     */
+    public function presenceOffline(Request $request): JsonResponse
+    {
+        $request->user()->markPresenceOffline();
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Public password policy for client-side validation hints.
+     */
+    public function passwordPolicy(): JsonResponse
+    {
+        $payload = PasswordPolicyService::responsePayload();
+        $payload['hint'] = PasswordPolicyService::rulesDescription(app()->getLocale());
+
+        return response()->json($payload);
     }
 
     /**
@@ -227,13 +285,98 @@ class AuthController extends Controller
     }
 
     /**
+     * Start email change: verify password, store pending email, send OTP to the new address.
+     */
+    public function changeEmailRequest(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'current_password' => ['required', 'string'],
+        ]);
+
+        if (!Hash::check($validated['current_password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => [__('auth.invalid_password')],
+            ]);
+        }
+
+        if (strcasecmp($validated['email'], $user->email) === 0) {
+            throw ValidationException::withMessages([
+                'email' => [__('auth.email_same_as_current')],
+            ]);
+        }
+
+        $key = 'change-email:'.$user->id;
+        if (RateLimiter::tooManyAttempts($key, self::OTP_RATE_LIMIT)) {
+            throw ValidationException::withMessages([
+                'email' => [__('auth.otp_rate_limit')],
+            ]);
+        }
+        RateLimiter::hit($key, self::OTP_RATE_DECAY);
+
+        $user->update(['pending_email' => $validated['email']]);
+
+        Verification::where('user_id', $user->id)->where('type', 'email_change')->delete();
+        [, $code] = Verification::createForUser($user, 'email_change', 30);
+        Mail::to($validated['email'])->send(new OtpVerificationMail($code, $user->name));
+
+        return response()->json([
+            'message' => __('auth.change_email_otp_sent'),
+        ]);
+    }
+
+    /**
+     * Confirm email change with OTP sent to pending_email.
+     */
+    public function changeEmailConfirm(Request $request): JsonResponse
+    {
+        $user = $request->user()->fresh();
+
+        $request->validate([
+            'code' => ['required', 'string', 'size:6'],
+        ]);
+
+        if (!$user->pending_email) {
+            return response()->json(['message' => __('auth.change_email_no_pending')], 422);
+        }
+
+        $verification = Verification::where('user_id', $user->id)->where('type', 'email_change')->first();
+        if (!$verification || !$verification->verify($request->code)) {
+            if ($verification && $verification->attempts >= 5) {
+                $verification->update(['status' => 'expired']);
+            }
+            throw ValidationException::withMessages([
+                'code' => [__('auth.invalid_otp')],
+            ]);
+        }
+
+        $newEmail = $user->pending_email;
+        $user->update([
+            'email' => $newEmail,
+            'pending_email' => null,
+            'email_verified_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => __('auth.change_email_success'),
+            'user' => $this->userResource($user->fresh()),
+        ]);
+    }
+
+    /**
      * Change password (authenticated user).
      */
     public function changePassword(Request $request): JsonResponse
     {
         $request->validate([
             'current_password' => ['required', 'string'],
-            'password' => ['required', 'string', 'min:8', 'confirmed', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};\':"\\|,.<>\/?]).+$/'],
+            'password' => PasswordPolicyService::rulesForField('password'),
+        ], [
+            'password.min' => __('auth.validation.password_min'),
+            'password.regex' => __('auth.validation.password_rule'),
+            'password.confirmed' => __('auth.validation.password_confirmed'),
         ]);
 
         $user = $request->user();
@@ -293,7 +436,9 @@ class AuthController extends Controller
         return [
             'id' => $user->id,
             'name' => $user->name,
+            'username' => $user->username,
             'email' => $user->email,
+            'pending_email' => $user->pending_email,
             'phone' => $user->phone,
             'role' => $user->role,
             'bio' => $user->bio,
@@ -312,10 +457,16 @@ class AuthController extends Controller
                     'name' => $user->city->region->getLocalizedName(request()->header('Accept-Language')),
                 ] : null,
             ] : null,
+            'location_lat' => $user->location_lat !== null ? (float) $user->location_lat : null,
+            'location_lng' => $user->location_lng !== null ? (float) $user->location_lng : null,
+            'location_address' => $user->location_address,
             'is_verified' => (bool) $user->is_verified,
             'email_verified_at' => $user->email_verified_at?->toIso8601String(),
             'email_verified' => (bool) $user->email_verified_at,
+            'created_at' => $user->created_at?->toIso8601String(),
             'permissions' => $permissions,
+            'company_verification_status' => $user->company_verification_status ?? 'none',
+            'company_verification_note' => $user->company_verification_note,
         ];
     }
 }

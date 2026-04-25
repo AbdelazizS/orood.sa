@@ -28,6 +28,11 @@ import {
   Mail,
   Megaphone,
   Eye,
+  Flag,
+  UserRound,
+  Landmark,
+  Shield,
+  Gavel,
 } from "lucide-react"
 
 const userLinks = [
@@ -41,12 +46,18 @@ const userLinks = [
 const adminLinks = [
   { to: "/admin", labelKey: "dashboard.overview", icon: LayoutDashboard },
   { to: "/admin/orders", labelKey: "admin.ordersTitle", icon: ShoppingCart },
+  { to: "/admin/bids", labelKey: "admin.bidsTitle", icon: Gavel },
   { to: "/admin/products", labelKey: "admin.offersAndRequests", icon: Package },
   { to: "/admin/users", labelKey: "dashboard.users", icon: Users },
+  { to: "/admin/companies", labelKey: "admin.companiesVerificationTitle", icon: Landmark },
+  { to: "/admin/financial-guarantees", labelKey: "admin.financialGuaranteesTitle", icon: Landmark },
+  { to: "/admin/guarantee-requests", labelKey: "admin.guaranteeRequestsTitle", icon: Shield },
   { to: "/admin/categories", labelKey: "dashboard.categories", icon: FolderTree },
   { to: "/admin/regions", labelKey: "admin.regions", icon: MapPin },
   { to: "/admin/tasks", labelKey: "admin.tasks", icon: ClipboardList },
   { to: "/admin/contact-inquiries", labelKey: "admin.contactInquiries", icon: Mail },
+  { to: "/admin/listing-reports", labelKey: "admin.listingReports", icon: Flag },
+  { to: "/admin/profile-reports", labelKey: "admin.profileReports", icon: UserRound },
   { to: "/admin/announcements", labelKey: "admin.announcements", icon: Megaphone },
   { to: "/admin/messages", labelKey: "admin.messagesTitle", icon: MessageSquare },
   { to: "/admin/visitors", labelKey: "admin.visitorsTitle", icon: Eye },

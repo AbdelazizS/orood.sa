@@ -16,10 +16,14 @@ class ProductViewController extends Controller
     public function __invoke(Request $request, Product $product): JsonResponse
     {
         $user = $request->user();
+        if (! $product->isAccessibleBy($user)) {
+            abort(404);
+        }
+
         $source = $request->input('source');
         $platform = $request->input('platform');
 
-        if (!$user || $user->id !== $product->user_id) {
+        if ($product->isPubliclyListed() && (! $user || $user->id !== $product->user_id)) {
             $product->increment('view_count');
             $product->increment('today_view_count');
             $product->increment('daily_view_count');

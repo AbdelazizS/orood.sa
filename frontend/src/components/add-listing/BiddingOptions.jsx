@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next"
 import { cn } from "@/lib/utils"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { useAppDirection } from "@/providers/DirectionProvider"
 
 /**
  * BIDDING OPTIONS (سوم) — Section 6 per PDF spec.
@@ -34,11 +35,12 @@ export function BiddingOptions({ enabled, visible, onChange, form }) {
 
 function BiddingOptionsInner({ enabled, visible, onChange }) {
   const { t } = useTranslation()
+  const { direction } = useAppDirection()
 
   return (
     <div
       className="rounded-lg border border-border bg-card p-3 sm:p-4 mb-2"
-      dir="rtl"
+      dir={direction}
     >
       <h3 className="text-sm font-bold text-foreground mb-3">
         {t("addListing.biddingSectionTitle")}
@@ -59,7 +61,7 @@ function BiddingOptionsInner({ enabled, visible, onChange }) {
         <RadioGroup
           value={visible ? "public" : "hidden"}
           onValueChange={(v) => onChange({ visible: v === "public" })}
-          className="mt-3 ms-6 flex flex-col gap-3"
+          className="mt-3 flex flex-col gap-3"
         >
           <label
             className={cn(

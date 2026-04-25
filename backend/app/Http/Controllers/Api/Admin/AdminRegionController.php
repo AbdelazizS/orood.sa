@@ -51,6 +51,7 @@ class AdminRegionController extends Controller
 
         $region = Region::create($validated);
         $this->audit->log('region.created', $region, null, $validated);
+        cache()->forget('api.regions');
 
         return response()->json(['data' => $region], 201);
     }
@@ -70,6 +71,7 @@ class AdminRegionController extends Controller
         $oldValues = $region->getOriginal();
         $region->update($validated);
         $this->audit->log('region.updated', $region, $oldValues, $validated);
+        cache()->forget('api.regions');
 
         return response()->json(['data' => $region->fresh()]);
     }
@@ -78,6 +80,7 @@ class AdminRegionController extends Controller
     {
         $this->audit->log('region.deleted', $region, $region->toArray());
         $region->delete();
+        cache()->forget('api.regions');
         return response()->json(['message' => 'Region deleted']);
     }
 
@@ -95,6 +98,7 @@ class AdminRegionController extends Controller
 
         $city = City::create($validated);
         $this->audit->log('city.created', $city, null, $validated);
+        cache()->forget('api.regions');
 
         return response()->json(['data' => $city], 201);
     }
@@ -117,6 +121,7 @@ class AdminRegionController extends Controller
         $oldValues = $city->getOriginal();
         $city->update($validated);
         $this->audit->log('city.updated', $city, $oldValues, $validated);
+        cache()->forget('api.regions');
 
         return response()->json(['data' => $city->fresh()]);
     }
@@ -128,6 +133,7 @@ class AdminRegionController extends Controller
         }
         $this->audit->log('city.deleted', $city, $city->toArray());
         $city->delete();
+        cache()->forget('api.regions');
         return response()->json(['message' => 'City deleted']);
     }
 
@@ -139,6 +145,7 @@ class AdminRegionController extends Controller
             'is_active' => ['required', 'boolean'],
         ]);
         Region::whereIn('id', $validated['ids'])->update(['is_active' => $validated['is_active']]);
+        cache()->forget('api.regions');
         return response()->json(['message' => 'Regions updated', 'count' => count($validated['ids'])]);
     }
 
@@ -149,6 +156,7 @@ class AdminRegionController extends Controller
             'ids.*' => ['integer', 'exists:regions,id'],
         ]);
         $count = Region::whereIn('id', $validated['ids'])->delete();
+        cache()->forget('api.regions');
         return response()->json(['message' => 'Regions deleted', 'count' => $count]);
     }
 }

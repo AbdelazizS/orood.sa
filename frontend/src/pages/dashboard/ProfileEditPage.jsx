@@ -13,6 +13,7 @@ import { PasswordInput } from "@/components/ui/password-input"
 import { ProfileImageUpload } from "@/components/ProfileImageUpload"
 import apiClient from "@/lib/apiClient"
 import { useAuthStore } from "@/store/useAuthStore"
+import { publicProfilePath } from "@/lib/profileRoutes"
 import * as authService from "@/services/authService"
 import { Loader2, Key, Mail } from "lucide-react"
 
@@ -35,8 +36,8 @@ export function ProfileEditPage() {
     mutationFn: (payload) => apiClient.put("/profile", payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["auth", "user"] })
-      await queryClient.invalidateQueries({ queryKey: ["profile", user.username] })
-      navigate(user?.username ? `/profile/${user.username}` : "/dashboard/profile")
+      await queryClient.invalidateQueries({ queryKey: ["profile"] })
+      navigate(publicProfilePath(user) ?? "/dashboard")
     },
   })
 

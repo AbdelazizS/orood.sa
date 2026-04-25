@@ -1,9 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useSearchParams } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 import apiClient from "@/lib/apiClient"
 import { toast } from "sonner"
 
 export function useMyListings() {
+  const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
   const queryClient = useQueryClient()
 
@@ -28,27 +30,27 @@ export function useMyListings() {
     mutationFn: ({ id, newStatus }) =>
       apiClient.patch(`/dashboard/listings/${id}/status`, { status: newStatus }),
     onSuccess: (res) => {
-      toast.success(res?.data?.message ?? "تم التحديث")
+      toast.success(res?.data?.message ?? t("dashboard.listingsToast.updated"))
       queryClient.invalidateQueries({ queryKey: ["my-listings"] })
       queryClient.invalidateQueries({ queryKey: ["dashboard", "home"] })
     },
     onError: (err) => {
-      toast.error(err?.response?.data?.message ?? "حدث خطأ")
+      toast.error(err?.response?.data?.message ?? t("dashboard.listingsToast.error"))
     },
   })
 
   const bump = useMutation({
     mutationFn: (id) => apiClient.post(`/dashboard/listings/${id}/bump`),
     onSuccess: () => {
-      toast.success("تم تحديث الإعلان، سيظهر في أعلى القائمة")
+      toast.success(t("dashboard.listingsToast.bumpSuccess"))
       queryClient.invalidateQueries({ queryKey: ["my-listings"] })
       queryClient.invalidateQueries({ queryKey: ["dashboard", "home"] })
     },
     onError: (err) => {
       toast.error(
         err?.response?.status === 429
-          ? "انتظر قليلاً"
-          : err?.response?.data?.message ?? "حدث خطأ"
+          ? t("dashboard.listingsToast.bumpRateLimited")
+          : err?.response?.data?.message ?? t("dashboard.listingsToast.error")
       )
     },
   })
@@ -56,35 +58,35 @@ export function useMyListings() {
   const deleteListing = useMutation({
     mutationFn: (id) => apiClient.delete(`/dashboard/listings/${id}`),
     onSuccess: () => {
-      toast.success("تم حذف الإعلان بنجاح")
+      toast.success(t("dashboard.listingsToast.deleted"))
       queryClient.invalidateQueries({ queryKey: ["my-listings"] })
       queryClient.invalidateQueries({ queryKey: ["dashboard", "home"] })
     },
     onError: (err) => {
-      toast.error(err?.response?.data?.message ?? "حدث خطأ")
+      toast.error(err?.response?.data?.message ?? t("dashboard.listingsToast.error"))
     },
   })
 
   const markSold = useMutation({
     mutationFn: (id) => apiClient.patch(`/dashboard/listings/${id}/mark-sold`),
     onSuccess: () => {
-      toast.success("تم تحديد الإعلان كمباع")
+      toast.success(t("dashboard.listingsToast.markSold"))
       queryClient.invalidateQueries({ queryKey: ["my-listings"] })
       queryClient.invalidateQueries({ queryKey: ["dashboard", "home"] })
     },
     onError: (err) => {
-      toast.error(err?.response?.data?.message ?? "حدث خطأ")
+      toast.error(err?.response?.data?.message ?? t("dashboard.listingsToast.error"))
     },
   })
 
   const duplicate = useMutation({
     mutationFn: (id) => apiClient.post(`/dashboard/listings/${id}/duplicate`),
     onSuccess: () => {
-      toast.success("تم نسخ الإعلان، يمكنك تعديله الآن")
+      toast.success(t("dashboard.listingsToast.duplicated"))
       queryClient.invalidateQueries({ queryKey: ["my-listings"] })
     },
     onError: (err) => {
-      toast.error(err?.response?.data?.message ?? "حدث خطأ")
+      toast.error(err?.response?.data?.message ?? t("dashboard.listingsToast.error"))
     },
   })
 

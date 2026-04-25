@@ -7,17 +7,28 @@ import { MapPin, Clock, MessageSquare, Phone, Pencil } from "lucide-react"
 import { VerificationBadge } from "@/components/auth/VerificationBadge"
 import { ContactDialog } from "@/components/chat/ContactDialog"
 import { useAuthStore } from "@/store/useAuthStore"
+import { publicProfilePath } from "@/lib/profileRoutes"
+import { getSellerPresenceUi } from "@/lib/sellerPresence"
 
 export function SellerCard({ product }) {
   const { t } = useTranslation()
   const { user, token } = useAuthStore()
   const seller = product?.seller
-  const isOwner = token && user?.id === seller?.id
+  const isOwner = Boolean(token && user?.id === seller?.id)
   const contactPhone = product?.contact_preferences?.phone ?? true
   const contactMessages = product?.contact_preferences?.messages ?? true
   const phoneNumber = product?.contact_preferences?.phone_number ?? seller?.phone
 
   if (!seller) return null
+
+  const presence = getSellerPresenceUi(seller, t, { isSelfSeller: isOwner })
+  const presenceLine = presence.showOnline
+    ? t("listingDetail.onlineNow", "متصل الآن")
+    : presence.lastSeenParagraph
+      ? presence.lastSeenParagraph
+      : presence.showOfflineBadge
+        ? t("listingDetail.offline", "غير متصل")
+        : null
 
   return (
     <Card>
@@ -34,7 +45,7 @@ export function SellerCard({ product }) {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <Link
-                to={seller.username ? `/profile/${seller.username}` : "/"}
+                to={publicProfilePath(seller) ?? "/"}
                 className="font-semibold hover:underline truncate"
               >
                 {seller.name}
@@ -51,12 +62,14 @@ export function SellerCard({ product }) {
                   {seller.city.name}
                 </span>
               )}
-              {seller.last_seen && (
-                <span className="flex items-center gap-1">
-                  <Clock className="size-3.5" />
-                  {seller.last_seen}
+              {presenceLine ? (
+                <span
+                  className={`flex items-center gap-1 ${presence.showOnline ? "text-primary font-medium" : ""}`}
+                >
+                  <Clock className="size-3.5 shrink-0" aria-hidden />
+                  {presenceLine}
                 </span>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
@@ -92,7 +105,7 @@ export function SellerCard({ product }) {
               </Button>
             )}
             <Button variant="ghost" size="sm" asChild className="w-full">
-              <Link to={seller.username ? `/profile/${seller.username}` : "/"}>
+              <Link to={publicProfilePath(seller) ?? "/"}>
                 {t("productDetails.viewProfile", "View Profile")}
               </Link>
             </Button>

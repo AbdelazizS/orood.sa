@@ -632,7 +632,13 @@ class PhaseOneSeeder extends Seeder
         $product1 = Product::where('title', 'Luxury Apartment in Riyadh')->first();
         if ($product1 && $buyerUser) {
             $conv = Conversation::firstOrCreate(
-                ['product_id' => $product1->id, 'buyer_id' => $buyerUser->id, 'seller_id' => $product1->user_id]
+                ['dedupe_key' => Conversation::listingDedupeKey((int) $product1->id, (int) $buyerUser->id)],
+                [
+                    'product_id' => $product1->id,
+                    'buyer_id' => $buyerUser->id,
+                    'seller_id' => $product1->user_id,
+                    'conversation_type' => Conversation::TYPE_LISTING,
+                ]
             );
             Message::firstOrCreate(
                 ['conversation_id' => $conv->id, 'user_id' => $buyerUser->id, 'body' => 'Is this still available?'],

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate, Link } from "react-router-dom"
+import { useNavigate, Link, useLocation, useSearchParams } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { useMutation } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
@@ -9,19 +9,39 @@ import { PasswordInput } from "@/components/ui/password-input"
 import * as authService from "@/services/authService"
 import { Loader2, ArrowRight } from "lucide-react"
 
-const FORM_MAX_WIDTH = "max-w-lg"
+const FORM_MAX_WIDTH = "max-w-md sm:max-w-lg"
 const FIELD_SPACING = "space-y-2"
 const SECTION_SPACING = "space-y-5"
+
+function loginErrorMessage(error, t) {
+  const status = error?.response?.status
+  const apiMessage = error?.response?.data?.message
+
+  if (status === 401) return t("auth.loginError")
+  if (status === 403 && typeof apiMessage === "string" && apiMessage.trim()) return apiMessage
+  if (typeof apiMessage === "string" && apiMessage.trim()) return apiMessage
+  return t("auth.loginError")
+}
 
 export function LoginPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
 
+  const rawRedirect =
+    location.state?.redirectTo
+    || location.state?.from
+    || searchParams.get("redirect")
+    || "/"
+  const redirectTo =
+    typeof rawRedirect === "string" && rawRedirect.startsWith("/") ? rawRedirect : "/"
+
   const loginMutation = useMutation({
     mutationFn: () => authService.login(email, password),
-    onSuccess: () => navigate("/", { replace: true }),
+    onSuccess: () => navigate(redirectTo, { replace: true }),
   })
 
   const handleSubmit = (e) => {
@@ -31,9 +51,9 @@ export function LoginPage() {
 
   return (
     <div
-      className={`w-full ${FORM_MAX_WIDTH} rounded-xl border border-border bg-card p-8 shadow-sm`}
+      className={`w-full ${FORM_MAX_WIDTH} rounded-xl border border-border bg-card p-4 shadow-sm sm:p-8`}
     >
-      <h1 className="mb-8 text-end text-xl font-semibold text-foreground">
+      <h1 className="mb-6 text-end text-xl font-semibold text-foreground sm:mb-8">
         {t("auth.loginTitle")}
       </h1>
       <form onSubmit={handleSubmit} className={SECTION_SPACING}>
@@ -70,7 +90,7 @@ export function LoginPage() {
         </div>
         {loginMutation.isError && (
           <p className="text-xs text-destructive">
-            {loginMutation.error?.response?.data?.message ?? t("auth.loginError")}
+            {loginErrorMessage(loginMutation.error, t)}
           </p>
         )}
         <Button
@@ -98,7 +118,10 @@ export function LoginPage() {
         </p> */}
         <p className="text-center text-sm text-muted-foreground">
           {t("auth.noAccount")}{" "}
-          <Link to="/register" className="font-medium text-primary hover:underline">
+          <Link
+            to={redirectTo !== "/" ? `/register?redirect=${encodeURIComponent(redirectTo)}` : "/register"}
+            className="font-medium text-primary hover:underline"
+          >
             {t("auth.registerLink")}
           </Link>
         </p>

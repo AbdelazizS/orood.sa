@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom"
+import { publicProfilePath } from "@/lib/profileRoutes"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -6,6 +7,7 @@ import { MapPin, Clock, MessageSquare, Phone, Pencil, Share2, Flag } from "lucid
 import { VerificationBadge } from "@/components/auth/VerificationBadge"
 import { ContactDialog } from "@/components/chat/ContactDialog"
 import { cn } from "@/lib/utils"
+import { getSellerPresenceUi } from "@/lib/sellerPresence"
 
 /**
  * ProfileHeader — premium hero section for user profile.
@@ -20,6 +22,19 @@ export function ProfileHeader({ profile, isOwnProfile, firstProductId, firstProd
     : null
   const coverUrl = profile?.cover_photo_url
   const logoUrl = profile?.logo_url ?? profile?.avatar_url
+
+  const presence = getSellerPresenceUi(
+    profile ? { is_online: profile.is_online, last_seen: profile.last_seen } : null,
+    t,
+    { isSelfSeller: Boolean(isOwnProfile) }
+  )
+  const presenceLine = presence.showOnline
+    ? t("listingDetail.onlineNow", "متصل الآن")
+    : presence.lastSeenParagraph
+      ? presence.lastSeenParagraph
+      : presence.showOfflineBadge
+        ? t("listingDetail.offline", "غير متصل")
+        : null
 
   return (
     <div
@@ -99,12 +114,14 @@ export function ProfileHeader({ profile, isOwnProfile, firstProductId, firstProd
                     {locationText}
                   </span>
                 )}
-                {profile?.last_seen && (
-                  <span className="flex items-center gap-1.5">
-                    <Clock className="size-4 shrink-0" />
-                    {profile.last_seen}
+                {presenceLine ? (
+                  <span
+                    className={`flex items-center gap-1.5 ${presence.showOnline ? "font-medium text-primary" : ""}`}
+                  >
+                    <Clock className="size-4 shrink-0" aria-hidden />
+                    {presenceLine}
                   </span>
-                )}
+                ) : null}
               </div>
               {profile?.bio && (
                 <p className="mt-2 max-w-xl text-sm text-muted-foreground">{profile.bio}</p>
@@ -122,7 +139,7 @@ export function ProfileHeader({ profile, isOwnProfile, firstProductId, firstProd
                 </Button>
               ) : (
                 <Button asChild variant="outline" size="default" className="w-full sm:w-auto">
-                  <Link to="/dashboard/profile">
+                  <Link to={publicProfilePath({ id: profile?.id, username: profile?.username }) ?? "/dashboard"}>
                     <Pencil className="me-2 size-4" />
                     {t("profile.edit", "تعديل الملف")}
                   </Link>

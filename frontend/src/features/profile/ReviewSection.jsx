@@ -18,7 +18,7 @@ export function ReviewSection({ profile, currentUser, isOwnProfile }) {
   const submitMutation = useMutation({
     mutationFn: (payload) => apiClient.post("/reviews", payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["profile", profile.id] })
+      await queryClient.invalidateQueries({ queryKey: ["profile"] })
       setShowForm(false)
       setComment("")
       setRating(5)

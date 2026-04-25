@@ -175,7 +175,6 @@ class MyListingsController extends Controller
 
         $product->update([
             'status' => 'sold',
-            'sold_count' => ($product->sold_count ?? 0) + 1,
         ]);
 
         return response()->json([

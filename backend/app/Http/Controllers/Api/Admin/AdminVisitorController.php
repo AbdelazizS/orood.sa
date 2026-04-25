@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Models\Visitor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -86,6 +87,100 @@ class AdminVisitorController extends Controller
             ->values()
             ->toArray();
 
+        $topUtmSources = Visitor::whereBetween('created_at', [$fromStr, $toStr])
+            ->select('source', DB::raw('COUNT(*) as count'))
+            ->whereNotNull('source')
+            ->where('source', '!=', '')
+            ->groupBy('source')
+            ->orderByDesc('count')
+            ->limit(10)
+            ->get()
+            ->map(fn ($r) => ['utm_source' => $r->source, 'count' => (int) $r->count])
+            ->values()
+            ->toArray();
+
+        $topUtmCampaigns = Visitor::whereBetween('created_at', [$fromStr, $toStr])
+            ->select('utm_campaign', DB::raw('COUNT(*) as count'))
+            ->whereNotNull('utm_campaign')
+            ->where('utm_campaign', '!=', '')
+            ->groupBy('utm_campaign')
+            ->orderByDesc('count')
+            ->limit(10)
+            ->get()
+            ->map(fn ($r) => ['campaign' => $r->utm_campaign, 'count' => (int) $r->count])
+            ->values()
+            ->toArray();
+
+        $bySocialChannel = Visitor::whereBetween('created_at', [$fromStr, $toStr])
+            ->select('social_channel', DB::raw('COUNT(*) as count'))
+            ->whereNotNull('social_channel')
+            ->where('social_channel', '!=', '')
+            ->groupBy('social_channel')
+            ->orderByDesc('count')
+            ->get()
+            ->map(fn ($r) => ['channel' => $r->social_channel, 'count' => (int) $r->count])
+            ->values()
+            ->toArray();
+
+        $topReferrerHosts = Visitor::whereBetween('created_at', [$fromStr, $toStr])
+            ->select('referrer_host', DB::raw('COUNT(*) as count'))
+            ->whereNotNull('referrer_host')
+            ->where('referrer_host', '!=', '')
+            ->groupBy('referrer_host')
+            ->orderByDesc('count')
+            ->limit(10)
+            ->get()
+            ->map(fn ($r) => ['host' => $r->referrer_host, 'count' => (int) $r->count])
+            ->values()
+            ->toArray();
+
+        $registrationHowHeard = User::query()
+            ->whereBetween('created_at', [$fromStr, $toStr])
+            ->whereNotNull('how_did_you_hear')
+            ->where('how_did_you_hear', '!=', '')
+            ->select('how_did_you_hear', DB::raw('COUNT(*) as count'))
+            ->groupBy('how_did_you_hear')
+            ->orderByDesc('count')
+            ->limit(15)
+            ->get()
+            ->map(fn ($r) => ['label' => $r->how_did_you_hear, 'count' => (int) $r->count])
+            ->values()
+            ->toArray();
+
+        $marketerTraffic = Visitor::query()
+            ->leftJoin('users as marketers', 'marketers.id', '=', 'visitors.last_touch_marketer_id')
+            ->whereBetween('visitors.created_at', [$fromStr, $toStr])
+            ->whereNotNull('visitors.last_touch_marketer_id')
+            ->select('visitors.last_touch_marketer_id', 'marketers.name', DB::raw('COUNT(*) as count'))
+            ->groupBy('visitors.last_touch_marketer_id', 'marketers.name')
+            ->orderByDesc('count')
+            ->limit(20)
+            ->get()
+            ->map(fn ($r) => [
+                'marketer_id' => (int) $r->last_touch_marketer_id,
+                'marketer_name' => (string) ($r->name ?? '—'),
+                'count' => (int) $r->count,
+            ])
+            ->values()
+            ->toArray();
+
+        $marketerSelectedClients = User::query()
+            ->leftJoin('users as marketers', 'marketers.id', '=', 'users.referred_by_marketer_id')
+            ->whereBetween('users.created_at', [$fromStr, $toStr])
+            ->whereNotNull('users.referred_by_marketer_id')
+            ->select('users.id', 'users.name', 'users.email', 'marketers.name as marketer_name')
+            ->orderByDesc('users.created_at')
+            ->limit(50)
+            ->get()
+            ->map(fn ($r) => [
+                'user_id' => (int) $r->id,
+                'user_name' => (string) $r->name,
+                'user_email' => (string) $r->email,
+                'marketer_name' => (string) ($r->marketer_name ?? '—'),
+            ])
+            ->values()
+            ->toArray();
+
         return response()->json([
             'data' => [
                 'total_visits' => $totalVisits,
@@ -94,6 +189,13 @@ class AdminVisitorController extends Controller
                 'top_paths' => $topPaths,
                 'top_cities' => $topCities,
                 'by_source' => $bySource,
+                'top_utm_sources' => $topUtmSources,
+                'top_utm_campaigns' => $topUtmCampaigns,
+                'by_social_channel' => $bySocialChannel,
+                'top_referrer_hosts' => $topReferrerHosts,
+                'registration_how_heard' => $registrationHowHeard,
+                'marketer_traffic' => $marketerTraffic,
+                'marketer_selected_clients' => $marketerSelectedClients,
                 'period' => $period,
                 'from' => $fromStr,
                 'to' => $toStr,

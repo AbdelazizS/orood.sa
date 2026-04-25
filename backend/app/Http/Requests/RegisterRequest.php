@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Services\PasswordPolicyService;
 use Illuminate\Foundation\Http\FormRequest;
 
 class RegisterRequest extends FormRequest
@@ -14,24 +15,28 @@ class RegisterRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'min:3', 'max:255'],
+            'name' => ['required', 'string', 'min:3', 'max:255', 'unique:users,name'],
             'email' => ['required', 'email', 'unique:users,email'],
             'phone' => ['nullable', 'string', 'regex:/^05\d{8}$/'],
             'how_did_you_hear' => ['nullable', 'string', 'max:255'],
-            'password' => [
-                'required',
-                'string',
-                'min:8',
-                'confirmed',
-                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};\':"\\|,.<>\/?]).+$/',
-            ],
+            'referred_by_marketer_id' => ['nullable', 'integer', 'exists:users,id'],
+            'password' => PasswordPolicyService::registerRules(),
         ];
     }
 
     public function messages(): array
     {
         return [
-            'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
+            'name.required' => __('auth.validation.name_required'),
+            'name.min' => __('auth.validation.name_min'),
+            'name.unique' => __('auth.validation.name_taken'),
+            'email.required' => __('auth.validation.email_required'),
+            'email.email' => __('auth.validation.email_invalid'),
+            'email.unique' => __('auth.validation.email_taken'),
+            'password.required' => __('auth.validation.password_required'),
+            'password.min' => __('auth.validation.password_min'),
+            'password.regex' => __('auth.validation.password_rule'),
+            'password.confirmed' => __('auth.validation.password_confirmed'),
         ];
     }
 }

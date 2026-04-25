@@ -12,6 +12,8 @@ enum UserRole: string
     case SUPERADMIN = 'super_admin';
     case MANAGER = 'manager';
     case EMPLOYEE = 'employee';
+    case MARKETER = 'marketer';
+    case COMPANY = 'company';
 
     public function isPlatformManager(): bool
     {
@@ -21,6 +23,7 @@ enum UserRole: string
             self::SUPERADMIN,
             self::MANAGER,
             self::EMPLOYEE,
+            self::MARKETER,
         ], true);
     }
 
@@ -30,6 +33,7 @@ enum UserRole: string
             self::USER,
             self::SELLER,
             self::BUYER,
+            self::COMPANY,
         ], true);
     }
 
@@ -44,6 +48,8 @@ enum UserRole: string
             self::SUPERADMIN => 'مدير أعلى',
             self::MANAGER => 'مدير منصة',
             self::EMPLOYEE => 'موظف',
+            self::MARKETER => 'مسوق',
+            self::COMPANY => 'شركة',
         };
     }
 }

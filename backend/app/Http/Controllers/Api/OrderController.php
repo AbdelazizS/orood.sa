@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Balance;
+use App\Models\Notification;
 use App\Models\Purchase;
+use App\Models\Review;
+use App\Support\InAppNotificationPayload;
+use App\Services\PurchaseFulfillment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
@@ -19,7 +23,7 @@ class OrderController extends Controller
         $role = $request->query('role', 'all'); // buyer, seller, all
         $status = $request->query('status');
 
-        $query = Purchase::with(['product.media', 'buyer', 'seller'])
+        $query = Purchase::with(['product', 'buyer', 'seller'])
             ->when($role === 'buyer', fn ($q) => $q->where('buyer_id', $user->id))
             ->when($role === 'seller', fn ($q) => $q->where('seller_id', $user->id))
             ->when($role === 'all', fn ($q) => $q->where(function ($q) use ($user) {
@@ -54,7 +58,7 @@ class OrderController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $order->load(['product.media', 'product.category', 'buyer', 'seller']);
+        $order->load(['product.category', 'buyer', 'seller']);
 
         return response()->json([
             'data' => $this->formatOrder($order, $user->id),
@@ -62,7 +66,7 @@ class OrderController extends Controller
     }
 
     /**
-     * Update order: seller adds tracking, buyer confirms receipt.
+     * Update order: seller dispatches/delivers, buyer confirms receipt.
      */
     public function update(Request $request, Purchase $order): JsonResponse
     {
@@ -78,22 +82,125 @@ class OrderController extends Controller
             return app(AccountController::class)->confirmReceipt($request);
         }
 
-        // Seller updating tracking
+        // Seller updating dispatch/tracking / marking delivered
         if ($order->seller_id === $user->id) {
+            $wasShippedAlready = $order->status === Purchase::STATUS_SHIPPED;
+
             $validated = $request->validate([
                 'tracking_number' => ['nullable', 'string', 'max:100'],
                 'carrier' => ['nullable', 'string', 'max:100'],
                 'tracking_url' => ['nullable', 'string', 'url', 'max:500'],
+                'dispatch_out_for_delivery' => ['sometimes', 'boolean'],
+                'dispatch_location_confirmed' => ['sometimes', 'boolean'],
+                'mark_delivered' => ['sometimes', 'boolean'],
+                'accept_cod' => ['sometimes', 'boolean'],
             ]);
 
-            $order->update(array_filter($validated));
+            $acceptCod = (bool) ($validated['accept_cod'] ?? false);
+            unset($validated['accept_cod']);
 
-            if (in_array($order->status, [Purchase::STATUS_PAID])) {
+            if ($acceptCod) {
+                if ($order->payment_method !== 'cod') {
+                    return response()->json(['message' => __('This action applies only to cash on delivery orders.')], 422);
+                }
+                if ($order->cod_seller_accepted_at !== null) {
+                    return response()->json(['message' => __('This order was already accepted.')], 422);
+                }
+                if (!in_array($order->status, [Purchase::STATUS_COD_REQUESTED, Purchase::STATUS_PENDING], true)) {
+                    return response()->json(['message' => __('Order cannot be accepted in its current status.')], 422);
+                }
+                $order->update([
+                    'cod_seller_accepted_at' => now(),
+                    'status' => Purchase::STATUS_PENDING,
+                ]);
+                Notification::create(InAppNotificationPayload::orderStatusForBuyer($order->fresh(['product']), 'order_pending'));
+
+                return response()->json([
+                    'message' => __('Cash on delivery order accepted. You can now add shipment details.'),
+                    'data' => $this->formatOrder($order->fresh(['product', 'buyer', 'seller']), $user->id),
+                ]);
+            }
+
+            $markDelivered = (bool) ($validated['mark_delivered'] ?? false);
+            unset($validated['mark_delivered']);
+            $dispatchOutForDelivery = (bool) ($validated['dispatch_out_for_delivery'] ?? false);
+            $dispatchLocationConfirmed = (bool) ($validated['dispatch_location_confirmed'] ?? false);
+            unset($validated['dispatch_out_for_delivery'], $validated['dispatch_location_confirmed']);
+
+            $trackingPayload = array_filter($validated, fn ($v) => $v !== null && $v !== '');
+
+            $hasTrackingNumber = isset($trackingPayload['tracking_number'])
+                && $trackingPayload['tracking_number'] !== '';
+
+            if ($order->payment_method === 'cod'
+                && $hasTrackingNumber
+                && (
+                    $order->status === Purchase::STATUS_COD_REQUESTED
+                    || ($order->status === Purchase::STATUS_PENDING && $order->cod_seller_accepted_at === null)
+                )) {
+                return response()->json([
+                    'message' => __('Accept this cash-on-delivery order before adding shipment details.'),
+                ], 422);
+            }
+
+            if ($trackingPayload !== []) {
+                $order->update($trackingPayload);
+            }
+
+            if ($dispatchOutForDelivery) {
+                $mayDispatchEscrow = in_array($order->status, [Purchase::STATUS_AWAITING_PAYMENT], true);
+                $mayDispatchCod = $order->payment_method === 'cod'
+                    && $order->status === Purchase::STATUS_PENDING
+                    && $order->cod_seller_accepted_at !== null;
+                if (! ($mayDispatchEscrow || $mayDispatchCod)) {
+                    return response()->json([
+                        'message' => __('Order cannot be marked as out for delivery in its current status.'),
+                    ], 422);
+                }
+                if (! $dispatchLocationConfirmed) {
+                    return response()->json([
+                        'message' => __('Please confirm delivery location before marking out for delivery.'),
+                    ], 422);
+                }
+                if ($order->shipping_lat === null || $order->shipping_lng === null) {
+                    return response()->json([
+                        'message' => __('Shipping location is missing. Buyer must set delivery location first.'),
+                    ], 422);
+                }
                 $order->update(['status' => Purchase::STATUS_SHIPPED]);
+                Notification::create(InAppNotificationPayload::orderStatusForBuyer($order->fresh(['product']), 'order_shipped'));
+            } elseif (in_array($order->status, [Purchase::STATUS_AWAITING_PAYMENT], true) && $hasTrackingNumber) {
+                $order->update(['status' => Purchase::STATUS_SHIPPED]);
+                Notification::create(InAppNotificationPayload::orderStatusForBuyer($order->fresh(['product']), 'order_shipped'));
+            } elseif ($order->payment_method === 'cod'
+                && $order->status === Purchase::STATUS_PENDING
+                && $order->cod_seller_accepted_at !== null
+                && $hasTrackingNumber) {
+                $order->update(['status' => Purchase::STATUS_SHIPPED]);
+                Notification::create(InAppNotificationPayload::orderStatusForBuyer($order->fresh(['product']), 'order_shipped'));
+            }
+
+            $order->refresh();
+
+            if ($markDelivered) {
+                if (!$wasShippedAlready) {
+                    return response()->json([
+                        'message' => __('You can mark as delivered only after the order is already shipped. Save shipment details first, then mark delivered.'),
+                    ], 422);
+                }
+                if ($order->status !== Purchase::STATUS_SHIPPED) {
+                    return response()->json([
+                        'message' => __('Order cannot be marked as delivered in its current status.'),
+                    ], 422);
+                }
+                $order->update(['status' => Purchase::STATUS_DELIVERED]);
+                Notification::create(InAppNotificationPayload::orderStatusForBuyer($order->fresh(['product']), 'order_delivered'));
             }
 
             return response()->json([
-                'message' => __('Tracking updated.'),
+                'message' => $markDelivered
+                    ? __('Marked as delivered.')
+                    : ($dispatchOutForDelivery ? __('Marked as out for delivery.') : __('Order updated.')),
                 'data' => $this->formatOrder($order->fresh(['product', 'buyer', 'seller']), $user->id),
             ]);
         }
@@ -120,18 +227,26 @@ class OrderController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        if (!in_array($order->status, [Purchase::STATUS_PENDING, Purchase::STATUS_PAID])) {
+        if (!in_array($order->status, [
+            Purchase::STATUS_PENDING,
+            Purchase::STATUS_COD_REQUESTED,
+            Purchase::STATUS_AWAITING_PAYMENT,
+        ], true)) {
             return response()->json(['message' => 'Order cannot be cancelled in current status'], 422);
         }
 
-        if ($order->status === Purchase::STATUS_PAID) {
-            $balance = Balance::getOrCreateForUser($order->buyer_id);
-            $balance->increment('available', $order->amount);
-            $sellerBalance = Balance::getOrCreateForUser($order->seller_id);
-            $sellerBalance->decrement('escrow', $order->amount);
+        try {
+            DB::transaction(function () use ($order) {
+                if ($order->status === Purchase::STATUS_AWAITING_PAYMENT && $order->payment_method === 'escrow') {
+                    PurchaseFulfillment::refundEscrowToBuyer($order);
+                }
+                $order->update(['status' => Purchase::STATUS_CANCELLED]);
+                Notification::create(InAppNotificationPayload::orderStatusForBuyer($order->fresh(['product']), 'order_cancelled'));
+                Notification::create(InAppNotificationPayload::orderStatusForSeller($order->fresh(['product']), 'order_cancelled'));
+            });
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
-
-        $order->update(['status' => Purchase::STATUS_CANCELLED]);
 
         return response()->json([
             'message' => __('Order cancelled.'),
@@ -153,7 +268,19 @@ class OrderController extends Controller
             'reason' => ['required', 'string', 'max:1000'],
         ]);
 
-        $order->update(['status' => 'disputed']);
+        if (!in_array($order->status, [
+            Purchase::STATUS_PENDING,
+            Purchase::STATUS_COD_REQUESTED,
+            Purchase::STATUS_AWAITING_PAYMENT,
+            Purchase::STATUS_SHIPPED,
+            Purchase::STATUS_DELIVERED,
+        ], true)) {
+            return response()->json(['message' => __('Dispute cannot be opened for this order.')], 422);
+        }
+
+        $order->update(['status' => Purchase::STATUS_DISPUTED]);
+        Notification::create(InAppNotificationPayload::orderStatusForBuyer($order->fresh(['product']), 'order_disputed'));
+        Notification::create(InAppNotificationPayload::orderStatusForSeller($order->fresh(['product']), 'order_disputed'));
 
         return response()->json([
             'message' => __('Dispute opened. Admin will review.'),
@@ -167,6 +294,17 @@ class OrderController extends Controller
         $media = is_array($product?->media) ? $product->media : [];
         $imageUrl = $media['cover'] ?? $media['image_url'] ?? $product?->image_url ?? null;
 
+        $canReviewSeller = false;
+        if ($order->buyer_id === $currentUserId
+            && $order->seller_id
+            && in_array($order->status, [Purchase::STATUS_DELIVERED, Purchase::STATUS_COMPLETED], true)
+            && \Schema::hasColumn('reviews', 'purchase_id')) {
+            $canReviewSeller = ! Review::where('reviewer_id', $currentUserId)
+                ->where('reviewee_id', $order->seller_id)
+                ->where('purchase_id', $order->id)
+                ->exists();
+        }
+
         return [
             'id' => $order->id,
             'order_number' => 'ORD-' . str_pad($order->id, 6, '0', STR_PAD_LEFT),
@@ -174,11 +312,16 @@ class OrderController extends Controller
             'status' => $order->status,
             'payment_method' => $order->payment_method,
             'amount' => (float) $order->amount,
+            'quantity' => (int) ($order->quantity ?? 1),
+            'buyer_note' => $order->buyer_note,
+            'cod_seller_accepted_at' => $order->cod_seller_accepted_at,
             'tracking_number' => $order->tracking_number,
             'carrier' => $order->carrier,
             'tracking_url' => $order->tracking_url,
             'invoice_url' => $order->invoice_url,
             'shipping_address' => $order->shipping_address,
+            'shipping_lat' => $order->shipping_lat,
+            'shipping_lng' => $order->shipping_lng,
             'product' => $product ? [
                 'id' => $product->id,
                 'title' => $product->title,
@@ -193,15 +336,39 @@ class OrderController extends Controller
             'seller' => $order->seller ? [
                 'id' => $order->seller->id,
                 'name' => $order->seller->name,
+                'username' => $order->seller->username,
+                'avatar_url' => $order->seller->avatar_url,
                 'phone' => $order->seller->phone,
             ] : null,
             'is_buyer' => $order->buyer_id === $currentUserId,
             'is_seller' => $order->seller_id === $currentUserId,
             'can_confirm_receipt' => $order->buyer_id === $currentUserId
-                && in_array($order->status, [Purchase::STATUS_PAID, Purchase::STATUS_SHIPPED, Purchase::STATUS_DELIVERED])
-                && $order->status !== Purchase::STATUS_COMPLETED,
+                && PurchaseFulfillment::buyerMayConfirmReceipt($order),
+            'can_accept_cod' => $order->seller_id === $currentUserId
+                && $order->payment_method === 'cod'
+                && $order->cod_seller_accepted_at === null
+                && in_array($order->status, [Purchase::STATUS_COD_REQUESTED, Purchase::STATUS_PENDING], true),
             'can_add_tracking' => $order->seller_id === $currentUserId
-                && in_array($order->status, [Purchase::STATUS_PAID, Purchase::STATUS_SHIPPED]),
+                && (
+                    in_array($order->status, [Purchase::STATUS_AWAITING_PAYMENT, Purchase::STATUS_SHIPPED], true)
+                    || (
+                        $order->payment_method === 'cod'
+                        && $order->status === Purchase::STATUS_PENDING
+                        && $order->cod_seller_accepted_at !== null
+                    )
+                ),
+            'can_dispatch_out_for_delivery' => $order->seller_id === $currentUserId
+                && (
+                    in_array($order->status, [Purchase::STATUS_AWAITING_PAYMENT], true)
+                    || (
+                        $order->payment_method === 'cod'
+                        && $order->status === Purchase::STATUS_PENDING
+                        && $order->cod_seller_accepted_at !== null
+                    )
+                ),
+            'can_mark_delivered' => $order->seller_id === $currentUserId
+                && $order->status === Purchase::STATUS_SHIPPED,
+            'can_review_seller' => $canReviewSeller,
         ];
     }
 }

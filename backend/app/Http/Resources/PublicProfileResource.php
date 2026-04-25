@@ -25,7 +25,7 @@ class PublicProfileResource extends JsonResource
             'region' => $regionName,
             'location_lat' => $this->location_lat,
             'location_lng' => $this->location_lng,
-            'is_online' => $this->is_online ?? false,
+            'is_online' => $this->resource->appearsOnline(),
             'last_seen' => $this->last_seen?->toISOString(),
             'last_seen_human' => $this->last_seen?->diffForHumans(),
             'is_verified' => $this->is_verified ?? false,

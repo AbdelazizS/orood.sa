@@ -13,9 +13,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import apiClient from "@/lib/apiClient"
 import { useAuthStore } from "@/store/useAuthStore"
+import { cn } from "@/lib/utils"
 import { resolveImageUrl } from "@/lib/imageUrl"
+import { toast } from "sonner"
 import { timeAgo } from "@/lib/timeAgo"
 import {
   useDeleteComment,
@@ -29,18 +41,92 @@ import {
   Loader2,
   ThumbsUp,
   ThumbsDown,
-  Share2,
   Pencil,
   RefreshCw,
   Trash2,
   MoreVertical,
+  Share2,
+  Flag,
 } from "lucide-react"
 import { ShareModal } from "./ShareModal"
+import { ListingReportDialog } from "./ListingReportDialog"
+
+function CommentVoteControls({ comment, isBusy, onVote, t }) {
+  const vote = comment.has_liked ?? comment.hasLiked
+  const likes = comment.likes_count ?? comment.likes ?? 0
+  const dislikes = comment.dislikes_count ?? comment.dislikes ?? 0
+
+  return (
+    <div className="flex shrink-0 flex-row items-center gap-1.5" dir="ltr" onClick={(e) => e.stopPropagation()}>
+      <div
+        className={cn(
+          "inline-flex items-center rounded-full border border-border/70 bg-muted/40 p-0.5 shadow-sm",
+          isBusy && "pointer-events-none opacity-70"
+        )}
+      >
+        <button
+          type="button"
+          disabled={isBusy}
+          aria-pressed={vote === true}
+          aria-label={t("comments.like", "Like")}
+          onClick={() => onVote(true)}
+          className={cn(
+            "flex min-h-[44px] min-w-[44px] flex-col items-center justify-center rounded-full px-2 py-1",
+            "transition-all duration-150 ease-out active:scale-[0.88]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2",
+            vote === true
+              ? "bg-primary text-primary-foreground shadow-sm ring-2 ring-primary/25 hover:bg-primary/90"
+              : "text-muted-foreground hover:bg-background/90 hover:text-foreground"
+          )}
+        >
+          <ThumbsUp className={cn("size-4 transition-transform duration-150", vote === true && "scale-110")} strokeWidth={vote === true ? 2.25 : 2} />
+          <span
+            className={cn("tabular-nums text-[10px] font-medium leading-none", vote === true && "text-primary-foreground")}
+            key={likes}
+          >
+            {likes}
+          </span>
+        </button>
+        <button
+          type="button"
+          disabled={isBusy}
+          aria-pressed={vote === false}
+          aria-label={t("comments.dislike", "Dislike")}
+          onClick={() => onVote(false)}
+          className={cn(
+            "flex min-h-[44px] min-w-[44px] flex-col items-center justify-center rounded-full px-2 py-1",
+            "transition-all duration-150 ease-out active:scale-[0.88]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40 focus-visible:ring-offset-2",
+            vote === false
+              ? "bg-destructive text-destructive-foreground shadow-sm ring-2 ring-destructive/25 hover:bg-destructive/90"
+              : "text-muted-foreground hover:bg-background/90 hover:text-foreground"
+          )}
+        >
+          <ThumbsDown
+            className={cn(
+              "size-4 stroke-current transition-transform duration-150",
+              vote === false && "scale-110 text-destructive-foreground"
+            )}
+            strokeWidth={vote === false ? 2.25 : 2}
+          />
+          <span
+            className={cn(
+              "tabular-nums text-[10px] font-medium leading-none",
+              vote === false && "text-destructive-foreground"
+            )}
+            key={dislikes}
+          >
+            {dislikes}
+          </span>
+        </button>
+      </div>
+      {isBusy ? <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" aria-hidden /> : null}
+    </div>
+  )
+}
 
 /**
- * Section 8 — Comments.
- * Comments ABOVE input. Bid comments green. Like/dislike VERTICAL.
- * Publisher tools at bottom.
+ * Section 8 — Comments (PDF): title row → list → textarea → send → owner tools row (owner only).
  */
 export function CommentsSection({ product }) {
   const { t } = useTranslation()
@@ -51,11 +137,16 @@ export function CommentsSection({ product }) {
   const [commentText, setCommentText] = useState("")
   const [editingId, setEditingId] = useState(null)
   const [editingText, setEditingText] = useState("")
+  const [replyingToId, setReplyingToId] = useState(null)
+  const [replyText, setReplyText] = useState("")
   const [shareOpen, setShareOpen] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
+  const [deleteListingOpen, setDeleteListingOpen] = useState(false)
 
   const isOwner = token && (user?.id === product?.seller?.id || user?.id === product?.user_id)
   const { data, isLoading: commentsLoading } = useListingComments(product?.id)
-  const comments = data?.comments ?? []
+  const comments = useMemo(() => data?.comments ?? [], [data])
+  const bidsPubliclyVisible = data?.meta?.bidding_visible ?? true
 
   const postComment = usePostComment(product?.id)
   const deleteComment = useDeleteComment()
@@ -65,7 +156,24 @@ export function CommentsSection({ product }) {
 
   const bumpMutation = useMutation({
     mutationFn: () => apiClient.post(`/products/${product.id}/bump`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["product", product.id] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["product", product.id] })
+      toast.success(t("listingDetail.bumpSuccess", "تم تحديث ظهور الإعلان"))
+    },
+    onError: () => toast.error(t("common.errorGeneric", "حدث خطأ")),
+  })
+
+  const deleteListingMutation = useMutation({
+    mutationFn: () => apiClient.delete(`/products/${product.id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] })
+      setDeleteListingOpen(false)
+      toast.success(t("admin.deleteSuccess", "تم الحذف"))
+      navigate("/dashboard/listings", { replace: true })
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.message ?? t("admin.deleteError", "تعذر حذف الإعلان"))
+    },
   })
 
   const regularItems = useMemo(
@@ -76,10 +184,23 @@ export function CommentsSection({ product }) {
     () =>
       comments
         .filter((c) => c.type === "BID")
+        .filter(() => bidsPubliclyVisible || isOwner)
         .sort((a, b) => (Number(a.bid_amount ?? 0) - Number(b.bid_amount ?? 0)) || (new Date(a.created_at) - new Date(b.created_at))),
-    [comments]
+    [bidsPubliclyVisible, comments, isOwner]
   )
-  const allItems = [...regularItems, ...bidItems]
+  const allItems = useMemo(() => {
+    // When bidding is enabled, bids are shown only in BidSection (API); hide BID comment duplicates here.
+    const bidStream = product?.accept_bids ? [] : bidItems
+    const merged = [...regularItems, ...bidStream]
+    return merged.sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+  }, [regularItems, bidItems, product?.accept_bids])
+  const getDisplayName = (person) => {
+    const username = person?.username?.trim()
+    if (username) return username
+    const name = person?.name?.trim()
+    if (name) return name
+    return t("comments.guest", "زائر")
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -87,8 +208,44 @@ export function CommentsSection({ product }) {
     postComment.mutate({ body: commentText.trim() }, { onSuccess: () => setCommentText("") })
   }
 
+  const handleReplySubmit = (commentId) => {
+    if (!token || !replyText.trim()) return
+    postComment.mutate(
+      { body: replyText.trim(), parent_id: commentId },
+      {
+        onSuccess: () => {
+          setReplyText("")
+          setReplyingToId(null)
+        },
+      }
+    )
+  }
+
   return (
     <>
+      <div dir={direction} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 sm:px-6">
+        <h3 className="text-sm font-semibold text-foreground">
+          {t("comments.title", "التعليقات")}
+        </h3>
+        {!isOwner ? (
+          <div className="flex flex-wrap items-center justify-end gap-1 sm:gap-2">
+            <Button variant="ghost" size="sm" className="h-8 gap-1 px-2 text-xs" onClick={() => setShareOpen(true)}>
+              <Share2 className="size-[13px]" />
+              {t("share.title", "مشاركة")}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1 px-2 text-xs text-muted-foreground"
+              onClick={() => setReportOpen(true)}
+            >
+              <Flag className="size-[13px]" />
+              {t("common.report", "بلاغ")}
+            </Button>
+          </div>
+        ) : null}
+      </div>
+
       {commentsLoading ? (
         <div className="flex justify-center py-8">
           <Loader2 className="size-6 animate-spin text-muted-foreground" />
@@ -101,16 +258,21 @@ export function CommentsSection({ product }) {
                 key={item.id}
                 className="mx-4 my-2 rounded-lg border border-primary/20 bg-primary/10 px-3 py-2 sm:mx-6"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-primary">
-                    {item.bid_amount} {t("common.currency", "ريال")}
-                  </span>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 flex-col">
+                    <span className="w-fit rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                      {t("bids.commentTag")}
+                    </span>
+                    <span className="mt-1 text-sm font-bold text-primary">
+                      {Math.round(Number(item.bid_amount ?? 0)).toLocaleString()} {t("common.currency", "ريال")}
+                    </span>
+                  </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">
                       {timeAgo(item.created_at, t)}
                     </span>
                     <span className="text-sm font-semibold">
-                      {item.user?.username ?? item.user?.name ?? "زائر"}
+                      {getDisplayName(item.user)}
                     </span>
                     <Avatar className="size-6">
                       {item.user?.avatar_url ? (
@@ -121,7 +283,7 @@ export function CommentsSection({ product }) {
                         />
                       ) : null}
                       <AvatarFallback className="bg-primary text-xs text-primary-foreground">
-                        {(item.user?.username ?? item.user?.name ?? "?").charAt(0)}
+                        {getDisplayName(item.user).charAt(0)}
                       </AvatarFallback>
                     </Avatar>
                   </div>
@@ -147,12 +309,14 @@ export function CommentsSection({ product }) {
                 </Avatar>
                 <div className="min-w-0 flex-1 text-start">
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0">
-                    <span className="text-sm font-semibold">{item.user?.username ?? item.user?.name ?? "زائر"}</span>
+                    <span className="text-sm font-semibold">{getDisplayName(item.user)}</span>
                     <span className="text-xs text-muted-foreground">
                       {timeAgo(item.created_at, t)}
                     </span>
                     {item.is_hidden_for_viewer && (
-                      <span className="text-[11px] font-semibold text-muted-foreground">مخفي</span>
+                      <span className="text-[11px] font-semibold text-muted-foreground">
+                        {t("comments.hidden", "Hidden")}
+                      </span>
                     )}
                   </div>
                   {editingId === item.id ? (
@@ -175,14 +339,14 @@ export function CommentsSection({ product }) {
                           }}
                           disabled={!editingText.trim() || editComment.isPending}
                         >
-                          حفظ
+                          {t("common.save", "Save")}
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => setEditingId(null)}
                         >
-                          إلغاء
+                          {t("common.cancel", "Cancel")}
                         </Button>
                       </div>
                     </div>
@@ -193,49 +357,90 @@ export function CommentsSection({ product }) {
                     <div className="mt-2 space-y-2">
                       {item.replies.map((r) => (
                         <div key={r.id} className="ms-10 rounded-md border border-primary/15 bg-primary/5 px-3 py-2">
-                          <p className="text-xs font-semibold text-primary">{t("comments.team", "فريق المنصة")}</p>
+                          <p className="text-xs font-semibold text-primary">
+                            {r.type === "TEAM_REPLY"
+                              ? t("comments.team", "فريق المنصة")
+                              : getDisplayName(r.user)}
+                          </p>
                           <p className="mt-0.5 text-sm text-foreground">{r.body}</p>
                         </div>
                       ))}
                     </div>
                   )}
+                  {token && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => {
+                          if (replyingToId === item.id) {
+                            setReplyingToId(null)
+                            setReplyText("")
+                            return
+                          }
+                          setReplyingToId(item.id)
+                          setReplyText("")
+                        }}
+                      >
+                        {t("comments.reply", "رد")}
+                      </Button>
+                    </div>
+                  )}
+                  {token && replyingToId === item.id && (
+                    <div className="mt-2 space-y-2">
+                      <Textarea
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        rows={2}
+                        dir={direction}
+                        className="resize-none text-sm"
+                        placeholder={t("comments.replyingTo", "الرد على تعليق")}
+                      />
+                      <div className="flex gap-2 rtl:flex-row-reverse">
+                        <Button
+                          size="sm"
+                          onClick={() => handleReplySubmit(item.id)}
+                          disabled={!replyText.trim() || postComment.isPending}
+                        >
+                          {t("comments.post", "إرسال")}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setReplyingToId(null)
+                            setReplyText("")
+                          }}
+                        >
+                          {t("common.cancel", "إلغاء")}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="flex shrink-0 flex-row items-center gap-4" dir="ltr">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!token) return
-                      likeComment.mutate({ id: item.id, listingId: product.id, is_like: true })
-                    }}
-                    className={`flex flex-col items-center gap-0.5 transition-colors hover:opacity-80 ${
-                      item.hasLiked === true ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                    }`}
-                    aria-label={t("comments.like", "Like")}
-                  >
-                    <ThumbsUp className="size-4" />
-                    <span className="text-[10px]">{item.likes_count ?? item.likes ?? 0}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!token) return
-                      likeComment.mutate({ id: item.id, listingId: product.id, is_like: false })
-                    }}
-                    className="flex flex-col items-center gap-0.5 text-muted-foreground transition-colors hover:text-foreground"
-                    aria-label={t("comments.dislike", "Dislike")}
-                  >
-                    <ThumbsDown className="size-4" />
-                    <span className="text-[10px]">{item.dislikes_count ?? item.dislikes ?? 0}</span>
-                  </button>
-                </div>
+                <CommentVoteControls
+                  comment={item}
+                  isBusy={likeComment.isPending && likeComment.variables?.id === item.id}
+                  onVote={(isLike) => {
+                    if (!token) {
+                      toast.info(t("comments.loginToVote", "Sign in to react to comments"))
+                      navigate("/login", { state: { from: `/products/${product.id}` } })
+                      return
+                    }
+                    likeComment.mutate({ id: item.id, listingId: product.id, is_like: isLike })
+                  }}
+                  t={t}
+                />
                 {token && (
                   <div className="ms-2 shrink-0">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <button
                           type="button"
-                          className="rounded-md p-1 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                          aria-label="menu"
+                          className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                          aria-label={t("comments.actionsMenu", "Comment actions")}
                         >
                           <MoreVertical className="size-4" />
                         </button>
@@ -249,13 +454,13 @@ export function CommentsSection({ product }) {
                                 setEditingText(item.body ?? "")
                               }}
                             >
-                              تعديل
+                              {t("comments.edit", "Edit")}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-destructive"
                               onClick={() => deleteComment.mutate({ id: item.id, listingId: product.id })}
                             >
-                              حذف
+                              {t("comments.delete", "Delete")}
                             </DropdownMenuItem>
                           </>
                         )}
@@ -264,13 +469,15 @@ export function CommentsSection({ product }) {
                             <DropdownMenuItem
                               onClick={() => toggleVisibility.mutate({ id: item.id, listingId: product.id })}
                             >
-                              {item.is_visible === false ? "إظهار" : "إخفاء"}
+                              {item.is_visible === false
+                                ? t("comments.show", "Show")
+                                : t("comments.hide", "Hide")}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-destructive"
                               onClick={() => deleteComment.mutate({ id: item.id, listingId: product.id })}
                             >
-                              حذف
+                              {t("comments.delete", "Delete")}
                             </DropdownMenuItem>
                           </>
                         )}
@@ -283,12 +490,6 @@ export function CommentsSection({ product }) {
           )}
         </div>
       ) : null}
-
-      <div dir={direction} className="px-4 pt-4 sm:px-6">
-        <h3 className="text-base font-semibold text-start">
-          {t("comments.title", "التعليقات")}
-        </h3>
-      </div>
 
       {token && (
         <div className="flex flex-col gap-2 px-4 py-4 sm:px-6">
@@ -319,54 +520,68 @@ export function CommentsSection({ product }) {
         </p>
       )}
 
-      <div className="flex items-center justify-between border-t border-border px-4 py-4 sm:px-6">
-        <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-1 text-xs"
-            onClick={() => setShareOpen(true)}
-          >
-            <Share2 className="size-[13px]" />
-            {t("share.title", "مشاركة")}
-          </Button>
-          {isOwner && (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1 text-xs"
-                onClick={() => navigate(`/products/${product.id}/edit`, { replace: true })}
-              >
-                <Pencil className="size-[13px]" />
-                {t("admin.editListing", "تعديل")}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1 text-xs"
-                onClick={() => bumpMutation.mutate()}
-                disabled={bumpMutation.isPending}
-              >
-                <RefreshCw className="size-[13px]" />
-                {t("profile.update", "تحديث")}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1 text-xs text-destructive"
-                onClick={() => {}}
-              >
-                <Trash2 className="size-[13px]" />
-                {t("admin.deleteListing", "حذف")}
-              </Button>
-            </>
-          )}
+      {isOwner && (
+        <div dir={direction} className="space-y-2 border-t border-border px-4 pb-4 pt-3 sm:px-6">
+          <div className="flex flex-wrap items-center justify-start gap-1 sm:gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-destructive hover:text-destructive"
+              onClick={() => setDeleteListingOpen(true)}
+            >
+              <Trash2 className="me-1 size-[13px]" />
+              {t("admin.deleteListing", "حذف")}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1 text-xs"
+              onClick={() => bumpMutation.mutate()}
+              disabled={bumpMutation.isPending}
+            >
+              <RefreshCw className="size-[13px]" />
+              {t("profile.update", "تحديث")}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1 text-xs"
+              onClick={() => navigate(`/products/${product.id}/edit`, { replace: true })}
+            >
+              <Pencil className="size-[13px]" />
+              {t("admin.editListing", "تعديل")}
+            </Button>
+            <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => setShareOpen(true)}>
+              <Share2 className="size-[13px]" />
+              {t("share.title", "مشاركة")}
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
+
+      <ShareModal open={shareOpen} onOpenChange={setShareOpen} product={product} />
+      <ListingReportDialog open={reportOpen} onOpenChange={setReportOpen} listingId={product?.id} />
+
+      <AlertDialog open={deleteListingOpen} onOpenChange={setDeleteListingOpen}>
+        <AlertDialogContent dir={direction}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("admin.deleteConfirm", "حذف العرض؟")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("admin.deleteConfirmDesc", "لا يمكن التراجع عن هذا الإجراء.")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel", "إلغاء")}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteListingMutation.isPending}
+              onClick={() => deleteListingMutation.mutate()}
+            >
+              {deleteListingMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : t("profile.delete", "حذف")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Separator />
-      <ShareModal open={shareOpen} onOpenChange={setShareOpen} product={product} />
     </>
   )
 }

@@ -1,9 +1,10 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import apiClient from "@/lib/apiClient"
+import { isProfileIdentifierNumeric } from "@/lib/profileRoutes"
 
-function isValidUsername(username) {
-  if (typeof username !== "string") return false
-  const value = username.trim()
+function isValidIdentifier(identifier) {
+  if (typeof identifier !== "string") return false
+  const value = identifier.trim()
   if (!value) return false
   if (value === "undefined" || value === "null") return false
   return true
@@ -15,52 +16,96 @@ function extractProfileData(response) {
   return response
 }
 
-export function useProfile(username) {
-  const validUsername = isValidUsername(username) ? username.trim() : ""
-  return useQuery({
-    queryKey: ["profile", validUsername],
-    queryFn: async () => {
-      if (!validUsername) throw new Error("Username is required")
+export function getProfileQueryKey(identifier) {
+  const raw = typeof identifier === "string" ? identifier.trim() : ""
+  if (!isValidIdentifier(raw)) return ["profile", "invalid", ""]
+  return isProfileIdentifierNumeric(raw) ? ["profile", "id", raw] : ["profile", "username", raw]
+}
 
-      const response = await apiClient.get(`/api/profile/${validUsername}`)
+/**
+ * Public profile by username or numeric user id (matches GET /profile/{username} or /profile/by-id/{id}).
+ */
+export function useProfile(identifier) {
+  const raw = isValidIdentifier(identifier) ? identifier.trim() : ""
+  const byId = isProfileIdentifierNumeric(raw)
+
+  return useQuery({
+    queryKey: getProfileQueryKey(raw),
+    queryFn: async () => {
+      if (!raw) throw new Error("Profile identifier is required")
+
+      const path = byId ? `/profile/by-id/${raw}` : `/profile/${encodeURIComponent(raw)}`
+      const response = await apiClient.get(path, { timeout: 30_000 })
       const payload = response?.data
       if (payload?.success === false) {
         throw new Error(payload?.message || "Failed to load profile")
       }
       return extractProfileData(response)
     },
-    enabled: !!validUsername,
+    enabled: !!raw,
     retry: 1,
     staleTime: 60_000,
   })
 }
 
-export function useProfileListings(username) {
-  const validUsername = isValidUsername(username) ? username.trim() : ""
+export function useProfileListings(identifier) {
+  const raw = isValidIdentifier(identifier) ? identifier.trim() : ""
+  const byId = isProfileIdentifierNumeric(raw)
+
   return useInfiniteQuery({
-    queryKey: ["profile-listings", validUsername],
+    queryKey: [...getProfileQueryKey(raw), "listings"],
     queryFn: async ({ pageParam = 1 }) => {
-      const response = await apiClient.get(`/api/profile/${validUsername}/listings`, { params: { page: pageParam } })
-      return response?.data?.data ?? response?.data?.listings ?? []
+      const path = byId
+        ? `/profile/by-id/${raw}/listings`
+        : `/profile/${encodeURIComponent(raw)}/listings`
+      const response = await apiClient.get(path, { params: { page: pageParam } })
+      const body = response?.data ?? {}
+      const listings = Array.isArray(body.listings) ? body.listings : []
+      const pagination = body.pagination ?? {
+        current_page: pageParam,
+        last_page: listings.length > 0 ? pageParam : pageParam,
+        total: listings.length,
+      }
+      return { listings, pagination }
     },
-    getNextPageParam: (lastPage, allPages) => {
-      if (!Array.isArray(lastPage) || lastPage.length < 12) return undefined
-      return allPages.length + 1
+    getNextPageParam: (lastPage) => {
+      const cur = Number(lastPage?.pagination?.current_page ?? 1)
+      const last = Number(lastPage?.pagination?.last_page ?? 1)
+      return cur < last ? cur + 1 : undefined
     },
-    enabled: !!validUsername,
+    initialPageParam: 1,
+    enabled: !!raw,
     retry: 1,
   })
 }
 
-export function useProfileReviews(username) {
-  const validUsername = isValidUsername(username) ? username.trim() : ""
-  return useQuery({
-    queryKey: ["profile-reviews", validUsername],
-    queryFn: async () => {
-      const response = await apiClient.get(`/api/profile/${validUsername}/reviews`)
-      return response?.data?.data ?? response?.data?.reviews ?? []
+export function useProfileReviews(identifier) {
+  const raw = isValidIdentifier(identifier) ? identifier.trim() : ""
+  const byId = isProfileIdentifierNumeric(raw)
+
+  return useInfiniteQuery({
+    queryKey: [...getProfileQueryKey(raw), "reviews"],
+    queryFn: async ({ pageParam = 1 }) => {
+      const path = byId
+        ? `/profile/by-id/${raw}/reviews`
+        : `/profile/${encodeURIComponent(raw)}/reviews`
+      const response = await apiClient.get(path, { params: { page: pageParam } })
+      const body = response?.data ?? {}
+      const reviews = Array.isArray(body.reviews) ? body.reviews : []
+      const pagination = body.pagination ?? {
+        current_page: pageParam,
+        last_page: reviews.length > 0 ? pageParam : pageParam,
+        total: reviews.length,
+      }
+      return { reviews, pagination }
     },
-    enabled: !!validUsername,
+    getNextPageParam: (lastPage) => {
+      const cur = Number(lastPage?.pagination?.current_page ?? 1)
+      const last = Number(lastPage?.pagination?.last_page ?? 1)
+      return cur < last ? cur + 1 : undefined
+    },
+    initialPageParam: 1,
+    enabled: !!raw,
     retry: 1,
   })
 }

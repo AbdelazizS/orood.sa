@@ -1,51 +1,63 @@
 import { Link, useLocation } from "react-router-dom"
 import { useTranslation } from "react-i18next"
+import { useQueryClient } from "@tanstack/react-query"
 import { cn } from "@/lib/utils"
 import { useAuthStore } from "@/store/useAuthStore"
 import * as authService from "@/services/authService"
 import { useNavigate } from "react-router-dom"
-import {
-  LayoutDashboard,
-  Package,
-  Heart,
-  Search,
-  MessageSquare,
-  Settings,
-  Shield,
-  BarChart3,
-  Bell,
-  LogOut,
-} from "lucide-react"
+import { LogOut } from "lucide-react"
+import { resolveImageUrl } from "@/lib/imageUrl"
+import { dashboardUserNavLinks } from "@/navigation/dashboardUserNavLinks"
 
-export const sidebarLinks = [
-  { to: "/dashboard", labelKey: "dashboard.overview", icon: LayoutDashboard },
-  { to: "/dashboard/orders", labelKey: "dashboard.orderTracking", icon: Package },
-  { to: "/dashboard/balance", labelKey: "dashboard.balance", icon: BarChart3 },
-  { to: "/dashboard/profile", labelKey: "dashboard.personalData", icon: Settings },
-  { to: "/dashboard/verification", labelKey: "dashboard.verification", icon: Shield },
-  { to: "/dashboard/messages", labelKey: "dashboard.messages", icon: MessageSquare },
-  { to: "/dashboard/notifications", labelKey: "dashboard.notifications", icon: Bell },
-  { to: "/dashboard/listings", labelKey: "dashboard.listings", icon: Package },
-  { to: "/dashboard/favorites", labelKey: "dashboard.favorites", icon: Heart },
-  { to: "/dashboard/saved-searches", labelKey: "dashboard.savedSearches", icon: Search },
-]
+/** @deprecated Use dashboardUserNavLinks from @/navigation/dashboardUserNavLinks */
+export const sidebarLinks = dashboardUserNavLinks
 
 export function AccountSideMenu({ className, onNavClick }) {
   const { t } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { user } = useAuthStore()
+
+  const memberSince =
+    user?.created_at != null
+      ? new Date(user.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short" })
+      : null
 
   return (
     <div className={cn("flex w-full flex-col gap-2", className)}>
-      <div className="mb-4 px-3">
+      {user && (
+        <div className="mb-2 flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-3 py-3">
+          {user.avatar_url ? (
+            <img
+              src={resolveImageUrl(user.avatar_url)}
+              alt=""
+              className="size-11 shrink-0 rounded-full object-cover ring-2 ring-background"
+            />
+          ) : (
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground ring-2 ring-background">
+              {(user.name || "?").slice(0, 1).toUpperCase()}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-semibold text-foreground">{user.name}</p>
+            {memberSince && (
+              <p className="truncate text-xs text-muted-foreground">
+                {t("dashboard.memberSince", "Member since {{date}}", { date: memberSince })}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="mb-2 px-3">
         <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           {t("dashboard.menu", "قائمة الحساب")}
         </h3>
       </div>
       
       <div className="space-y-1">
-        {sidebarLinks.map((link) => {
+        {dashboardUserNavLinks.map((link) => {
           const isActive = link.to === "/dashboard"
             ? location.pathname === link.to
             : location.pathname === link.to || location.pathname.startsWith(link.to + "/")
@@ -70,8 +82,7 @@ export function AccountSideMenu({ className, onNavClick }) {
       <div className="mt-8 border-t border-border pt-4">
         <button
           onClick={() => {
-            authService.logout()
-            navigate("/", { replace: true })
+            authService.performLogout({ navigate, replaceTo: "/", queryClient })
             if (onNavClick) onNavClick()
           }}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-destructive transition-all hover:bg-destructive/10"

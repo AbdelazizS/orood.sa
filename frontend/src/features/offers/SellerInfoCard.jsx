@@ -5,6 +5,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { MapPin, Clock, Package } from "lucide-react"
 import { VerificationBadge } from "@/components/auth/VerificationBadge"
 import { resolveImageUrl } from "@/lib/imageUrl"
+import { publicProfilePath } from "@/lib/profileRoutes"
+import { getSellerPresenceUi } from "@/lib/sellerPresence"
 
 /**
  * Seller info: city, online status, completed requests, verification.
@@ -15,8 +17,16 @@ export function SellerInfoCard({ product }) {
   if (!seller) return null
 
   const cityName = seller.city?.name ?? product?.location
-  const lastSeen = seller.last_seen ?? t("productDetails.onlineNow", "متصل الآن")
+  const presence = getSellerPresenceUi(seller, t)
   const completedOrders = seller.completed_orders ?? 0
+
+  const presenceLine = presence.showOnline
+    ? t("listingDetail.onlineNow", "متصل الآن")
+    : presence.lastSeenParagraph
+      ? presence.lastSeenParagraph
+      : presence.showOfflineBadge
+        ? t("listingDetail.offline", "غير متصل")
+        : null
 
   return (
     <Card>
@@ -32,7 +42,7 @@ export function SellerInfoCard({ product }) {
           </Avatar>
           <div className="min-w-0 flex-1">
             <Link
-              to={seller.username ? `/profile/${seller.username}` : "/"}
+              to={publicProfilePath(seller) ?? "/"}
               className="font-semibold hover:underline truncate block"
             >
               {seller.name}
@@ -44,10 +54,14 @@ export function SellerInfoCard({ product }) {
                   {cityName}
                 </span>
               )}
-              <span className="flex items-center gap-1">
-                <Clock className="size-3.5" />
-                {lastSeen}
-              </span>
+              {presenceLine ? (
+                <span
+                  className={`flex items-center gap-1 ${presence.showOnline ? "text-primary font-medium" : ""}`}
+                >
+                  <Clock className="size-3.5 shrink-0" aria-hidden />
+                  {presenceLine}
+                </span>
+              ) : null}
               <span className="flex items-center gap-1">
                 <Package className="size-3.5" />
                 {t("productDetails.completedRequests", "الطلبات المكتملة")}: {completedOrders}

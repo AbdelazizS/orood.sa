@@ -4,12 +4,20 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Balance;
+use App\Models\ChargeRequest;
 use App\Models\DocumentVerification;
-use App\Models\Guarantee;
+use App\Models\Notification;
+use App\Models\GuaranteeRequest;
 use App\Models\PageVisit;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\Transaction;
+use App\Models\Bid;
+use App\Models\Permission;
+use App\Models\WithdrawalRequest;
+use App\Support\InAppNotificationPayload;
+use App\Services\GuaranteeWallet;
+use App\Services\PurchaseFulfillment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -63,6 +71,12 @@ class AccountController extends Controller
             'company_city' => $validated['company_city'] ?? null,
             'company_product_type' => $validated['company_product_type'] ?? null,
         ]);
+
+        foreach (Permission::userIdsHavingPermission('compliance.review_document_verifications') as $staffUserId) {
+            Notification::create(
+                InAppNotificationPayload::documentVerificationPendingForStaff((int) $staffUserId, $verification, $user)
+            );
+        }
 
         RateLimiter::hit($key, 3600);
 
@@ -128,93 +142,85 @@ class AccountController extends Controller
     }
 
     /**
-     * Deposit financial guarantee.
+     * List current user's financial guarantee requests (deposit / refund).
      */
-    public function depositGuarantee(Request $request): JsonResponse
+    public function guaranteeRequestsIndex(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'amount' => ['required', 'numeric', 'min:100'],
-        ]);
+        $rows = GuaranteeRequest::query()
+            ->where('user_id', $request->user()->id)
+            ->orderByDesc('id')
+            ->limit(100)
+            ->get();
 
-        $user = $request->user();
-        $amount = (float) $validated['amount'];
-        $balance = Balance::getOrCreateForUser($user->id);
-        if ((float) $balance->available < $amount) {
-            return response()->json(['message' => __('Insufficient balance.')], 422);
-        }
-
-        DB::transaction(function () use ($user, $balance, $amount) {
-            Guarantee::create([
-                'user_id' => $user->id,
-                'amount' => $amount,
-                'status' => Guarantee::STATUS_ACTIVE,
-            ]);
-            $user->increment('financial_guarantee', $amount);
-            $balance->decrement('available', $amount);
-            Transaction::create([
-                'user_id' => $user->id,
-                'type' => Transaction::TYPE_GUARANTEE_DEPOSIT,
-                'amount' => -$amount,
-                'description' => __('Deposit to financial guarantee'),
-            ]);
-        });
-
-        return response()->json([
-            'message' => __('Guarantee deposited successfully.'),
-            'data' => [
-                'financial_guarantee' => (float) $user->fresh()->financial_guarantee,
-            ],
-        ], 201);
+        return response()->json(['data' => $rows]);
     }
 
     /**
-     * Refund financial guarantee to balance.
+     * Submit a deposit or refund request (requires admin approval).
      */
-    public function refundGuarantee(Request $request): JsonResponse
+    public function guaranteeRequestsStore(Request $request): JsonResponse
     {
+        $validated = $request->validate([
+            'type' => ['required', 'string', 'in:deposit,refund'],
+            'amount' => ['required_if:type,deposit', 'nullable', 'numeric', 'min:100'],
+        ]);
+
         $user = $request->user();
-        $amount = (float) ($user->financial_guarantee ?? 0);
 
-        if ($amount <= 0) {
-            return response()->json(['message' => __('No guarantee to refund.')], 422);
-        }
-
-        // Check for pending orders where seller might need guarantee
-        $pendingAsSeller = Purchase::where('seller_id', $user->id)
-            ->whereIn('status', ['pending', 'paid', 'shipped', 'delivered'])
+        $hasPending = GuaranteeRequest::query()
+            ->where('user_id', $user->id)
+            ->where('status', GuaranteeRequest::STATUS_PENDING)
             ->exists();
 
-        if ($pendingAsSeller) {
+        if ($hasPending) {
             return response()->json([
-                'message' => __('Cannot refund guarantee while you have pending orders.'),
+                'message' => __('You already have a pending guarantee request.'),
             ], 422);
         }
 
-        DB::transaction(function () use ($user, $amount) {
-            Guarantee::where('user_id', $user->id)
-                ->where('status', Guarantee::STATUS_ACTIVE)
-                ->update(['status' => Guarantee::STATUS_REFUNDED, 'refunded_at' => now()]);
+        if ($validated['type'] === GuaranteeRequest::TYPE_REFUND) {
+            if ((float) ($user->financial_guarantee ?? 0) <= 0) {
+                return response()->json(['message' => __('No guarantee to refund.')], 422);
+            }
 
-            $user->update(['financial_guarantee' => 0]);
-
-            $balance = Balance::getOrCreateForUser($user->id);
-            $balance->increment('available', $amount);
-
-            Transaction::create([
+            $row = GuaranteeRequest::create([
                 'user_id' => $user->id,
-                'type' => Transaction::TYPE_GUARANTEE_WITHDRAWAL,
-                'amount' => $amount,
-                'description' => __('Guarantee refunded to balance'),
+                'type' => GuaranteeRequest::TYPE_REFUND,
+                'amount' => null,
+                'status' => GuaranteeRequest::STATUS_PENDING,
             ]);
-        });
+
+            foreach (Permission::userIdsHavingPermission('compliance.review_guarantee_requests') as $staffUserId) {
+                Notification::create(
+                    InAppNotificationPayload::guaranteeRequestPendingForStaff((int) $staffUserId, $row, $user)
+                );
+            }
+
+            return response()->json([
+                'message' => __('Refund request submitted. Awaiting admin approval.'),
+                'data' => $row,
+            ], 201);
+        }
+
+        $amount = (float) $validated['amount'];
+
+        $row = GuaranteeRequest::create([
+            'user_id' => $user->id,
+            'type' => GuaranteeRequest::TYPE_DEPOSIT,
+            'amount' => $amount,
+            'status' => GuaranteeRequest::STATUS_PENDING,
+        ]);
+
+        foreach (Permission::userIdsHavingPermission('compliance.review_guarantee_requests') as $staffUserId) {
+            Notification::create(
+                InAppNotificationPayload::guaranteeRequestPendingForStaff((int) $staffUserId, $row, $user)
+            );
+        }
 
         return response()->json([
-            'message' => __('Guarantee refunded to your balance.'),
-            'data' => [
-                'financial_guarantee' => 0,
-                'balance' => (float) Balance::getOrCreateForUser($user->id)->available,
-            ],
-        ]);
+            'message' => __('Deposit request submitted. Awaiting admin approval.'),
+            'data' => $row,
+        ], 201);
     }
 
     /**
@@ -225,7 +231,7 @@ class AccountController extends Controller
         $user = $request->user();
         $amount = (float) ($user->financial_guarantee ?? 0);
         $pendingAsSeller = Purchase::where('seller_id', $user->id)
-            ->whereIn('status', ['pending', 'paid', 'shipped', 'delivered'])
+            ->whereIn('status', ['pending', 'cod_requested', 'awaiting_payment', 'shipped', 'delivered'])
             ->exists();
 
         return response()->json([
@@ -246,12 +252,26 @@ class AccountController extends Controller
         $balance = Balance::getOrCreateForUser($user->id);
         $guarantee = (float) ($user->financial_guarantee ?? 0);
 
+        $pendingWithdrawals = (float) WithdrawalRequest::where('user_id', $user->id)
+            ->where('status', WithdrawalRequest::STATUS_PENDING)
+            ->sum('amount');
+        $pendingCharges = (float) ChargeRequest::where('user_id', $user->id)
+            ->where('status', ChargeRequest::STATUS_PENDING)
+            ->sum('amount');
+
         return response()->json([
             'data' => [
                 'available' => (float) $balance->available,
                 'escrow' => (float) $balance->escrow,
                 'withdrawable' => (float) ($balance->withdrawable ?? 0),
                 'financial_guarantee' => $guarantee,
+                'pending_withdrawals' => $pendingWithdrawals,
+                'pending_charges' => $pendingCharges,
+                'bank_transfer' => [
+                    'account_name' => config('finance.bank_transfer.account_name'),
+                    'bank_name' => config('finance.bank_transfer.bank_name'),
+                    'iban' => config('finance.bank_transfer.iban'),
+                ],
             ],
         ]);
     }
@@ -265,29 +285,60 @@ class AccountController extends Controller
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'min:10'],
             'payment_method' => ['nullable', 'string', 'in:card,mada,apple_pay,voucher'],
+            'payer_bank_name' => ['required', 'string', 'max:255'],
+            'transfer_reference' => ['required', 'string', 'max:255'],
+            'receipt_url' => ['nullable', 'string', 'max:500'],
+            'note' => ['nullable', 'string', 'max:2000'],
+            'idempotency_key' => ['nullable', 'string', 'max:191'],
         ]);
 
         $user = $request->user();
-        $balance = Balance::getOrCreateForUser($user->id);
         $amount = (float) $validated['amount'];
+        $idempotencyKey = $request->header('Idempotency-Key')
+            ?: ($validated['idempotency_key'] ?? null);
+        if ($idempotencyKey !== null && strlen($idempotencyKey) < 8) {
+            return response()->json(['message' => __('wallet.idempotency_key_min_length')], 422);
+        }
 
-        DB::transaction(function () use ($user, $balance, $amount) {
-            $balance->increment('available', $amount);
-            Transaction::create([
-                'user_id' => $user->id,
-                'type' => Transaction::TYPE_DEPOSIT,
-                'amount' => $amount,
-                'description' => __('Balance charge'),
-            ]);
-        });
+        if ($idempotencyKey) {
+            $existing = ChargeRequest::where('user_id', $user->id)
+                ->where('idempotency_key', $idempotencyKey)
+                ->first();
+            if ($existing) {
+                return response()->json([
+                    'message' => __('wallet.charge_submitted'),
+                    'data' => [
+                        'charge_request' => $existing,
+                        'idempotent_replay' => true,
+                    ],
+                ], 200);
+            }
+        }
 
-        $balance->refresh();
+        $chargeRequest = ChargeRequest::create([
+            'user_id' => $user->id,
+            'amount' => $amount,
+            'payment_method' => $validated['payment_method'] ?? null,
+            'payer_bank_name' => $validated['payer_bank_name'],
+            'transfer_reference' => $validated['transfer_reference'],
+            'receipt_url' => $validated['receipt_url'] ?? null,
+            'note' => $validated['note'] ?? null,
+            'submitted_at' => now(),
+            'status' => ChargeRequest::STATUS_PENDING,
+            'idempotency_key' => $idempotencyKey,
+        ]);
+
+        foreach (Permission::userIdsHavingPermission('finance.approve_charge') as $financeUserId) {
+            Notification::create(
+                InAppNotificationPayload::chargeRequestPendingForStaff((int) $financeUserId, $chargeRequest, $user)
+            );
+        }
 
         return response()->json([
-            'message' => __('Balance charged successfully.'),
+            'message' => __('wallet.charge_submitted'),
             'data' => [
-                'balance' => (float) $balance->available,
-                'transaction' => $user->transactions()->latest()->first(),
+                'charge_request' => $chargeRequest,
+                'status' => 'pending_review',
             ],
         ], 201);
     }
@@ -321,8 +372,15 @@ class AccountController extends Controller
             Product::where('user_id', $user->id)->where('status', 'published')->count(),
             Product::where('user_id', $user->id)->where('status', 'sold')->count(),
             Product::where('user_id', $user->id)->where('status', 'hidden')->count(),
-            Purchase::where('seller_id', $user->id)->where('status', Purchase::STATUS_PENDING)->count(),
-            Purchase::where('seller_id', $user->id)->whereIn('status', [Purchase::STATUS_PAID, Purchase::STATUS_SHIPPED, Purchase::STATUS_DELIVERED])->count(),
+            Purchase::where('seller_id', $user->id)->whereIn('status', [
+                Purchase::STATUS_PENDING,
+                Purchase::STATUS_COD_REQUESTED,
+            ])->count(),
+            Purchase::where('seller_id', $user->id)->whereIn('status', [
+                Purchase::STATUS_AWAITING_PAYMENT,
+                Purchase::STATUS_SHIPPED,
+                Purchase::STATUS_DELIVERED,
+            ])->count(),
             Purchase::where('seller_id', $user->id)->whereIn('status', [Purchase::STATUS_COMPLETED])->count(),
             \App\Models\Message::whereIn('conversation_id', $convIds)->where('user_id', '!=', $user->id)->where('read', false)->count(),
             Notification::where('user_id', $user->id)->whereNull('read_at')->count(),
@@ -349,6 +407,7 @@ class AccountController extends Controller
                 'type' => $n->type,
                 'title' => $n->title,
                 'body' => $n->body ?? '',
+                'data' => $n->data,
                 'isRead' => $n->read_at !== null,
                 'link' => ($n->data ?? [])['link'] ?? null,
                 'createdAt' => $n->created_at,
@@ -420,6 +479,8 @@ class AccountController extends Controller
                         'escrowBalance' => (float) $balance->escrow,
                         'withdrawableBalance' => (float) ($balance->withdrawable ?? 0),
                         'financialGuarantee' => (float) ($user->financial_guarantee ?? 0),
+                        'pendingWithdrawals' => (float) WithdrawalRequest::where('user_id', $user->id)->where('status', WithdrawalRequest::STATUS_PENDING)->sum('amount'),
+                        'pendingCharges' => (float) ChargeRequest::where('user_id', $user->id)->where('status', ChargeRequest::STATUS_PENDING)->sum('amount'),
                     ],
                 ],
                 'recentOrders' => $recentOrders,
@@ -474,7 +535,13 @@ class AccountController extends Controller
 
         $pendingOrders = Purchase::where(function ($q) use ($user) {
             $q->where('buyer_id', $user->id)->orWhere('seller_id', $user->id);
-        })->whereIn('status', [Purchase::STATUS_PENDING, Purchase::STATUS_PAID, Purchase::STATUS_SHIPPED, Purchase::STATUS_DELIVERED])
+        })->whereIn('status', [
+            Purchase::STATUS_PENDING,
+            Purchase::STATUS_COD_REQUESTED,
+            Purchase::STATUS_AWAITING_PAYMENT,
+            Purchase::STATUS_SHIPPED,
+            Purchase::STATUS_DELIVERED,
+        ])
             ->count();
 
         $convIds = \App\Models\Conversation::where('buyer_id', $user->id)->orWhere('seller_id', $user->id)->pluck('id');
@@ -504,39 +571,97 @@ class AccountController extends Controller
     {
         $user = $request->user();
 
+        try {
+            $requestedTimezone = (string) ($request->header('X-Timezone')
+                ?? $request->query('tz')
+                ?? 'UTC');
+            $timezone = in_array($requestedTimezone, \DateTimeZone::listIdentifiers(), true)
+                ? $requestedTimezone
+                : 'UTC';
+            $localNow = now($timezone);
+        } catch (\Throwable) {
+            $timezone = 'UTC';
+            $localNow = now('UTC');
+        }
+
         $profileVisits = PageVisit::where('profile_id', $user->id);
         $productIds = Product::where('user_id', $user->id)->pluck('id');
         $listingVisits = PageVisit::whereIn('product_id', $productIds);
+        $profileVisitsValid = $profileVisits->clone()->whereNotNull('created_at');
+        $listingVisitsValid = $listingVisits->clone()->whereNotNull('created_at');
 
-        $now = $profileVisits->clone()->where('created_at', '>=', now()->subMinutes(5))->count();
-        $today = $profileVisits->clone()->whereDate('created_at', today())->count();
-        $week = $profileVisits->clone()->where('created_at', '>=', now()->subWeek())->count();
-        $month = $profileVisits->clone()->where('created_at', '>=', now()->subMonth())->count();
-        $year = $profileVisits->clone()->where('created_at', '>=', now()->subYear())->count();
+        $nowProfile = $profileVisitsValid->clone()->where('created_at', '>=', now()->subMinutes(5))->count();
+        $nowListing = $listingVisitsValid->clone()->where('created_at', '>=', now()->subMinutes(5))->count();
+
+        $todayStartUtc = $localNow->copy()->startOfDay()->utc();
+        $todayEndUtc = $localNow->copy()->addDay()->startOfDay()->utc();
+        $weekStartUtc = $localNow->copy()->subDays(6)->startOfDay()->utc();
+        $monthStartUtc = $localNow->copy()->subDays(29)->startOfDay()->utc();
+        $yearStartUtc = $localNow->copy()->subDays(364)->startOfDay()->utc();
+
+        $todayProfile = $profileVisitsValid->clone()
+            ->where('created_at', '>=', $todayStartUtc)
+            ->where('created_at', '<', $todayEndUtc)
+            ->count();
+        $weekProfile = $profileVisitsValid->clone()->where('created_at', '>=', $weekStartUtc)->count();
+        $monthProfile = $profileVisitsValid->clone()->where('created_at', '>=', $monthStartUtc)->count();
+        $yearProfile = $profileVisitsValid->clone()->where('created_at', '>=', $yearStartUtc)->count();
+
+        $todayListing = $listingVisitsValid->clone()
+            ->where('created_at', '>=', $todayStartUtc)
+            ->where('created_at', '<', $todayEndUtc)
+            ->count();
+        $weekListing = $listingVisitsValid->clone()->where('created_at', '>=', $weekStartUtc)->count();
+        $monthListing = $listingVisitsValid->clone()->where('created_at', '>=', $monthStartUtc)->count();
+        $yearListing = $listingVisitsValid->clone()->where('created_at', '>=', $yearStartUtc)->count();
+
+        $nowCombined = $nowProfile + $nowListing;
+        $todayCombined = $todayProfile + $todayListing;
+        $weekCombined = $weekProfile + $weekListing;
+        $monthCombined = $monthProfile + $monthListing;
+        $yearCombined = $yearProfile + $yearListing;
+        $validVisitsCount = (int) ($profileVisitsValid->clone()->count() + $listingVisitsValid->clone()->count());
+        $invalidVisitsWithoutTimestamp = (int) (
+            $profileVisits->clone()->whereNull('created_at')->count()
+            + $listingVisits->clone()->whereNull('created_at')->count()
+        );
+        $excludedInternalVisits = (int) (
+            $profileVisits->clone()->whereNotNull('visitor_id')->whereColumn('visitor_id', 'profile_id')->count()
+            + $listingVisits->clone()->where('visitor_id', $user->id)->count()
+        );
+        $latestProfileVisitAt = $profileVisitsValid->clone()->max('created_at');
+        $latestListingVisitAt = $listingVisitsValid->clone()->max('created_at');
+        $lastVisitAtCombined = collect([$latestProfileVisitAt, $latestListingVisitAt])
+            ->filter()
+            ->sortDesc()
+            ->first();
 
         $sources = ['whatsapp', 'twitter', 'facebook', 'linkedin', 'youtube', 'direct', 'other'];
-        $todaySources = $profileVisits->clone()->whereDate('created_at', today())
+        $todaySources = $profileVisitsValid->clone()
+            ->where('created_at', '>=', $todayStartUtc)
+            ->where('created_at', '<', $todayEndUtc)
             ->selectRaw('coalesce(nullif(source, ""), "other") as src, count(*) as cnt')
             ->groupBy('src')
             ->pluck('cnt', 'src')
             ->toArray();
-        $weekSources = $profileVisits->clone()->where('created_at', '>=', now()->subWeek())
+        $weekSources = $profileVisitsValid->clone()->where('created_at', '>=', $weekStartUtc)
             ->selectRaw('coalesce(nullif(source, ""), "other") as src, count(*) as cnt')
             ->groupBy('src')
             ->pluck('cnt', 'src')
             ->toArray();
-        $monthSources = $profileVisits->clone()->where('created_at', '>=', now()->subMonth())
+        $monthSources = $profileVisitsValid->clone()->where('created_at', '>=', $monthStartUtc)
             ->selectRaw('coalesce(nullif(source, ""), "other") as src, count(*) as cnt')
             ->groupBy('src')
             ->pluck('cnt', 'src')
             ->toArray();
-        $yearSources = $profileVisits->clone()->where('created_at', '>=', now()->subYear())
+        $yearSources = $profileVisitsValid->clone()->where('created_at', '>=', $yearStartUtc)
             ->selectRaw('coalesce(nullif(source, ""), "other") as src, count(*) as cnt')
             ->groupBy('src')
             ->pluck('cnt', 'src')
             ->toArray();
 
         $recentVisitors = PageVisit::where('profile_id', $user->id)
+            ->whereNotNull('created_at')
             ->with('visitor:id,name,avatar_url')
             ->orderByDesc('created_at')
             ->limit(10)
@@ -553,7 +678,12 @@ class AccountController extends Controller
 
         return response()->json([
             'data' => [
-                'counts' => ['now' => $now, 'today' => $today, 'week' => $week, 'month' => $month, 'year' => $year],
+                // Backward-compatible counts (profile page visits only).
+                'counts' => ['now' => (int) $nowProfile, 'today' => (int) $todayProfile, 'week' => (int) $weekProfile, 'month' => (int) $monthProfile, 'year' => (int) $yearProfile],
+                // Combined scope requested by dashboard: profile page + owned listings.
+                'counts_combined' => ['now' => (int) $nowCombined, 'today' => (int) $todayCombined, 'week' => (int) $weekCombined, 'month' => (int) $monthCombined, 'year' => (int) $yearCombined],
+                'counts_profile' => ['now' => (int) $nowProfile, 'today' => (int) $todayProfile, 'week' => (int) $weekProfile, 'month' => (int) $monthProfile, 'year' => (int) $yearProfile],
+                'counts_listings' => ['now' => (int) $nowListing, 'today' => (int) $todayListing, 'week' => (int) $weekListing, 'month' => (int) $monthListing, 'year' => (int) $yearListing],
                 'sources' => [
                     'today' => array_merge(array_fill_keys($sources, 0), $todaySources),
                     'week' => array_merge(array_fill_keys($sources, 0), $weekSources),
@@ -562,8 +692,24 @@ class AccountController extends Controller
                 ],
                 'recent_visitors' => $recentVisitors,
                 'share_link' => $shareLink,
-                'total_visits' => $profileVisits->clone()->count(),
-                'listing_visits' => $listingVisits->count(),
+                'total_visits' => $validVisitsCount,
+                'profile_visits' => (int) $profileVisitsValid->clone()->count(),
+                'listing_visits' => (int) $listingVisitsValid->clone()->count(),
+                'valid_visits_count' => $validVisitsCount,
+                'invalid_visits_without_timestamp' => $invalidVisitsWithoutTimestamp,
+                'excluded_internal_visits' => $excludedInternalVisits,
+                'today_breakdown' => [
+                    'profile_today' => (int) $todayProfile,
+                    'listings_today' => (int) $todayListing,
+                ],
+                'last_visit_at_combined' => $lastVisitAtCombined,
+                'applied_timezone' => $timezone,
+                'window_bounds' => [
+                    'today' => ['from_utc' => $todayStartUtc->toIso8601String(), 'to_utc' => $todayEndUtc->toIso8601String()],
+                    'week' => ['from_utc' => $weekStartUtc->toIso8601String()],
+                    'month' => ['from_utc' => $monthStartUtc->toIso8601String()],
+                    'year' => ['from_utc' => $yearStartUtc->toIso8601String()],
+                ],
             ],
         ]);
     }
@@ -597,19 +743,25 @@ class AccountController extends Controller
             return response()->json(['message' => __('Order already completed.')], 422);
         }
 
-        if (!in_array($purchase->status, [Purchase::STATUS_PAID, Purchase::STATUS_SHIPPED, Purchase::STATUS_DELIVERED])) {
-            return response()->json(['message' => __('Order cannot be confirmed in current status.')], 422);
+        try {
+            PurchaseFulfillment::assertBuyerMayConfirmReceipt($purchase);
+            PurchaseFulfillment::complete($purchase);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 422);
         }
 
-        $amount = (float) $purchase->amount;
-
-        DB::transaction(function () use ($purchase, $amount) {
-            $purchase->update(['status' => Purchase::STATUS_COMPLETED]);
-
-            $sellerBalance = Balance::getOrCreateForUser($purchase->seller_id);
-            $sellerBalance->decrement('escrow', $amount);
-            $sellerBalance->increment('available', $amount);
-        });
+        $purchase->refresh()->loadMissing('product');
+        \App\Models\Notification::create(
+            \App\Support\InAppNotificationPayload::orderStatusForBuyer($purchase, 'order_completed')
+        );
+        \App\Models\Notification::create(
+            \App\Support\InAppNotificationPayload::orderStatusForSeller($purchase, 'order_completed')
+        );
+        \App\Models\Notification::create(
+            \App\Support\InAppNotificationPayload::orderStatusForBuyer($purchase, 'review_eligible')
+        );
 
         return response()->json([
             'message' => __('Receipt confirmed. Funds released to seller.'),
@@ -632,27 +784,61 @@ class AccountController extends Controller
         $balance = Balance::getOrCreateForUser($user->id);
         $amount = (float) $validated['amount'];
         $withdrawable = (float) ($balance->withdrawable ?? 0);
+        $pendingSum = (float) WithdrawalRequest::where('user_id', $user->id)
+            ->where('status', WithdrawalRequest::STATUS_PENDING)
+            ->sum('amount');
 
-        if ($withdrawable < $amount) {
+        if ($withdrawable - $pendingSum < $amount) {
             return response()->json([
-                'message' => __('Insufficient withdrawable balance.'),
+                'message' => __('wallet.insufficient_withdrawable'),
             ], 422);
         }
 
-        DB::transaction(function () use ($user, $balance, $amount) {
-            $balance->decrement('withdrawable', $amount);
-            Transaction::create([
-                'user_id' => $user->id,
-                'type' => Transaction::TYPE_WITHDRAWAL,
-                'amount' => -$amount,
-                'description' => __('Withdrawal request'),
-            ]);
-        });
+        $requestRow = WithdrawalRequest::create([
+            'user_id' => $user->id,
+            'amount' => $amount,
+            'bank_iban' => $validated['bank_iban'],
+            'bank_name' => $validated['bank_name'],
+            'status' => WithdrawalRequest::STATUS_PENDING,
+        ]);
+
+        foreach (Permission::userIdsHavingPermission('finance.approve_withdrawal') as $financeUserId) {
+            Notification::create(
+                InAppNotificationPayload::withdrawalRequestPendingForStaff((int) $financeUserId, $requestRow, $user)
+            );
+        }
 
         return response()->json([
-            'message' => __('Withdrawal request submitted.'),
-            'data' => ['success' => true],
+            'message' => __('wallet.withdrawal_submitted'),
+            'data' => ['success' => true, 'withdrawal_request' => $requestRow],
         ], 201);
+    }
+
+    /**
+     * List current user's charge requests.
+     */
+    public function chargeRequests(Request $request): JsonResponse
+    {
+        $rows = ChargeRequest::where('user_id', $request->user()->id)
+            ->with('reviewer:id,name')
+            ->orderByDesc('created_at')
+            ->limit(50)
+            ->get();
+
+        return response()->json(['data' => $rows]);
+    }
+
+    /**
+     * List current user's withdrawal requests.
+     */
+    public function withdrawalRequests(Request $request): JsonResponse
+    {
+        $rows = WithdrawalRequest::where('user_id', $request->user()->id)
+            ->orderByDesc('created_at')
+            ->limit(50)
+            ->get();
+
+        return response()->json(['data' => $rows]);
     }
 
     /**
@@ -703,6 +889,7 @@ class AccountController extends Controller
         };
 
         $metrics = $metric ? [$metric] : ['views', 'comments', 'messages', 'sales', 'bids'];
+        $productsById = Product::whereIn('id', $productIds)->get()->keyBy('id');
         $reports = [];
 
         foreach ($metrics as $m) {
@@ -729,8 +916,8 @@ class AccountController extends Controller
                     ->get()
                     ->map(fn ($r) => (object) [
                         'id' => $r->id,
-                        'title' => Product::find($r->id)?->title ?? '',
-                        'image_url' => Product::find($r->id)?->image_url,
+                        'title' => $productsById->get($r->id)?->title ?? '',
+                        'image_url' => $productsById->get($r->id)?->image_url,
                         'count' => (int) $r->count,
                     ]),
                 'sales' => Purchase::whereIn('product_id', $productIds)
@@ -743,22 +930,23 @@ class AccountController extends Controller
                     ->get()
                     ->map(fn ($r) => (object) [
                         'id' => $r->id,
-                        'title' => Product::find($r->id)?->title ?? '',
-                        'image_url' => Product::find($r->id)?->image_url,
+                        'title' => $productsById->get($r->id)?->title ?? '',
+                        'image_url' => $productsById->get($r->id)?->image_url,
                         'count' => (int) $r->count,
                     ]),
-                'bids' => \App\Models\Bid::whereIn('product_id', $productIds)
+                'bids' => Bid::whereIn('product_id', $productIds)
                     ->where('created_at', '>=', $since)
-                    ->selectRaw('product_id as id, count(*) as count')
+                    ->selectRaw('product_id as id, count(*) as count, max(amount) as top_bid_amount')
                     ->groupBy('product_id')
                     ->orderByDesc('count')
                     ->limit(5)
                     ->get()
                     ->map(fn ($r) => (object) [
                         'id' => $r->id,
-                        'title' => Product::find($r->id)?->title ?? '',
-                        'image_url' => Product::find($r->id)?->image_url,
+                        'title' => $productsById->get($r->id)?->title ?? '',
+                        'image_url' => $productsById->get($r->id)?->image_url,
                         'count' => (int) $r->count,
+                        'top_bid_amount' => (float) ($r->top_bid_amount ?? 0),
                     ]),
                 default => collect(),
             };

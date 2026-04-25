@@ -1,6 +1,10 @@
-import { useState } from "react"
+import { lazy, Suspense, useRef, useState } from "react"
+import { useLocation, useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
+import { addMinutes, format, isBefore, startOfDay } from "date-fns"
+import { ar, enUS } from "date-fns/locale"
 import { useAppDirection } from "@/providers/DirectionProvider"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   Dialog,
   DialogContent,
@@ -8,112 +12,208 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { MapPin } from "lucide-react"
+import { ScheduleTimePicker } from "@/components/ui/schedule-time-picker.jsx"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useAuthStore } from "@/store/useAuthStore"
+import apiClient from "@/lib/apiClient"
+import { toast } from "sonner"
+import { CalendarIcon } from "lucide-react"
+import { cn } from "@/lib/utils"
 
-/**
- * View at Location Modal — date/hour/minute steppers.
- * Vertical steppers. Map placeholder. Submit button.
- */
-export function ViewAtLocationModal({ open, onOpenChange }) {
-  const { t } = useTranslation()
-  const { direction } = useAppDirection()
-  const [day, setDay] = useState(1)
-  const [hour, setHour] = useState(12)
-  const [minute, setMinute] = useState(0)
+const LocationMapPicker = lazy(() =>
+  import("@/components/maps/LocationMapPicker.jsx").then((m) => ({ default: m.LocationMapPicker }))
+)
+
+function combineDateAndTime(date, timeHHmm) {
+  if (!date || !timeHHmm || typeof timeHHmm !== "string") return null
+  const parts = timeHHmm.split(":")
+  const h = Number.parseInt(parts[0], 10)
+  const m = Number.parseInt(parts[1] ?? "0", 10)
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return null
+  const out = new Date(date)
+  out.setHours(h, m, 0, 0)
+  return out
+}
+
+function ViewAtLocationForm({ productId, onOpenChange }) {
+  const { t, i18n } = useTranslation()
+  const queryClient = useQueryClient()
+  const { token } = useAuthStore()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const addressRef = useRef(null)
+  const [scheduleDate, setScheduleDate] = useState(undefined)
+  const [scheduleTime, setScheduleTime] = useState("12:00")
+  const [calOpen, setCalOpen] = useState(false)
+  const [pin, setPin] = useState(null)
+  const [locationAddress, setLocationAddress] = useState("")
+  const [locationPlaceId, setLocationPlaceId] = useState(null)
+  const [mapError, setMapError] = useState(null)
+
+  const locale = i18n.language === "ar" ? ar : enUS
+
+  const submitMutation = useMutation({
+    mutationFn: async (payload) => apiClient.post(`/products/${productId}/view-request`, payload),
+    onSuccess: async () => {
+      toast.success(t("purchase.viewRequestSent", "تم إرسال طلب المعاينة"))
+      onOpenChange(false)
+      await queryClient.invalidateQueries({ queryKey: ["account", "view-requests"] })
+      if (productId) {
+        await queryClient.invalidateQueries({ queryKey: ["product", String(productId), "view-requests"] })
+        await queryClient.invalidateQueries({ queryKey: ["product", String(productId)] })
+      }
+    },
+    onError: (error) => {
+      const status = error?.response?.status
+      if (status === 422) {
+        toast.error(t("purchase.errorValidation", "تعذّر إتمام الشراء. تحقق من الرصيد والبيانات."))
+        return
+      }
+      const serverMessage = error?.response?.data?.message
+      toast.error(serverMessage ?? t("common.errorGeneric", "حدث خطأ غير متوقع"))
+    },
+  })
 
   const handleSubmit = () => {
-    onOpenChange(false)
+    if (!token) {
+      navigate("/login", { state: { redirectTo: location.pathname } })
+      return
+    }
+    if (!scheduleDate || !productId) {
+      toast.error(t("purchase.pickDate"))
+      return
+    }
+    const combined = combineDateAndTime(scheduleDate, scheduleTime)
+    if (!combined || isBefore(combined, addMinutes(new Date(), 5))) {
+      toast.error(t("purchase.schedulingTooSoon"))
+      return
+    }
+    if (!pin || pin.lat == null || pin.lng == null || !Number.isFinite(pin.lat) || !Number.isFinite(pin.lng)) {
+      setMapError(t("purchase.mapPinRequired", "حدّد موقع المعاينة على الخريطة"))
+      toast.error(t("purchase.mapPinRequired", "حدّد موقع المعاينة على الخريطة"))
+      return
+    }
+    setMapError(null)
+
+    submitMutation.mutate({
+      scheduled_date: combined.toISOString(),
+      location_lat: pin.lat,
+      location_lng: pin.lng,
+      location_address: locationAddress.trim() || null,
+      location_place_id: locationPlaceId || null,
+    })
   }
 
   return (
+    <>
+      <DialogHeader>
+        <DialogTitle className="text-start">
+          {t("purchase.viewAtLocation", "أرغب بمشاهدة المنتج في موقعي")}
+        </DialogTitle>
+      </DialogHeader>
+      <div className="grid gap-3">
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">{t("purchase.preferredDateTime")}</Label>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Popover open={calOpen} onOpenChange={setCalOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={cn("w-full justify-start text-start font-normal sm:flex-1", !scheduleDate && "text-muted-foreground")}
+                >
+                  <CalendarIcon className="me-2 size-4 shrink-0 opacity-60" />
+                  {scheduleDate ? format(scheduleDate, "PPP", { locale }) : t("purchase.pickDate")}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={scheduleDate}
+                  onSelect={(d) => {
+                    setScheduleDate(d)
+                    if (d) setCalOpen(false)
+                  }}
+                  disabled={(d) => isBefore(startOfDay(d), startOfDay(new Date()))}
+                />
+              </PopoverContent>
+            </Popover>
+            <ScheduleTimePicker
+              id="view-req-time"
+              value={scheduleTime}
+              onChange={setScheduleTime}
+              className="sm:flex-initial"
+            />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">
+            {t("purchase.locationAddress", "عنوان الموقع")}
+          </Label>
+          <Input
+            ref={addressRef}
+            value={locationAddress}
+            onChange={(e) => setLocationAddress(e.target.value)}
+            placeholder={t("purchase.locationAddressPlaceholder", "المدينة، الحي، الشارع أو معلم واضح")}
+          />
+        </div>
+
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">
+            {t("purchase.mapSelectLabel", "موقع المعاينة على الخريطة")}
+          </Label>
+          <Suspense
+            fallback={
+              <Skeleton className="flex h-[220px] w-full items-center justify-center rounded-md border border-border text-xs text-muted-foreground">
+                {t("common.loading", "جار التحميل...")}
+              </Skeleton>
+            }
+          >
+            <LocationMapPicker
+              key={`${productId}-map`}
+              language={i18n.language}
+              lat={pin?.lat}
+              lng={pin?.lng}
+              addressInputRef={addressRef}
+              onChange={({ lat, lng }) => {
+                setPin({ lat, lng })
+                setLocationPlaceId(null)
+                setMapError(null)
+              }}
+              onPlaceResolved={(addr, _la, _ln, meta) => {
+                setLocationAddress(addr)
+                setLocationPlaceId(meta?.placeId ?? null)
+                setMapError(null)
+              }}
+              onReverseGeocode={(addr) => {
+                setLocationAddress(addr ?? "")
+              }}
+            />
+          </Suspense>
+          {mapError ? <p className="text-xs text-destructive">{mapError}</p> : null}
+        </div>
+      </div>
+      <Button className="w-full" onClick={handleSubmit} disabled={!scheduleDate || !pin || submitMutation.isPending}>
+        {submitMutation.isPending ? t("common.loading", "جار التحميل...") : t("purchase.submitViewRequest", "إرسال طلب المعاينة")}
+      </Button>
+    </>
+  )
+}
+
+/**
+ * View-at-location request with preferred date/time, map pin, and optional address.
+ */
+export function ViewAtLocationModal({ open, onOpenChange, productId }) {
+  const { direction } = useAppDirection()
+
+  return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent dir={direction} className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="text-start">
-            {t("purchase.viewAtLocation", "أرغب بمشاهدة المنتج في موقعي")}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="grid grid-cols-3 gap-3 text-center">
-          <div>
-            <Label className="text-xs text-muted-foreground">
-              {t("listingDetail.date", "اليوم")} ( )
-            </Label>
-            <div className="mt-1 flex flex-col items-center gap-1">
-              <Button
-                variant="outline"
-                size="icon"
-                className="size-7"
-                onClick={() => setDay((d) => d + 1)}
-              >
-                +
-              </Button>
-              <span className="w-8 text-center text-sm font-semibold">{day}</span>
-              <Button
-                variant="outline"
-                size="icon"
-                className="size-7"
-                onClick={() => setDay((d) => Math.max(1, d - 1))}
-              >
-                −
-              </Button>
-            </div>
-          </div>
-          <div>
-            <Label className="text-xs text-muted-foreground">
-              {t("listingDetail.hour", "الساعة")}
-            </Label>
-            <div className="mt-1 flex flex-col items-center gap-1">
-              <Button
-                variant="outline"
-                size="icon"
-                className="size-7"
-                onClick={() => setHour((h) => Math.min(23, h + 1))}
-              >
-                +
-              </Button>
-              <span className="w-8 text-center text-sm font-semibold">{hour}</span>
-              <Button
-                variant="outline"
-                size="icon"
-                className="size-7"
-                onClick={() => setHour((h) => Math.max(0, h - 1))}
-              >
-                −
-              </Button>
-            </div>
-          </div>
-          <div>
-            <Label className="text-xs text-muted-foreground">
-              {t("listingDetail.minute", "الدقيقة")}
-            </Label>
-            <div className="mt-1 flex flex-col items-center gap-1">
-              <Button
-                variant="outline"
-                size="icon"
-                className="size-7"
-                onClick={() => setMinute((m) => Math.min(59, m + 1))}
-              >
-                +
-              </Button>
-              <span className="w-8 text-center text-sm font-semibold">{minute}</span>
-              <Button
-                variant="outline"
-                size="icon"
-                className="size-7"
-                onClick={() => setMinute((m) => Math.max(0, m - 1))}
-              >
-                −
-              </Button>
-            </div>
-          </div>
-        </div>
-        <div className="flex h-48 items-center justify-center overflow-hidden rounded-md border border-border bg-muted">
-          <MapPin className="size-8 text-muted-foreground" />
-        </div>
-        <Button className="w-full" onClick={handleSubmit}>
-          {t("purchase.buyNow", "اشتر الآن")}
-        </Button>
+      <DialogContent dir={direction} className="max-w-md max-h-[90vh] overflow-y-auto">
+        {open && productId ? <ViewAtLocationForm productId={productId} onOpenChange={onOpenChange} /> : null}
       </DialogContent>
     </Dialog>
   )

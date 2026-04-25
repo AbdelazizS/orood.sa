@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next"
 import { useAppDirection } from "@/providers/DirectionProvider"
-import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 
 /**
@@ -19,39 +18,38 @@ export function ShippingInfo({ product }) {
 
   return (
     <>
-      <dl dir={direction} className="space-y-2 px-4 py-4 text-sm sm:px-6">
+      <dl dir={direction} className="grid grid-cols-1 gap-3 px-4 py-4 text-sm md:grid-cols-2 sm:px-6">
         {freeShipping && (
-          <div className="flex items-start gap-3">
-            <dd className="flex-1 text-start">
-              <span className="font-semibold text-primary">
-                {t("listingDetail.shippingFree", "Free 2-4 day delivery")}
-              </span>
-              <br />
-              <span className="text-xs text-muted-foreground">
-                {t("listingDetail.shippingEstimate", "Get it between Thu, Sep 18 and Sat, Sep 20")}
-              </span>
-              <br />
-              <span className="text-xs text-muted-foreground">
-                {t("listingDetail.locatedIn", "Located in")}: {locationCity}
-              </span>
-            </dd>
-            <dt className="w-20 shrink-0 font-semibold text-muted-foreground">
+          <div className="grid grid-cols-[84px_minmax(0,1fr)] items-start gap-2 sm:gap-3">
+            <dt className="pt-0.5 text-start font-semibold text-muted-foreground">
               {t("listingDetail.shipping", "Shipping")}:
             </dt>
+            <dd className="min-w-0 text-start leading-relaxed">
+              <p className="font-semibold text-primary m-0">
+                {t("listingDetail.shippingFree", "Free 2-4 day delivery")}
+              </p>
+              <p className="m-0 text-xs text-muted-foreground">
+                {t("listingDetail.shippingEstimate", "Get it between Thu, Sep 18 and Sat, Sep 20")}
+              </p>
+              {locationCity ? (
+                <p className="m-0 text-xs text-muted-foreground">
+                  {t("listingDetail.locatedIn", "Located in")}: {locationCity}
+                </p>
+              ) : null}
+            </dd>
           </div>
         )}
         {freeReturn && (
-          <div className="flex items-start gap-3">
-            <dd className="flex-1 text-start text-xs text-muted-foreground">
-              {returnDays} {t("listingDetail.daysReturns", "days returns")}.
-              {t("listingDetail.sellerPaysReturn", "Seller pays for return shipping")}.
-              <Button variant="link" size="sm" className="h-auto p-0 text-xs text-primary">
-                {t("listingDetail.seeDetails", "See details")}
-              </Button>
-            </dd>
-            <dt className="w-20 shrink-0 font-semibold text-muted-foreground">
+          <div className="grid grid-cols-[84px_minmax(0,1fr)] items-start gap-2 sm:gap-3">
+            <dt className="pt-0.5 text-start font-semibold text-muted-foreground">
               {t("listingDetail.returns", "Returns")}:
             </dt>
+            <dd className="min-w-0 text-start text-xs text-muted-foreground leading-relaxed">
+              <p className="m-0">
+                {returnDays} {t("listingDetail.daysReturns", "days returns")}
+              </p>
+              <p className="m-0">{t("listingDetail.sellerPaysReturn", "Seller pays for return shipping")}</p>
+            </dd>
           </div>
         )}
       </dl>

@@ -70,7 +70,7 @@ export function ProfileTopNav({
               onClick={onEdit}
               asChild
             >
-              <Link to="/dashboard/profile">
+              <Link to={accountHref ?? "/dashboard"}>
                 <Pencil size={14} />
                 تعديل
               </Link>

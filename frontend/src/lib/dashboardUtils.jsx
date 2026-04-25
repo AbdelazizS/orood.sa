@@ -8,6 +8,8 @@ import {
   Gavel,
   Star,
   Bell,
+  Flag,
+  MapPin,
 } from "lucide-react"
 
 const LOCALE_MAP = { ar, en: enUS }
@@ -53,6 +55,8 @@ export function getStatusKey(status) {
 export function getStatusVariant(status) {
   const variants = {
     pending: "secondary",
+    cod_requested: "secondary",
+    awaiting_payment: "default",
     paid: "default",
     shipped: "outline",
     delivered: "outline",
@@ -74,9 +78,14 @@ export function getNotificationIcon(type) {
     message_new: MessageCircle,
     bid_new: Gavel,
     review_new: Star,
+    staff_profile_report_new: Flag,
+    view_request_new: MapPin,
+    view_request_approved: MapPin,
+    view_request_declined: MapPin,
+    view_request_cancelled: MapPin,
   }
   const Icon = icons[type] ?? Bell
-  return <Icon size={14} className={type === "order_new" ? "text-primary" : type === "message_new" ? "text-green-500" : type === "bid_new" ? "text-orange-500" : type === "review_new" ? "text-yellow-500" : "text-muted-foreground"} />
+  return <Icon size={14} className={type === "order_new" ? "text-primary" : type === "message_new" ? "text-green-500" : type === "bid_new" ? "text-orange-500" : type === "review_new" ? "text-yellow-500" : type?.startsWith?.("view_request") ? "text-sky-600" : "text-muted-foreground"} />
 }
 
 /**
@@ -88,6 +97,11 @@ export function getNotificationIconBg(type) {
     message_new: "bg-green-500/10",
     bid_new: "bg-orange-500/10",
     review_new: "bg-yellow-500/10",
+    staff_profile_report_new: "bg-destructive/10",
+    view_request_new: "bg-sky-500/10",
+    view_request_approved: "bg-sky-500/10",
+    view_request_declined: "bg-muted",
+    view_request_cancelled: "bg-muted",
   }
   return bg[type] ?? "bg-muted"
 }

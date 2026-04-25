@@ -1,11 +1,13 @@
 import { useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
+import { useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/navigation/ThemeToggle"
 import { UserMenu } from "@/components/navigation/UserMenu"
 import { useAuthStore } from "@/store/useAuthStore"
+import { publicProfilePath } from "@/lib/profileRoutes"
 import * as authService from "@/services/authService"
 import {
   Sheet,
@@ -16,27 +18,22 @@ import {
 } from "@/components/ui/sheet"
 import { Menu, Plus, LayoutDashboard, Shield, User, Bell, LogOut, MessageSquare } from "lucide-react"
 
-export function TopNavigation() {
-  const { t } = useTranslation()
-  const { user, token } = useAuthStore()
-  const [mobileOpen, setMobileOpen] = useState(false)
+const linkClass =
+  "flex w-full items-center gap-2 rounded-xl px-4 py-3 text-start transition-colors hover:bg-accent"
 
-  const isAdmin = user && ["admin", "super_admin", "manager", "employee"].includes(user.role)
-
-  const linkClass = "flex w-full items-center gap-2 rounded-xl px-4 py-3 text-start transition-colors hover:bg-accent"
-
-  const showBottomNav = token && user
-  const MobileNavContent = () => (
+function MobileNavSheetContent({ t, showBottomNav, token, user, isAdmin, onClose, navigate, queryClient }) {
+  const memberProfileHref = publicProfilePath(user) ?? "/dashboard"
+  return (
     <div className="flex flex-col gap-1">
       {!showBottomNav && (
         <>
           <Button variant="ghost" size="sm" asChild className={linkClass}>
-            <Link to="/" onClick={() => setMobileOpen(false)}>
+            <Link to="/" onClick={onClose}>
               {t("common.brandName")}
             </Link>
           </Button>
           <Button variant="ghost" size="sm" asChild className={linkClass}>
-            <Link to="/add" onClick={() => setMobileOpen(false)} className="flex items-center gap-2">
+            <Link to="/add" onClick={onClose} className="flex items-center gap-2">
               <Plus className="size-4" />
               {t("nav.addListing")}
             </Link>
@@ -47,28 +44,32 @@ export function TopNavigation() {
         <>
           {isAdmin ? (
             <Button variant="ghost" size="sm" asChild className={linkClass}>
-              <Link to="/admin" onClick={() => setMobileOpen(false)} className="flex items-center gap-2">
+              <Link to="/admin" onClick={onClose} className="flex items-center gap-2">
                 <Shield className="size-4" />
                 {t("dashboard.admin")}
               </Link>
             </Button>
           ) : (
             <Button variant="ghost" size="sm" asChild className={linkClass}>
-              <Link to="/dashboard" onClick={() => setMobileOpen(false)} className="flex items-center gap-2">
+              <Link to="/dashboard" onClick={onClose} className="flex items-center gap-2">
                 <LayoutDashboard className="size-4" />
                 {t("dashboard.overview")}
               </Link>
             </Button>
           )}
           <Button variant="ghost" size="sm" asChild className={linkClass}>
-            <Link to="/dashboard/profile" onClick={() => setMobileOpen(false)} className="flex items-center gap-2">
+            <Link to={memberProfileHref} onClick={onClose} className="flex items-center gap-2">
               <User className="size-4" />
               {t("nav.profile", "Profile")}
             </Link>
           </Button>
           {!showBottomNav && (
             <Button variant="ghost" size="sm" asChild className={linkClass}>
-              <Link to="/dashboard/notifications" onClick={() => setMobileOpen(false)} className="flex items-center gap-2">
+              <Link
+                to={isAdmin ? "/admin/notifications" : "/dashboard/notifications"}
+                onClick={onClose}
+                className="flex items-center gap-2"
+              >
                 <Bell className="size-4" />
                 {t("notifications.title", "Notifications")}
               </Link>
@@ -79,8 +80,8 @@ export function TopNavigation() {
             size="sm"
             className={`${linkClass} text-destructive`}
             onClick={() => {
-              authService.logout()
-              setMobileOpen(false)
+              authService.performLogout({ navigate, replaceTo: "/", queryClient })
+              onClose()
             }}
           >
             <LogOut className="size-4" />
@@ -90,12 +91,12 @@ export function TopNavigation() {
       ) : (
         <>
           <Button variant="ghost" size="sm" asChild className={linkClass}>
-            <Link to="/login" onClick={() => setMobileOpen(false)}>
+            <Link to="/login" onClick={onClose}>
               {t("common.login")}
             </Link>
           </Button>
           <Button size="sm" asChild className={linkClass}>
-            <Link to="/register" onClick={() => setMobileOpen(false)}>
+            <Link to="/register" onClick={onClose}>
               {t("common.register")}
             </Link>
           </Button>
@@ -103,6 +104,18 @@ export function TopNavigation() {
       )}
     </div>
   )
+}
+
+export function TopNavigation() {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const { user, token } = useAuthStore()
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  const isAdmin = user && ["admin", "super_admin", "manager", "employee"].includes(user.role)
+
+  const showBottomNav = token && user
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-background text-foreground">
@@ -110,11 +123,14 @@ export function TopNavigation() {
         {/* Mobile: logo only on start */}
         <Link
           to="/"
-          className="focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-lg shrink-0 min-w-0"
+          className="focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-lg shrink-0 min-w-0 flex flex-col items-start leading-tight"
         >
-          <h1 className="truncate text-lg font-bold tracking-tight text-primary sm:text-xl md:text-2xl">
-            {t("common.brandName")}
-          </h1>
+          <span className="truncate text-lg font-bold tracking-tight text-primary sm:text-xl md:text-2xl">
+            {t("common.brandLogoEn")}
+          </span>
+          <span className="truncate text-base font-bold text-foreground sm:text-lg md:text-xl">
+            {t("common.brandLogoAr")}
+          </span>
         </Link>
 
         {/* Mobile: theme + lang + burger grouped together */}
@@ -132,7 +148,16 @@ export function TopNavigation() {
                 <SheetTitle className="text-start">{t("nav.menu")}</SheetTitle>
               </SheetHeader>
               <nav className="flex flex-1 flex-col gap-0 overflow-y-auto p-4">
-                <MobileNavContent />
+                <MobileNavSheetContent
+                  t={t}
+                  showBottomNav={showBottomNav}
+                  token={token}
+                  user={user}
+                  isAdmin={isAdmin}
+                  onClose={() => setMobileOpen(false)}
+                  navigate={navigate}
+                  queryClient={queryClient}
+                />
               </nav>
             </SheetContent>
           </Sheet>
@@ -141,12 +166,12 @@ export function TopNavigation() {
             {token && user ? (
               <>
                 <Button variant="ghost" size="icon" asChild className="relative">
-                  <Link to="/dashboard/messages" title={t("dashboard.messages", "الرسائل")}>
+                  <Link to={isAdmin ? "/admin/messages" : "/dashboard/messages"} title={t("dashboard.messages", "الرسائل")}>
                     <MessageSquare className="size-5" />
                   </Link>
                 </Button>
                 <Button variant="ghost" size="icon" asChild className="relative">
-                  <Link to="/dashboard/notifications" title={t("notifications.title", "الإشعارات")}>
+                  <Link to={isAdmin ? "/admin/notifications" : "/dashboard/notifications"} title={t("notifications.title", "الإشعارات")}>
                     <Bell className="size-5" />
                   </Link>
                 </Button>

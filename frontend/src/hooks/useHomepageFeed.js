@@ -48,7 +48,7 @@ export const useHomepageFeed = () => {
     queryKey: ["feed", filterKey, i18n.language],
     queryFn: async ({ pageParam = 1 }) => {
       const params = buildFeedParams(filters, pageParam)
-      const { data } = await apiClient.get("/homepage/feed", { params })
+      const { data } = await apiClient.get("/listings", { params })
       return data
     },
     initialPageParam: 1,
@@ -92,11 +92,21 @@ export const useHomepageFeed = () => {
     staleTime: 1000 * 60 * 5,
   })
 
+  const sectionsQuery = useQuery({
+    queryKey: ["homepage", "sections", i18n.language],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/homepage/sections")
+      return data?.data ?? {}
+    },
+    staleTime: 1000 * 60 * 5,
+  })
+
   return {
     feedQuery,
     categoriesQuery,
     regionsQuery,
     companiesQuery,
     featuresQuery,
+    sectionsQuery,
   }
 }

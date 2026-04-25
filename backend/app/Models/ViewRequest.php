@@ -7,6 +7,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ViewRequest extends Model
 {
+    public const STATUS_PENDING = 'PENDING';
+
+    public const STATUS_APPROVED = 'APPROVED';
+
+    public const STATUS_DECLINED = 'DECLINED';
+
+    public const STATUS_CANCELLED = 'CANCELLED';
+
     protected $fillable = [
         'product_id',
         'requester_id',
@@ -14,7 +22,9 @@ class ViewRequest extends Model
         'location_lat',
         'location_lng',
         'location_address',
+        'location_place_id',
         'status',
+        'seller_note',
     ];
 
     protected $casts = [
@@ -23,13 +33,13 @@ class ViewRequest extends Model
         'location_lng' => 'float',
     ];
 
-    public function product(): BelongsTo
-    {
-        return $this->belongsTo(Product::class);
-    }
-
     public function requester(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requester_id');
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class, 'product_id');
     }
 }

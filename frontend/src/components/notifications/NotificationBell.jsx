@@ -1,7 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
+import { useNavigate } from "react-router-dom"
 import { Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useAccountSectionBasePath } from "@/lib/accountSectionPaths"
+import { getNotificationBody, getNotificationTitle } from "@/lib/notificationDisplay"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,19 +12,15 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import apiClient from "@/lib/apiClient"
+import { useNotificationsInbox } from "@/hooks/useNotificationsInbox"
 
 function NotificationBell() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const basePath = useAccountSectionBasePath()
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["notifications"],
-    queryFn: async () => {
-      const { data } = await apiClient.get("/notifications?per_page=15")
-      return data?.data ?? []
-    },
-    refetchInterval: 30000,
-  })
+  const { data, isLoading } = useNotificationsInbox(15, { refetchInterval: 30_000 })
 
   const markReadMutation = useMutation({
     mutationFn: (id) => apiClient.post(`/notifications/${id}/read`),
@@ -33,8 +32,8 @@ function NotificationBell() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
   })
 
-  const notifications = Array.isArray(data) ? data : []
-  const unreadCount = notifications.filter((n) => !n.read_at).length
+  const notifications = Array.isArray(data?.items) ? data.items : []
+  const unreadCount = Number(data?.meta?.unread_count ?? 0)
 
   return (
     <DropdownMenu>
@@ -77,26 +76,35 @@ function NotificationBell() {
               {notifications.map((n) => (
                 <div
                   key={n.id}
-                  className={`flex flex-col gap-0.5 border-b px-3 py-2.5 last:border-b-0 ${!n.read_at ? "bg-muted/50" : ""}`}
+                  className={`flex items-start justify-between gap-2 border-b px-3 py-2.5 last:border-b-0 ${!n.read_at ? "bg-muted/50" : ""}`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="text-sm font-medium">{n.title}</span>
-                    {!n.read_at && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 px-1.5 text-xs"
-                        onClick={() => markReadMutation.mutate(n.id)}
-                        disabled={markReadMutation.isPending}
-                      >
-                        {t("notifications.markRead", "Read")}
-                      </Button>
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 rounded-md text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onClick={() => navigate(`${basePath}/notifications/${n.id}`)}
+                  >
+                    <span className="block text-sm font-medium hover:underline">{getNotificationTitle(n, t)}</span>
+                    {(getNotificationBody(n, t) || n.body) && (
+                      <p className="mt-0.5 text-xs text-muted-foreground">{getNotificationBody(n, t) || n.body}</p>
                     )}
-                  </div>
-                  {n.body && <p className="text-xs text-muted-foreground">{n.body}</p>}
-                  <span className="text-[10px] text-muted-foreground">
-                    {n.created_at ? new Date(n.created_at).toLocaleString() : ""}
-                  </span>
+                    <span className="mt-0.5 block text-[10px] text-muted-foreground">
+                      {n.created_at ? new Date(n.created_at).toLocaleString() : ""}
+                    </span>
+                  </button>
+                  {!n.read_at && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 shrink-0 px-2 text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        markReadMutation.mutate(n.id)
+                      }}
+                      disabled={markReadMutation.isPending}
+                    >
+                      {t("notifications.markRead", "Mark as read")}
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>

@@ -28,6 +28,21 @@ class PermissionSeeder extends Seeder
             ['name' => 'users.delete', 'group' => 'users', 'description' => 'Delete users'],
             ['name' => 'roles.manage', 'group' => 'roles', 'description' => 'Manage roles and permissions'],
             ['name' => 'audit.view', 'group' => 'audit', 'description' => 'View audit logs'],
+            ['name' => 'settings.view', 'group' => 'settings', 'description' => 'View platform settings'],
+            ['name' => 'settings.update', 'group' => 'settings', 'description' => 'Update platform settings'],
+            ['name' => 'bids.place', 'group' => 'bids', 'description' => 'Place bids on listings'],
+            ['name' => 'bids.withdraw', 'group' => 'bids', 'description' => 'Withdraw own pending bids'],
+            ['name' => 'bids.visibility', 'group' => 'bids', 'description' => 'Toggle own bid visibility'],
+            ['name' => 'bids.review_listing', 'group' => 'bids', 'description' => 'Review and process bids on own listings'],
+            ['name' => 'bids.create_order', 'group' => 'bids', 'description' => 'Create order from accepted bid'],
+            ['name' => 'bids.admin_view', 'group' => 'bids', 'description' => 'Admin view/search bids'],
+            ['name' => 'bids.admin_manage', 'group' => 'bids', 'description' => 'Admin hide/delete bids'],
+            ['name' => 'bids.admin_audit', 'group' => 'bids', 'description' => 'Admin access bid audit timeline'],
+            ['name' => 'tasks.view', 'group' => 'tasks', 'description' => 'View tasks'],
+            ['name' => 'tasks.create', 'group' => 'tasks', 'description' => 'Create tasks'],
+            ['name' => 'tasks.assign', 'group' => 'tasks', 'description' => 'Assign and reassign tasks'],
+            ['name' => 'tasks.update', 'group' => 'tasks', 'description' => 'Update task content and progress'],
+            ['name' => 'tasks.close', 'group' => 'tasks', 'description' => 'Mark tasks done, reopen, or delete tasks'],
         ];
 
         foreach ($permissions as $p) {
@@ -40,6 +55,7 @@ class PermissionSeeder extends Seeder
             'offers.view', 'offers.update',
             'categories.view', 'regions.view', 'regions.update',
             'users.view', 'users.update',
+            'tasks.view', 'tasks.create', 'tasks.assign', 'tasks.update',
         ])->pluck('id')->toArray();
 
         foreach ($adminRoles as $role) {
@@ -55,6 +71,24 @@ class PermissionSeeder extends Seeder
                 ['role' => 'employee', 'permission_id' => $permId],
                 ['created_at' => now(), 'updated_at' => now()]
             );
+        }
+
+        $memberRolePermissions = [
+            'user' => ['bids.place', 'bids.withdraw', 'bids.visibility', 'bids.review_listing'],
+            'buyer' => ['bids.place', 'bids.withdraw', 'bids.visibility', 'bids.create_order'],
+            'seller' => ['bids.place', 'bids.withdraw', 'bids.visibility', 'bids.review_listing'],
+            'company_buyer' => ['bids.place', 'bids.withdraw', 'bids.visibility', 'bids.create_order'],
+            'company_seller' => ['bids.place', 'bids.withdraw', 'bids.visibility', 'bids.review_listing'],
+            'moderator' => [],
+        ];
+        foreach ($memberRolePermissions as $role => $permNames) {
+            $permIds = Permission::whereIn('name', $permNames)->pluck('id')->all();
+            foreach ($permIds as $permId) {
+                DB::table('role_permission')->updateOrInsert(
+                    ['role' => $role, 'permission_id' => $permId],
+                    ['created_at' => now(), 'updated_at' => now()]
+                );
+            }
         }
     }
 }

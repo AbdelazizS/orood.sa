@@ -354,6 +354,45 @@ export function AdminAnalyticsPage() {
       })
     }
 
+    const ensureSpace = (needed) => {
+      if (y + needed > pageH - 25) {
+        doc.addPage()
+        y = margin
+      }
+    }
+
+    if ((reports.top_products ?? []).length > 0) {
+      ensureSpace(24)
+      doc.setFontSize(12)
+      doc.setFont("helvetica", "bold")
+      doc.text("Top products (orders in period)", margin, y)
+      y += 8
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(10)
+      ;(reports.top_products ?? []).slice(0, 10).forEach((p) => {
+        ensureSpace(8)
+        const line = `${(p.title ?? "").slice(0, 70)} — ${p.purchase_count ?? 0} orders, ${Number(p.total_amount ?? 0).toFixed(0)} SAR`
+        doc.text(line, margin, y)
+        y += 7
+      })
+      y += 4
+    }
+
+    if ((reports.top_cities ?? []).length > 0) {
+      ensureSpace(24)
+      doc.setFontSize(12)
+      doc.setFont("helvetica", "bold")
+      doc.text("Top cities (by orders)", margin, y)
+      y += 8
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(10)
+      ;(reports.top_cities ?? []).slice(0, 10).forEach((c) => {
+        ensureSpace(8)
+        doc.text(`${c.name ?? "—"}: ${c.purchase_count ?? 0} orders`, margin, y)
+        y += 7
+      })
+    }
+
     const totalPages = doc.internal.getNumberOfPages()
     for (let p = 1; p <= totalPages; p++) {
       doc.setPage(p)

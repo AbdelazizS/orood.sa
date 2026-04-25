@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
+import { useNavigate, useSearchParams } from "react-router-dom"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -17,12 +19,17 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import apiClient from "@/lib/apiClient"
 import { Shield, CheckCircle2, XCircle, Loader2, FileText, Building2 } from "lucide-react"
-import { useState } from "react"
 import { toast } from "sonner"
+import { usePermission } from "@/hooks/usePermission"
+import { cn } from "@/lib/utils"
 
 export function AdminVerificationsPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const focusId = (searchParams.get("focus") || "").trim()
   const queryClient = useQueryClient()
+  const canReview = usePermission("compliance.review_document_verifications")
   const [rejecting, setRejecting] = useState(null)
   const [rejectReason, setRejectReason] = useState("")
 
@@ -32,7 +39,16 @@ export function AdminVerificationsPage() {
       const { data: res } = await apiClient.get("/admin/verifications")
       return res
     },
+    enabled: canReview,
   })
+
+  const verifications = data?.data ?? []
+
+  useEffect(() => {
+    if (!focusId || !verifications.length) return
+    const el = document.getElementById(`verification-row-${focusId}`)
+    el?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+  }, [focusId, verifications])
 
   const approveMutation = useMutation({
     mutationFn: (id) => apiClient.post(`/admin/verifications/${id}/approve`),
@@ -52,7 +68,9 @@ export function AdminVerificationsPage() {
     },
   })
 
-  const verifications = data?.data ?? []
+  if (!canReview) {
+    return <div className="p-6 text-muted-foreground">{t("admin.noPermission", "You do not have permission to view this page.")}</div>
+  }
 
   if (isLoading) {
     return (
@@ -62,6 +80,8 @@ export function AdminVerificationsPage() {
       </div>
     )
   }
+
+  const dateLocale = i18n.language?.startsWith("ar") ? "ar-SA" : undefined
 
   return (
     <div className="space-y-6">
@@ -79,7 +99,11 @@ export function AdminVerificationsPage() {
       ) : (
         <div className="space-y-4">
           {verifications.map((v) => (
-            <Card key={v.id}>
+            <Card
+              key={v.id}
+              id={`verification-row-${v.id}`}
+              className={cn(String(v.id) === focusId && "ring-2 ring-primary/40 ring-offset-2 ring-offset-background")}
+            >
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   {v.type === "company_license" ? (
@@ -90,7 +114,7 @@ export function AdminVerificationsPage() {
                   {v.user?.name} — {v.type === "company_license" ? t("verification.companyLicense") : t("verification.idCard")}
                 </CardTitle>
                 <CardDescription>
-                  {v.created_at && new Date(v.created_at).toLocaleString("ar-SA")}
+                  {v.created_at && new Date(v.created_at).toLocaleString(dateLocale)}
                   {v.company_name && ` • ${v.company_name}`}
                   {v.company_city && ` • ${v.company_city}`}
                 </CardDescription>
@@ -106,7 +130,19 @@ export function AdminVerificationsPage() {
                     {t("admin.viewDocument", "عرض الوثيقة")}
                   </a>
                 )}
-                <div className="mt-4 flex gap-2">
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      navigate(
+                        `/admin/messages?user_email=${encodeURIComponent(v.user?.email ?? "")}&source=document_verification&document_verification_id=${v.id}`,
+                      )
+                    }
+                  >
+                    {t("admin.contactClient", "Contact client")}
+                  </Button>
                   <Button
                     size="sm"
                     onClick={() => approveMutation.mutate(v.id)}

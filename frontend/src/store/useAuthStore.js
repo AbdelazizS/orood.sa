@@ -1,9 +1,10 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
+import { fetchUser } from "@/services/authService"
 
 export const useAuthStore = create(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       token: null,
       setAuth: (user, token) => set({ user, token }),
@@ -15,6 +16,10 @@ export const useAuthStore = create(
       isAdmin: () => useAuthStore.getState().user?.role === "admin",
       isSeller: () => useAuthStore.getState().user?.role === "seller",
       isBuyer: () => useAuthStore.getState().user?.role === "buyer",
+      refreshUser: async () => {
+        if (!get().token) return
+        await fetchUser()
+      },
     }),
     { name: "arood-auth" },
   ),

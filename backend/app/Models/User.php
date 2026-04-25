@@ -21,6 +21,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'pending_email',
         'password',
         'phone',
         'how_did_you_hear',
@@ -47,11 +48,20 @@ class User extends Authenticatable
         'cover_public_id',
         'verification_method',
         'verification_status',
+        'company_verification_status',
+        'company_verification_note',
+        'location_lat',
+        'location_lng',
+        'location_address',
+        'referred_by_marketer_id',
     ];
 
     protected $casts = [
         'is_verified' => 'boolean',
         'financial_guarantee' => 'decimal:2',
+        'location_lat' => 'float',
+        'location_lng' => 'float',
+        'company_verification_status' => 'string',
     ];
 
     /**
@@ -163,6 +173,21 @@ class User extends Authenticatable
         return $this->hasOne(Company::class, 'user_id');
     }
 
+    public function isCompany(): bool
+    {
+        return (string) $this->role === 'company';
+    }
+
+    public function isAdminRole(): bool
+    {
+        return in_array((string) $this->role, ['admin', 'super_admin'], true);
+    }
+
+    public function canSellWholesale(): bool
+    {
+        return $this->isCompany() && (string) $this->company_verification_status === 'approved';
+    }
+
     public function purchasesAsBuyer()
     {
         return $this->hasMany(Purchase::class, 'buyer_id');
@@ -187,6 +212,40 @@ class User extends Authenticatable
     {
         $role = UserRole::tryFrom($this->role);
         return $role ? $role->canCreateListings() : false;
+    }
+
+    /**
+     * How recently `last_seen` must be updated (via POST /auth/presence) to count as "online".
+     * Must exceed the SPA heartbeat interval plus network slack.
+     */
+    public const PRESENCE_ONLINE_WITHIN_SECONDS = 90;
+
+    public function appearsOnline(): bool
+    {
+        if ($this->last_seen === null) {
+            return false;
+        }
+
+        return $this->last_seen->greaterThan(now()->subSeconds(self::PRESENCE_ONLINE_WITHIN_SECONDS));
+    }
+
+    public function markPresenceHeartbeat(): void
+    {
+        $this->forceFill([
+            'last_seen' => now(),
+            'is_online' => true,
+        ])->save();
+    }
+
+    /**
+     * Tab close / explicit offline: stop counting as online for others immediately.
+     */
+    public function markPresenceOffline(): void
+    {
+        $this->forceFill([
+            'is_online' => false,
+            'last_seen' => now()->subSeconds(self::PRESENCE_ONLINE_WITHIN_SECONDS + 1),
+        ])->save();
     }
 
     protected function casts(): array

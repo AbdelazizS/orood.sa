@@ -15,7 +15,16 @@ const LEVEL_CONFIG = {
  */
 export function VerificationBadge({ emailVerified, level, size = "sm", className }) {
   const { t } = useTranslation()
-  const resolvedLevel = level ?? (emailVerified ? "green" : "grey")
+  const normalizedLevel = (() => {
+    if (!level) return null
+    const raw = String(level).toLowerCase()
+    if (raw === "unverified" || raw === "grey") return "grey"
+    if (raw === "email" || raw === "email_verified" || raw === "green") return "green"
+    if (raw === "id_verified" || raw === "gold") return "gold"
+    if (raw === "company_verified" || raw === "blue") return "blue"
+    return raw
+  })()
+  const resolvedLevel = normalizedLevel ?? (emailVerified ? "green" : "grey")
   const config = LEVEL_CONFIG[resolvedLevel] ?? LEVEL_CONFIG.grey
   const Icon = config.Icon
 

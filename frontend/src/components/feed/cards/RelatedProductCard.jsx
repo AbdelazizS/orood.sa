@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -42,7 +42,7 @@ export function RelatedProductCard({ product, className }) {
         className
       )}
     >
-      <Link to={`/products/${product.id}`} className="block">
+      <Link to={`/products/${product.id}`} state={{ from }} className="block">
         <div className="relative aspect-[4/3] overflow-hidden bg-muted/50">
           {imageUrl ? (
             <img
@@ -80,7 +80,7 @@ export function RelatedProductCard({ product, className }) {
         </div>
       </Link>
       <div className="space-y-2 p-3">
-        <Link to={`/products/${product.id}`}>
+        <Link to={`/products/${product.id}`} state={{ from }}>
           <h3 className="line-clamp-2 text-sm font-semibold leading-tight hover:underline">
             {product?.title}
           </h3>
@@ -108,7 +108,7 @@ export function RelatedProductCard({ product, className }) {
         </div>
         <div className="flex gap-2 pt-2">
           <Button asChild size="sm" variant="default" className="flex-1">
-            <Link to={`/products/${product.id}`}>
+            <Link to={`/products/${product.id}`} state={{ from }}>
               {t("productDetails.viewDetails", "عرض التفاصيل")}
             </Link>
           </Button>

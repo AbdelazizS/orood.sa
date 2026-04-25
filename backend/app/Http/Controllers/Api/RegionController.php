@@ -12,7 +12,9 @@ class RegionController extends Controller
     public function index()
     {
         $regions = cache()->remember('api.regions', now()->addMinutes(30), function () {
-            return Region::with('cities')->where('is_active', true)->get();
+            return Region::with(['cities' => fn ($q) => $q->where('is_active', true)])
+                ->where('is_active', true)
+                ->get();
         });
 
         return RegionResource::collection($regions);
@@ -20,7 +22,7 @@ class RegionController extends Controller
 
     public function cities(Region $region)
     {
-        $region->load('cities');
+        $region->load(['cities' => fn ($q) => $q->where('is_active', true)]);
 
         return CityResource::collection($region->cities);
     }

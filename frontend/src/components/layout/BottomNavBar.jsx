@@ -1,8 +1,10 @@
 import { Link, useLocation } from "react-router-dom"
 import { useTranslation } from "react-i18next"
-import { Home, LayoutGrid, Plus, Bell, Mail } from "lucide-react"
+import { Home, Plus, Bell, Mail, Package } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAppDirection } from "@/providers/DirectionProvider"
+import { useAuthStore } from "@/store/useAuthStore"
+import { isStaffUser } from "@/lib/accountSectionPaths"
 
 /**
  * Fixed bottom nav bar — visible when authenticated, hidden on lg+.
@@ -12,10 +14,19 @@ export function BottomNavBar() {
   const { t } = useTranslation()
   const { direction } = useAppDirection()
   const location = useLocation()
+  const user = useAuthStore((s) => s.user)
+  const staff = isStaffUser(user)
+  const notifPath = staff ? "/admin/notifications" : "/dashboard/notifications"
+  const msgPath = staff ? "/admin/messages" : "/dashboard/messages"
   const isAddPage = location.pathname === "/add"
   const isHome = location.pathname === "/"
-  const isNotifications = location.pathname === "/dashboard/notifications"
-  const isMessages = location.pathname.startsWith("/dashboard/messages")
+  const isNotifications = staff
+    ? location.pathname.startsWith("/admin/notifications")
+    : location.pathname.startsWith("/dashboard/notifications")
+  const isMessages = staff
+    ? location.pathname.startsWith("/admin/messages")
+    : location.pathname.startsWith("/dashboard/messages")
+  const isOrders = location.pathname.startsWith("/dashboard/orders")
 
   const linkClass = "flex flex-1 flex-col items-center justify-center gap-0.5 pt-2 transition-colors"
   const activeClass = "text-primary"
@@ -41,11 +52,13 @@ export function BottomNavBar() {
         </Link>
 
         <Link
-          to="/"
-          className={cn(linkClass, inactiveClass)}
+          to="/dashboard/orders"
+          className={cn(linkClass, isOrders ? activeClass : inactiveClass)}
         >
-          <LayoutGrid className="size-6" />
-          <span className="text-[11px] text-muted-foreground">{t("nav.allCategories", "كل الأقسام")}</span>
+          <Package className="size-6" />
+          <span className={cn("text-[11px]", isOrders ? "text-primary font-medium" : "text-muted-foreground")}>
+            {t("dashboard.orderTracking", "الطلبات")}
+          </span>
         </Link>
 
         <Link to="/add" className="flex flex-col items-center justify-center -mt-5">
@@ -58,7 +71,7 @@ export function BottomNavBar() {
         </Link>
 
         <Link
-          to="/dashboard/notifications"
+          to={notifPath}
           className={cn(linkClass, isNotifications ? activeClass : inactiveClass)}
         >
           <Bell className="size-6" />
@@ -68,7 +81,7 @@ export function BottomNavBar() {
         </Link>
 
         <Link
-          to="/dashboard/messages"
+          to={msgPath}
           className={cn(linkClass, isMessages ? activeClass : inactiveClass)}
         >
           <Mail className="size-6" />

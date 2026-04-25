@@ -1,7 +1,6 @@
 import { useEffect } from "react"
 import { useSearchParams } from "react-router-dom"
 import { FeedList } from "@/components/feed/FeedList"
-import { WholesaleSection } from "@/components/wholesale/WholesaleSection"
 import { useHomepageFeed } from "@/hooks/useHomepageFeed"
 import { FilterToolbar } from "@/components/home/FilterToolbar"
 import { CategoryBar } from "@/components/home/CategoryBar"
@@ -12,7 +11,7 @@ import { useFiltersStore } from "@/store/useFiltersStore"
 export function HomePage() {
   const { setCategory, setSubcategory } = useFiltersStore()
   const [searchParams] = useSearchParams()
-  const { feedQuery, categoriesQuery, regionsQuery, featuresQuery } = useHomepageFeed()
+  const { feedQuery, categoriesQuery, regionsQuery } = useHomepageFeed()
 
   useEffect(() => {
     const cat = searchParams.get("category")
@@ -37,18 +36,14 @@ export function HomePage() {
       <SubcategoryBar categories={categories} />
 
       {/* Section 3 — Filter toolbar */}
-      <FilterToolbar
-        regions={regionsQuery.data ?? []}
-        features={featuresQuery.data}
-      />
+      <FilterToolbar regions={regionsQuery.data ?? []} />
 
       {/* Section 4 — Announcement strip */}
-      <AnnouncementStrip />
+      <AnnouncementStrip target="individuals" queryKey="home-individuals" />
 
       {/* Section 5 — Listings feed */}
       <div className="space-y-0">
         <FeedList feedQuery={feedQuery} />
-        <WholesaleSection />
       </div>
     </section>
   )

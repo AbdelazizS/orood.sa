@@ -48,6 +48,8 @@ export function AdminDashboardPage() {
   const isSuperAdmin = role === "super_admin"
   const isAdmin = role === "admin" || isSuperAdmin
   const isManager = role === "manager" || isAdmin
+  const perms = Array.isArray(user?.permissions) ? user.permissions : []
+  const hasAdminBidsPermission = perms.includes("*") || perms.includes("bids.admin_view")
 
   const dateTo = new Date()
   const dateFrom = new Date()
@@ -147,6 +149,16 @@ export function AdminDashboardPage() {
         <h1 className="text-2xl font-bold">{t("admin.dashboardTitle")}</h1>
         <p className="text-muted-foreground">{t("admin.dashboardDescription")}</p>
       </div>
+      {!hasAdminBidsPermission ? (
+        <Card className="border-amber-300 bg-amber-50/70">
+          <CardContent className="pt-6 text-sm text-amber-800">
+            {t(
+              "admin.bidsPermissionMissingHint",
+              "Bids page is hidden because this admin account is missing bids.admin_view permission. Assign it from Roles & Permissions."
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {statCards.map(({ key, labelKey, icon: Icon, color }) => (

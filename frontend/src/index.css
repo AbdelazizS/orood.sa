@@ -123,6 +123,7 @@
   }
   html {
     @apply bg-background text-foreground;
+    font-size: 106.25%;
   }
   html[dir="rtl"] body {
     font-family: var(--font-arabic);

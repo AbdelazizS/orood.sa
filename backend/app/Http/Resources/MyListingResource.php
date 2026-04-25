@@ -78,7 +78,11 @@ class MyListingResource extends JsonResource
             'sold' => 'SOLD',
             'hidden' => 'HIDDEN',
             'deleted' => 'DELETED',
-            default => 'ACTIVE',
+            'pending_review' => 'PENDING_REVIEW',
+            'suspended' => 'SUSPENDED',
+            'archived' => 'ARCHIVED',
+            'draft' => 'DRAFT',
+            default => 'OTHER',
         };
     }
 }

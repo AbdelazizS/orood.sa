@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { MapPin, Package, ShoppingBag } from "lucide-react"
@@ -26,21 +26,21 @@ export function ProductCardGrid({ product, className }) {
   const imageUrl = product?.media?.image_url ?? product?.media?.gallery?.[0]
 
   return (
-    <Link to={`/products/${product.id}`} className="block">
+    <Link to={`/products/${product.id}`} className="block h-full" state={{ from }}>
       <Card
         className={cn(
-          "group overflow-hidden rounded-2xl border bg-card shadow-sm transition-all duration-200",
+          "group flex h-full flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all duration-200",
           "hover:scale-[1.02] hover:shadow-md",
           "focus-within:ring-2 focus-within:ring-primary/20 focus-within:ring-offset-2",
           className
         )}
       >
-        <div className="relative aspect-[4/3] overflow-hidden bg-muted/50">
+        <div className="relative aspect-[4/3] overflow-hidden bg-transparent">
           {imageUrl ? (
             <img
               src={resolveImageUrl(imageUrl)}
               alt={product?.title}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              className="h-full w-full object-contain p-1.5 transition-transform duration-300 group-hover:scale-[1.02]"
               loading="lazy"
             />
           ) : (
@@ -70,7 +70,7 @@ export function ProductCardGrid({ product, className }) {
             )}
           </div>
         </div>
-        <div className="space-y-2 p-3">
+        <div className="flex min-h-[120px] flex-1 flex-col justify-between space-y-2 p-3">
           <h3 className="line-clamp-2 text-sm font-semibold leading-tight">
             {product?.title}
           </h3>
@@ -78,12 +78,16 @@ export function ProductCardGrid({ product, className }) {
             <ShoppingBag className="size-4 shrink-0" />
             {formatPrice(product?.price, t)}
           </p>
-          {product?.location && (
-            <p className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
-              <MapPin className="size-3.5 shrink-0" />
-              {product.location}
-            </p>
-          )}
+          <p className="flex min-h-4 items-center gap-1.5 truncate text-xs text-muted-foreground">
+            {product?.location ? (
+              <>
+                <MapPin className="size-3.5 shrink-0" />
+                <span className="truncate">{product.location}</span>
+              </>
+            ) : (
+              <span className="invisible">.</span>
+            )}
+          </p>
         </div>
       </Card>
     </Link>

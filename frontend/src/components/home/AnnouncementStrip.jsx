@@ -1,20 +1,21 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import apiClient from "@/lib/apiClient"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-const DISMISSED_KEY = "arooth-announcements-dismissed"
+const DISMISSED_KEY_PREFIX = "arooth-announcements-dismissed"
 
 /**
  * Section 4 — Announcement strip. Dismissible, won't show again after close.
  */
-export function AnnouncementStrip() {
+export function AnnouncementStrip({ target = "all", queryKey = "default" }) {
   const { t } = useTranslation()
+  const dismissedStorageKey = `${DISMISSED_KEY_PREFIX}-${queryKey}`
   const [dismissedIds, setDismissedIds] = useState(() => {
     try {
-      const raw = localStorage.getItem(DISMISSED_KEY)
+      const raw = localStorage.getItem(dismissedStorageKey)
       return raw ? new Set(JSON.parse(raw)) : new Set()
     } catch {
       return new Set()
@@ -22,22 +23,29 @@ export function AnnouncementStrip() {
   })
 
   const { data } = useQuery({
-    queryKey: ["announcements"],
+    queryKey: ["announcements", target],
     queryFn: async () => {
-      const { data: res } = await apiClient.get("/announcements")
+      const { data: res } = await apiClient.get("/announcements", {
+        params: { target },
+      })
       return res?.data ?? []
     },
   })
 
-  const allAnnouncements = (data ?? []).filter((a) => a.active !== false && a.is_active !== false)
+  const allAnnouncements = useMemo(
+    () => (data ?? []).filter((a) => a.active !== false && a.is_active !== false),
+    [data]
+  )
   const announcements = allAnnouncements.filter((a) => !dismissedIds.has(String(a.id)))
 
   const handleDismissAll = () => {
     const ids = new Set(allAnnouncements.map((a) => String(a.id)))
     setDismissedIds(ids)
     try {
-      localStorage.setItem(DISMISSED_KEY, JSON.stringify([...ids]))
-    } catch {}
+      localStorage.setItem(dismissedStorageKey, JSON.stringify([...ids]))
+    } catch {
+      // Ignore storage failures (private mode, quota).
+    }
   }
 
   if (announcements.length === 0) return null

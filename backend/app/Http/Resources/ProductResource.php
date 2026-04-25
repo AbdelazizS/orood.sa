@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\DB;
 
 class ProductResource extends JsonResource
 {
@@ -13,6 +14,36 @@ class ProductResource extends JsonResource
     public function toArray(Request $request): array
     {
         $stats = $this->stats ?? [];
+        $isOwner = (bool) ($this->is_owner ?? false);
+        $canViewBidDetails = (bool) ($this->can_view_bid_details ?? ($isOwner || (bool) ($this->bids_visible ?? true)));
+        $viewer = $request->user();
+        $anonymousHigh = null;
+        $minimumNextBid = null;
+        if ($this->accept_bids && ! $canViewBidDetails && ! $isOwner && $viewer) {
+            $maxAll = (float) ($this->bids()
+                ->where('status', \App\Models\Bid::STATUS_PENDING)
+                ->max('amount') ?? 0);
+            if ($maxAll > 0) {
+                $anonymousHigh = $maxAll;
+                $minimumNextBid = round($maxAll + 0.01, 2);
+            } else {
+                $minimumNextBid = 0.01;
+            }
+        }
+        $highestBid = $canViewBidDetails ? ($this->highest_bid ?? null) : $anonymousHigh;
+        $visibleBidsCount = $canViewBidDetails
+            ? (int) ($this->bids_count ?? $this->bids()->where('status', \App\Models\Bid::STATUS_PENDING)->count())
+            : 0;
+        $currentBidUserId = $canViewBidDetails ? $this->current_bid_user_id : null;
+        $messageCount = (int) ($this->message_count ?? 0);
+        $isDetailRequest = $request->is('api/v1/listings/*') || $request->is('api/v1/products/*');
+        if ($messageCount <= 0 && $isDetailRequest && $this->id) {
+            $messageCount = (int) DB::table('conversations')
+                ->where('product_id', $this->id)
+                ->distinct('buyer_id')
+                ->count('buyer_id');
+        }
+
         return [
             'id' => $this->id,
             'type' => $this->type,
@@ -25,35 +56,39 @@ class ProductResource extends JsonResource
             'is_offer' => $this->is_offer,
             'accept_bids' => (bool) $this->accept_bids,
             'bids_visible' => (bool) ($this->bids_visible ?? true),
-            'contact_phone' => $this->contact_phone,
-            'contact_by_call' => (bool) ($this->contact_by_call ?? false),
+            'contact_phone' => $this->contact_phone ?? data_get($this->contact_preferences, 'phone_number'),
+            'contact_by_call' => (bool) ($this->contact_by_call ?? data_get($this->contact_preferences, 'phone', false)),
             'free_shipping' => (bool) ($this->free_shipping ?? false),
             'free_return' => (bool) ($this->free_return ?? false),
             'free_return_days' => (int) ($this->free_return_days ?? 1),
+            'allow_cod' => (bool) ($this->allow_cod ?? true),
             'view_at_location' => (bool) ($this->view_at_location ?? false),
             'show_comments' => (bool) ($this->show_comments ?? true),
             'view_count' => (int) ($this->view_count ?? 0),
             'today_view_count' => (int) ($this->today_view_count ?? 0),
-            'message_count' => (int) ($this->message_count ?? 0),
+            'message_count' => $messageCount,
+            'sold_count' => (int) ($this->sold_count ?? 0),
             'shipping_days' => $this->shipping_days,
             'return_days' => $this->return_days,
             'location_city' => $this->location_city,
             'location_lat' => $this->location_lat,
             'location_lng' => $this->location_lng,
             'bumped_at' => $this->bumped_at,
-            'is_owner' => $this->is_owner ?? false,
+            'is_owner' => $isOwner,
             'location' => $this->city?->getLocalizedName($request->header('Accept-Language')) ?? $this->region?->getLocalizedName($request->header('Accept-Language')),
             'stats' => [
                 'views' => (int) ($this->view_count ?? data_get($stats, 'views', 0)),
                 'purchases' => data_get($stats, 'purchases', 0),
-                'messages' => (int) ($this->message_count ?? data_get($stats, 'messages', 0)),
-                'bids' => $this->bids_count ?? $this->bids()->count(),
+                'messages' => $messageCount > 0 ? $messageCount : (int) data_get($stats, 'messages', 0),
+                'bids' => $visibleBidsCount,
                 'comments' => $this->comments_count ?? $this->comments()->count(),
             ],
-            'highest_bid' => $this->highest_bid ?? null,
-            'current_bid_user_id' => $this->current_bid_user_id,
+            'highest_bid' => $highestBid,
+            'minimum_next_bid' => $minimumNextBid,
+            'current_bid_user_id' => $currentBidUserId,
             'seller' => [
                 'id' => $this->seller?->id,
+                'username' => $this->seller?->username,
                 'name' => $this->seller?->name,
                 'avatar_url' => $this->seller?->avatar_url,
                 'is_verified' => (bool) ($this->seller?->is_verified ?? false),
@@ -65,9 +100,10 @@ class ProductResource extends JsonResource
                     'name' => $this->seller->city->getLocalizedName($request->header('Accept-Language')),
                 ] : null,
                 'last_seen' => $this->seller?->last_seen,
-                'is_online' => (bool) ($this->seller?->is_online ?? false),
+                'is_online' => $this->sellerPresenceOnline(),
                 'completed_orders' => (int) ($this->seller?->completed_orders ?? data_get($stats, 'orders', 0)),
                 'rating' => (float) ($this->seller?->rating ?? 0),
+                'total_ratings' => (int) ($this->seller?->total_ratings ?? 0),
             ],
             'category' => $this->category ? ['id' => $this->category->id, 'name' => $this->category->getLocalizedName($request->header('Accept-Language'))] : null,
             'subcategory' => $this->subcategory ? ['id' => $this->subcategory->id, 'name' => $this->subcategory->getLocalizedName($request->header('Accept-Language'))] : null,
@@ -89,10 +125,29 @@ class ProductResource extends JsonResource
             ],
             'tags' => $this->tags ?? [],
             'published_at' => $this->published_at,
-            'moderation_status' => $this->moderation_status ?? 'approved',
+            'created_at' => $this->created_at,
+            'status' => $this->status,
+            'is_publicly_listed' => $this->isPubliclyListed(),
+            'moderation_status' => $this->moderation_status,
             'wholesale_price' => $this->wholesale_price,
+            'discount_percent' => (int) ($this->discount_percent ?? 0),
             'min_quantity' => $this->min_quantity,
+            'wholesale_expires_at' => $this->wholesale_expires_at,
             'is_wholesale' => (bool) ($this->is_wholesale ?? false),
         ];
+    }
+
+    /**
+     * True only when last_seen is fresh (heartbeat). DB is_online alone is ignored so a closed
+     * browser cannot leave users stuck "online" forever.
+     */
+    protected function sellerPresenceOnline(): bool
+    {
+        $seller = $this->seller;
+        if (! $seller) {
+            return false;
+        }
+
+        return $seller->appearsOnline();
     }
 }

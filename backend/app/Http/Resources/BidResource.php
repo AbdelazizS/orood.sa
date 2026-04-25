@@ -12,12 +12,14 @@ class BidResource extends JsonResource
         $user = $this->user;
         $isOwnBid = $request->user() && $request->user()->id === $this->user_id;
 
+        $amountRounded = (int) round((float) $this->amount);
+
         return [
             'id' => $this->id,
             'listing_id' => $this->product_id,
             'product_id' => $this->product_id,
             'amount' => (float) $this->amount,
-            'formatted' => number_format((float) $this->amount, 2) . ' ر.س',
+            'formatted' => number_format($amountRounded, 0) . ' ر.س',
             'status' => $this->status,
             'is_visible' => (bool) $this->is_visible,
             'note' => $this->note ?? $this->message,

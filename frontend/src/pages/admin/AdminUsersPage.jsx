@@ -33,8 +33,9 @@ import { Label } from "@/components/ui/label"
 import apiClient from "@/lib/apiClient"
 import { MoreHorizontal, Pencil, Loader2, Ban, UserX, Search, ShieldCheck, Wallet, Check, Eye } from "lucide-react"
 import { VerificationBadge } from "@/components/auth/VerificationBadge"
+import { useAuthStore } from "@/store/useAuthStore"
 
-const ROLES = ["super_admin", "admin", "manager", "employee", "seller", "buyer", "user"]
+const ROLES = ["super_admin", "admin", "manager", "employee", "marketer", "company", "seller", "buyer", "user"]
 const VERIFICATION_LEVELS = [
   { value: "unverified", labelKey: "verification.unverified", color: "grey" },
   { value: "email", labelKey: "verification.emailVerified", color: "green" },
@@ -51,23 +52,23 @@ const MEMBER_FILTERS = [
   { value: "inactive_3m", labelKey: "admin.membersInactive3m" },
 ]
 
-function userColumns({ t, i18n, setEditingUser, setVerifyUser, modMutation, navigate }) {
+function userColumns({ t, i18n, setEditingUser, setVerifyUser, modMutation, navigate, currentUserId }) {
   return [
-    { id: "name", header: t("admin.name", "الاسم"), cell: ({ row }) => row.original.name },
-    { id: "email", header: t("auth.email", "البريد الإلكتروني"), cell: ({ row }) => row.original.email },
-    { id: "phone", header: t("admin.phone", "الجوال"), cell: ({ row }) => row.original.phone || "—" },
+    { id: "name", header: t("admin.name"), cell: ({ row }) => row.original.name },
+    { id: "email", header: t("auth.email"), cell: ({ row }) => row.original.email },
+    { id: "phone", header: t("admin.phone"), cell: ({ row }) => row.original.phone || "—" },
     {
       id: "role",
-      header: t("auth.role", "الدور"),
+      header: t("auth.role"),
       cell: ({ row }) => (
-        <Badge variant={["admin", "super_admin", "manager", "employee"].includes(row.original.role) ? "default" : "secondary"}>
+        <Badge variant={["admin", "super_admin", "manager", "employee", "marketer", "company"].includes(row.original.role) ? "default" : "secondary"}>
           {t(`admin.role.${row.original.role}`, row.original.role?.replace(/_/g, " "))}
         </Badge>
       ),
     },
     {
       id: "city",
-      header: t("addOffer.cityLabel", "المدينة"),
+      header: t("addOffer.cityLabel"),
       cell: ({ row }) => {
         const city = row.original.city
         return city ? (i18n.language?.startsWith("ar") && city.name_ar ? city.name_ar : city.name) : "—"
@@ -75,14 +76,14 @@ function userColumns({ t, i18n, setEditingUser, setVerifyUser, modMutation, navi
     },
     {
       id: "verification",
-      header: t("admin.verificationBadge", "التوثيق"),
+      header: t("admin.verificationBadge"),
       cell: ({ row }) => (
         <VerificationBadge level={row.original.verification_level} size="sm" />
       ),
     },
     {
       id: "guarantee",
-      header: t("guarantee.title", "الضمان المالي"),
+      header: t("guarantee.title"),
       cell: ({ row }) => {
         const amt = row.original.financial_guarantee ?? 0
         const hasGuarantee = amt > 0
@@ -91,7 +92,7 @@ function userColumns({ t, i18n, setEditingUser, setVerifyUser, modMutation, navi
             {hasGuarantee ? (
               <>
                 <Check className="size-4 text-green-600" />
-                <span>{Number(amt).toLocaleString()} {t("common.currency", "ر.س")}</span>
+                <span>{Number(amt).toLocaleString()} {t("common.currency")}</span>
               </>
             ) : (
               <span className="text-muted-foreground">—</span>
@@ -102,15 +103,15 @@ function userColumns({ t, i18n, setEditingUser, setVerifyUser, modMutation, navi
     },
     {
       id: "status",
-      header: t("admin.status", "الحالة"),
+      header: t("admin.status"),
       cell: ({ row }) => {
         const u = row.original
         return (
           <div className="flex gap-1">
-            {u.banned_at && <Badge variant="destructive">{t("admin.banned", "محظور")}</Badge>}
-            {u.suspended_at && !u.banned_at && <Badge variant="secondary">{t("admin.suspended", "معلق")}</Badge>}
+            {u.banned_at && <Badge variant="destructive">{t("admin.banned")}</Badge>}
+            {u.suspended_at && !u.banned_at && <Badge variant="secondary">{t("admin.suspended")}</Badge>}
             {!u.banned_at && !u.suspended_at && (
-              <Badge variant="outline" className="text-green-600 border-green-600">{t("admin.active", "نشط")}</Badge>
+              <Badge variant="outline" className="text-green-600 border-green-600">{t("admin.active")}</Badge>
             )}
           </div>
         )
@@ -131,38 +132,38 @@ function userColumns({ t, i18n, setEditingUser, setVerifyUser, modMutation, navi
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => navigate(`/admin/users/${user.id}`)}>
                 <Eye className="me-2 size-4" />
-                {t("admin.viewProfile", "عرض الملف")}
+                {t("admin.viewProfile")}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setEditingUser(user)}>
                 <Pencil className="me-2 size-4" />
-                {t("admin.edit", "تحرير")}
+                {t("admin.edit")}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setVerifyUser(user)}>
                 <ShieldCheck className="me-2 size-4" />
-                {t("admin.setVerification", "تعيين التوثيق")}
+                {t("admin.setVerification")}
               </DropdownMenuItem>
-              {["seller", "buyer", "user"].includes(user.role) && (
+              {user.role !== "super_admin" && Number(user.id) !== Number(currentUserId) && (
                 <>
                   {user.banned_at ? (
                     <DropdownMenuItem onClick={() => modMutation.mutate({ id: user.id, action: "unban" })}>
                       <Ban className="me-2 size-4" />
-                      {t("admin.unban", "إلغاء الحظر")}
+                      {t("admin.unban")}
                     </DropdownMenuItem>
                   ) : (
                     <DropdownMenuItem onClick={() => modMutation.mutate({ id: user.id, action: "ban" })}>
                       <Ban className="me-2 size-4" />
-                      {t("admin.ban", "حظر")}
+                      {t("admin.ban")}
                     </DropdownMenuItem>
                   )}
                   {user.suspended_at ? (
                     <DropdownMenuItem onClick={() => modMutation.mutate({ id: user.id, action: "unsuspend" })}>
                       <UserX className="me-2 size-4" />
-                      {t("admin.unsuspend", "إلغاء التعليق")}
+                      {t("admin.unsuspend")}
                     </DropdownMenuItem>
                   ) : (
                     <DropdownMenuItem onClick={() => modMutation.mutate({ id: user.id, action: "suspend" })}>
                       <UserX className="me-2 size-4" />
-                      {t("admin.suspend", "تعليق")}
+                      {t("admin.suspend")}
                     </DropdownMenuItem>
                   )}
                 </>
@@ -170,7 +171,7 @@ function userColumns({ t, i18n, setEditingUser, setVerifyUser, modMutation, navi
               {(user.financial_guarantee ?? 0) > 0 && (
                 <DropdownMenuItem onClick={() => modMutation.mutate({ id: user.id, action: "refund-guarantee" })}>
                   <Wallet className="me-2 size-4" />
-                  {t("admin.refundGuarantee", "استرداد الضمان")}
+                  {t("admin.refundGuarantee")}
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>
@@ -183,6 +184,7 @@ function userColumns({ t, i18n, setEditingUser, setVerifyUser, modMutation, navi
 
 export function AdminUsersPage() {
   const { t, i18n } = useTranslation()
+  const currentUserId = useAuthStore((s) => s.user?.id)
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [editingUser, setEditingUser] = useState(null)
@@ -229,7 +231,7 @@ export function AdminUsersPage() {
     onSuccess: () => {
       setEditingUser(null)
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] })
-      toast.success(t("admin.updateSuccess", "تم التحديث بنجاح"))
+      toast.success(t("admin.updateSuccess"))
     },
     onError: (err) => {
       toast.error(err?.response?.data?.message ?? t("common.error"))
@@ -246,15 +248,20 @@ export function AdminUsersPage() {
     onSuccess: (_, variables) => {
       setVerifyUser(null)
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] })
-      if (variables.action === "verify") toast.success(t("admin.verificationUpdated", "تم تحديث التوثيق"))
-      else if (variables.action === "refund-guarantee") toast.success(t("guarantee.refunded", "تم استرداد الضمان"))
-      else if (variables.action === "ban") toast.success(t("admin.userBanned", "تم حظر المستخدم"))
-      else if (variables.action === "unban") toast.success(t("admin.userUnbanned", "تم إلغاء حظر المستخدم"))
-      else if (variables.action === "suspend") toast.success(t("admin.userSuspended", "تم تعليق المستخدم"))
-      else if (variables.action === "unsuspend") toast.success(t("admin.userUnsuspended", "تم إلغاء تعليق المستخدم"))
+      if (variables.action === "verify") toast.success(t("admin.verificationUpdated"))
+      else if (variables.action === "refund-guarantee") toast.success(t("guarantee.refunded"))
+      else if (variables.action === "ban") toast.success(t("admin.userBanned"))
+      else if (variables.action === "unban") toast.success(t("admin.userUnbanned"))
+      else if (variables.action === "suspend") toast.success(t("admin.userSuspended"))
+      else if (variables.action === "unsuspend") toast.success(t("admin.userUnsuspended"))
     },
     onError: (err) => {
-      toast.error(err?.response?.data?.message ?? t("common.error"))
+      const backendMessage = err?.response?.data?.message
+      const validationErrors = err?.response?.data?.errors
+      const firstValidationMessage = validationErrors
+        ? Object.values(validationErrors)?.flat?.()?.[0]
+        : null
+      toast.error(firstValidationMessage || backendMessage || t("common.error"))
     },
   })
 
@@ -265,26 +272,26 @@ export function AdminUsersPage() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">{t("admin.usersTitle", "إدارة المستخدمين")}</h1>
+        <h1 className="text-2xl font-bold">{t("admin.usersTitle")}</h1>
         <Skeleton className="h-64" />
       </div>
     )
   }
 
-  const columns = userColumns({ t, i18n, setEditingUser, setVerifyUser, modMutation, navigate })
+  const columns = userColumns({ t, i18n, setEditingUser, setVerifyUser, modMutation, navigate, currentUserId })
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">{t("admin.usersTitle", "إدارة المستخدمين")}</h1>
-          <p className="text-muted-foreground">{t("admin.usersDescription", "عرض وإدارة حسابات المستخدمين")}</p>
+          <h1 className="text-2xl font-bold">{t("admin.usersTitle")}</h1>
+          <p className="text-muted-foreground">{t("admin.usersDescription")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
             <Search className="absolute start-2 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
-              placeholder={t("admin.search", "بحث...")}
+              placeholder={t("admin.search")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="ps-8 w-48"
@@ -292,10 +299,10 @@ export function AdminUsersPage() {
           </div>
           <Select value={roleFilter || "all"} onValueChange={(v) => setRoleFilter(v === "all" ? "" : v)}>
             <SelectTrigger className="w-36">
-              <SelectValue placeholder={t("admin.roleLabel", "الدور")} />
+              <SelectValue placeholder={t("admin.roleLabel")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{t("common.all", "الكل")}</SelectItem>
+              <SelectItem value="all">{t("common.all")}</SelectItem>
               {ROLES.map((r) => (
                 <SelectItem key={r} value={r}>{t(`admin.role.${r}`, r.replace(/_/g, " "))}</SelectItem>
               ))}
@@ -303,10 +310,10 @@ export function AdminUsersPage() {
           </Select>
           <Select value={cityFilter || "all"} onValueChange={(v) => setCityFilter(v === "all" ? "" : v)}>
             <SelectTrigger className="w-40">
-              <SelectValue placeholder={t("addOffer.cityLabel", "المدينة")} />
+              <SelectValue placeholder={t("addOffer.cityLabel")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{t("common.all", "الكل")}</SelectItem>
+              <SelectItem value="all">{t("common.all")}</SelectItem>
             {cities.map((c) => (
               <SelectItem key={c.id} value={String(c.id)}>
                 {c.name}
@@ -316,10 +323,10 @@ export function AdminUsersPage() {
           </Select>
           <Select value={verificationFilter || "all"} onValueChange={(v) => setVerificationFilter(v === "all" ? "" : v)}>
             <SelectTrigger className="w-40">
-              <SelectValue placeholder={t("admin.verificationBadge", "التوثيق")} />
+              <SelectValue placeholder={t("admin.verificationBadge")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{t("common.all", "الكل")}</SelectItem>
+              <SelectItem value="all">{t("common.all")}</SelectItem>
               {VERIFICATION_LEVELS.map((v) => (
                 <SelectItem key={v.value} value={v.value}>{t(v.labelKey, v.value.replace(/_/g, " "))}</SelectItem>
               ))}
@@ -327,7 +334,7 @@ export function AdminUsersPage() {
           </Select>
           <Select value={memberFilter || "all"} onValueChange={(v) => setMemberFilter(v === "all" ? "" : v)}>
             <SelectTrigger className="w-44">
-              <SelectValue placeholder={t("admin.memberFilter", "فلتر الأعضاء")} />
+              <SelectValue placeholder={t("admin.memberFilter")} />
             </SelectTrigger>
             <SelectContent>
               {MEMBER_FILTERS.map((f) => (
@@ -356,7 +363,7 @@ export function AdminUsersPage() {
         <Dialog open onOpenChange={(o) => !o && setEditingUser(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{t("admin.editUser", "تعديل المستخدم")}</DialogTitle>
+              <DialogTitle>{t("admin.editUser")}</DialogTitle>
             </DialogHeader>
             <EditUserForm
               user={editingUser}
@@ -392,7 +399,7 @@ function VerifyUserDialog({ user, onClose, onSave, isPending }) {
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t("admin.setVerification", "تعيين التوثيق")}</DialogTitle>
+          <DialogTitle>{t("admin.setVerification")}</DialogTitle>
         </DialogHeader>
         <form
           onSubmit={(e) => {
@@ -402,7 +409,7 @@ function VerifyUserDialog({ user, onClose, onSave, isPending }) {
           className="space-y-4"
         >
           <div>
-            <Label>{t("admin.verificationLevel", "مستوى التوثيق")}</Label>
+            <Label>{t("admin.verificationLevel")}</Label>
             <Select value={level} onValueChange={setLevel}>
               <SelectTrigger className="mt-1">
                 <SelectValue />
@@ -459,19 +466,19 @@ function EditUserForm({ user, cities, i18n, onClose, onSave, isPending }) {
       className="space-y-4"
     >
       <div>
-        <Label>{t("admin.name", "الاسم")}</Label>
+        <Label>{t("admin.name")}</Label>
         <Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1" required />
       </div>
       <div>
-        <Label>{t("auth.email", "البريد الإلكتروني")}</Label>
+        <Label>{t("auth.email")}</Label>
         <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1" />
       </div>
       <div>
-        <Label>{t("admin.phone", "الجوال")}</Label>
+        <Label>{t("admin.phone")}</Label>
         <Input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1" placeholder="+966..." />
       </div>
       <div>
-        <Label>{t("admin.roleLabel", "الدور")}</Label>
+        <Label>{t("admin.roleLabel")}</Label>
         <Select value={role} onValueChange={setRole}>
           <SelectTrigger className="mt-1">
             <SelectValue />
@@ -484,13 +491,13 @@ function EditUserForm({ user, cities, i18n, onClose, onSave, isPending }) {
         </Select>
       </div>
       <div>
-        <Label>{t("addOffer.cityLabel", "المدينة")}</Label>
+        <Label>{t("addOffer.cityLabel")}</Label>
         <Select value={cityId} onValueChange={setCityId}>
           <SelectTrigger className="mt-1">
-            <SelectValue placeholder={t("common.optional", "اختياري")} />
+            <SelectValue placeholder={t("common.optional")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="none">{t("common.optional", "—")}</SelectItem>
+            <SelectItem value="none">{t("common.optional")}</SelectItem>
             {cities.map((c) => (
               <SelectItem key={c.id} value={String(c.id)}>
                 {c.name}

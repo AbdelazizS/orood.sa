@@ -8,7 +8,51 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Conversation extends Model
 {
-    protected $fillable = ['product_id', 'buyer_id', 'seller_id'];
+    public const TYPE_LISTING = 'listing';
+
+    public const TYPE_DIRECT = 'direct';
+
+    protected $fillable = [
+        'product_id',
+        'buyer_id',
+        'seller_id',
+        'conversation_type',
+        'dedupe_key',
+    ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Conversation $c) {
+            if ($c->dedupe_key) {
+                return;
+            }
+            if ($c->product_id) {
+                $c->conversation_type = $c->conversation_type ?: self::TYPE_LISTING;
+                $c->dedupe_key = self::listingDedupeKey((int) $c->product_id, (int) $c->buyer_id);
+
+                return;
+            }
+            if ($c->buyer_id && $c->seller_id) {
+                $c->conversation_type = $c->conversation_type ?: self::TYPE_DIRECT;
+                $c->dedupe_key = self::directDedupeKey((int) $c->buyer_id, (int) $c->seller_id);
+            }
+        });
+    }
+
+    public static function listingDedupeKey(int $productId, int $buyerId): string
+    {
+        return 'listing:'.$productId.':'.$buyerId;
+    }
+
+    public static function directDedupeKey(int $userAId, int $userBId): string
+    {
+        return 'direct:'.min($userAId, $userBId).':'.max($userAId, $userBId);
+    }
+
+    public function isDirect(): bool
+    {
+        return $this->conversation_type === self::TYPE_DIRECT;
+    }
 
     public function product(): BelongsTo
     {

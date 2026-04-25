@@ -1,18 +1,38 @@
-import { useState } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useEffect, useMemo, useState } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useSearchParams } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Textarea } from "@/components/ui/textarea"
+import { ConversationListItem } from "@/components/messaging/ConversationListItem"
+import { MessageBubble } from "@/components/messaging/MessageBubble"
+import { ChatThreadPanel } from "@/components/messaging/ChatThreadPanel"
 import apiClient from "@/lib/apiClient"
 import { useAuthStore } from "@/store/useAuthStore"
-import { MessageSquare } from "lucide-react"
+import { Send, MessageSquare, ArrowLeft, Loader2 } from "lucide-react"
 
 export function MessagesPage() {
+  const { t } = useTranslation()
   const { user } = useAuthStore()
+  const queryClient = useQueryClient()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [selectedId, setSelectedId] = useState(null)
   const [message, setMessage] = useState("")
+
+  const withRaw = searchParams.get("with")?.trim() ?? ""
+  const productRaw = searchParams.get("product")?.trim() ?? ""
+  const pendingRecipientId = useMemo(() => {
+    const n = Number(withRaw)
+    if (!Number.isFinite(n) || n <= 0 || n === user?.id) return null
+    return n
+  }, [withRaw, user?.id])
+  const pendingProductId = useMemo(() => {
+    const n = Number(productRaw)
+    if (!Number.isFinite(n) || n <= 0) return null
+    return n
+  }, [productRaw])
 
   const { data: conversations = [], isLoading } = useQuery({
     queryKey: ["conversations"],
@@ -22,8 +42,12 @@ export function MessagesPage() {
     },
   })
 
-  const selected = conversations.find((c) => c.id === selectedId)
-  const { data: messages = [], refetch } = useQuery({
+  const selected = useMemo(
+    () => conversations.find((c) => Number(c.id) === Number(selectedId)) ?? null,
+    [conversations, selectedId]
+  )
+
+  const { data: messages = [], isLoading: messagesLoading } = useQuery({
     queryKey: ["conversation", selectedId],
     queryFn: async () => {
       const { data } = await apiClient.get(`/conversations/${selectedId}`)
@@ -32,18 +56,122 @@ export function MessagesPage() {
     enabled: Boolean(selectedId),
   })
 
-  const sendMessage = async (e) => {
+  const threadAnchorKey = useMemo(() => {
+    if (!selectedId) return ""
+    const last = messages.at(-1)
+    return `${selectedId}:${last?.id ?? "none"}:${messages.length}`
+  }, [selectedId, messages])
+
+  // Opening a thread marks peer messages read on the server; refresh list + dashboard unread counts.
+  useEffect(() => {
+    if (!selectedId || messagesLoading) return
+    queryClient.invalidateQueries({ queryKey: ["conversations"] })
+    queryClient.invalidateQueries({ queryKey: ["dashboard", "home"] })
+  }, [selectedId, messagesLoading, queryClient])
+
+  useEffect(() => {
+    if (isLoading || !user?.id) return
+    if (!pendingRecipientId) return
+
+    const match = conversations.find(
+      (c) =>
+        (c.conversation_type === "direct" || !c.product_id) &&
+        ((c.buyer_id === user.id && c.seller_id === pendingRecipientId) ||
+          (c.seller_id === user.id && c.buyer_id === pendingRecipientId)),
+    )
+    if (match) {
+      setSelectedId(match.id)
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete("with")
+        next.set("c", String(match.id))
+        return next
+      })
+    }
+  }, [isLoading, conversations, pendingRecipientId, user?.id, setSearchParams])
+
+  useEffect(() => {
+    if (isLoading || !user?.id) return
+    if (!pendingProductId) return
+    const match = conversations.find(
+      (c) => Number(c.product_id) === pendingProductId && Number(c.buyer_id) === Number(user.id)
+    )
+    if (match) {
+      setSelectedId(match.id)
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete("product")
+        next.set("c", String(match.id))
+        return next
+      })
+    }
+  }, [isLoading, conversations, pendingProductId, user?.id, setSearchParams])
+
+  useEffect(() => {
+    const raw = searchParams.get("c")
+    const n = Number(raw)
+    if (Number.isFinite(n) && n > 0) {
+      if (n !== selectedId) setSelectedId(n)
+      return
+    }
+    if (!pendingRecipientId && !pendingProductId && selectedId !== null) {
+      setSelectedId(null)
+    }
+  }, [searchParams, selectedId, pendingRecipientId, pendingProductId])
+
+  const sendMutation = useMutation({
+    mutationFn: ({ conversationId, recipientId, productId, body }) => {
+      if (conversationId) {
+        return apiClient.post(`/conversations/${conversationId}/messages`, { body })
+      }
+      if (recipientId) {
+        return apiClient.post("/messages", { recipient_id: recipientId, body })
+      }
+      return apiClient.post("/messages", { product_id: productId, body })
+    },
+    onSuccess: async (res, vars) => {
+      const cid = res?.data?.conversation_id
+      if (!vars.conversationId && cid) {
+        setSelectedId(cid)
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev)
+          next.delete("with")
+          next.delete("product")
+          next.set("c", String(cid))
+          return next
+        })
+      }
+      setMessage("")
+      await queryClient.invalidateQueries({ queryKey: ["conversations"] })
+      if (vars.conversationId) {
+        await queryClient.invalidateQueries({ queryKey: ["conversation", vars.conversationId] })
+      } else if (cid) {
+        await queryClient.invalidateQueries({ queryKey: ["conversation", cid] })
+      }
+    },
+  })
+
+  const sendMessage = (e) => {
     e.preventDefault()
-    if (!message.trim() || !selectedId) return
-    await apiClient.post(`/conversations/${selectedId}/messages`, { body: message })
-    setMessage("")
-    refetch()
+    const body = message.trim()
+    if (!body) return
+    if (selectedId) {
+      sendMutation.mutate({ conversationId: selectedId, body })
+      return
+    }
+    if (pendingRecipientId) {
+      sendMutation.mutate({ recipientId: pendingRecipientId, body })
+      return
+    }
+    if (pendingProductId) {
+      sendMutation.mutate({ productId: pendingProductId, body })
+    }
   }
 
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Messages</h1>
+        <h1 className="text-2xl font-bold">{t("messages.pageTitle", "Messages")}</h1>
         <Skeleton className="h-96" />
       </div>
     )
@@ -51,77 +179,124 @@ export function MessagesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Messages</h1>
-      <div className="grid gap-4 md:grid-cols-[300px,1fr]">
-        <Card>
+      <h1 className="text-2xl font-bold">{t("messages.pageTitle", "Messages")}</h1>
+      <div className="grid min-h-[70vh] gap-4 md:grid-cols-[320px,1fr]">
+        <Card className={selectedId ? "hidden md:block" : ""}>
           <CardHeader>
-            <CardTitle className="text-base">Conversations</CardTitle>
+            <CardTitle className="text-base">{t("messages.conversations", "Conversations")}</CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="max-h-[70vh] overflow-y-auto p-0">
             {conversations.map((conv) => {
               const other = conv.buyer_id === user?.id ? conv.seller : conv.buyer
               return (
-                <button
+                <ConversationListItem
                   key={conv.id}
-                  onClick={() => setSelectedId(conv.id)}
-                  className={`flex w-full items-center gap-3 px-4 py-3 text-start hover:bg-muted ${selectedId === conv.id ? "bg-muted" : ""}`}
-                >
-                  <Avatar className="size-10">
-                    <AvatarFallback>{other?.name?.charAt(0) ?? "?"}</AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{other?.name}</p>
-                    <p className="truncate text-xs text-muted-foreground">{conv.product?.title}</p>
-                  </div>
-                </button>
+                  title={other?.name ?? t("common.unknown", "Unknown")}
+                  subtitle={conv.product?.title}
+                  preview={conv.last_message?.body}
+                  timeLabel={conv.last_message?.created_at ? new Date(conv.last_message.created_at).toLocaleTimeString() : ""}
+                  unreadCount={conv.unread_count ?? 0}
+                  isActive={selectedId === conv.id}
+                  onClick={() => {
+                    setSelectedId(conv.id)
+                    setSearchParams((prev) => {
+                      const next = new URLSearchParams(prev)
+                      next.delete("with")
+                      next.set("c", String(conv.id))
+                      return next
+                    })
+                  }}
+                />
               )
             })}
           </CardContent>
         </Card>
-        <Card>
-          {selected ? (
+        <Card className={selectedId || pendingRecipientId || pendingProductId ? "" : "hidden md:block"}>
+          {selected || pendingRecipientId || pendingProductId ? (
             <>
-              <CardHeader>
-                <CardTitle className="text-base">{selected.product?.title}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="max-h-64 space-y-2 overflow-y-auto">
-                  {messages.map((m) => (
-                    <div
-                      key={m.id}
-                      className={`flex ${m.user_id === user?.id ? "justify-end" : "justify-start"}`}
-                    >
-                      <div
-                        className={`max-w-[80%] rounded-lg px-3 py-2 ${
-                          m.user_id === user?.id ? "bg-primary text-primary-foreground" : "bg-muted"
-                        }`}
-                      >
-                        {m.body}
-                      </div>
-                    </div>
-                  ))}
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="md:hidden"
+                    type="button"
+                    onClick={() => {
+                      setSelectedId(null)
+                      setSearchParams((prev) => {
+                        const next = new URLSearchParams(prev)
+                        next.delete("c")
+                        return next
+                      })
+                    }}
+                  >
+                    <ArrowLeft className="size-4" />
+                  </Button>
+                  <CardTitle className="text-base">
+                    {selected?.product?.title ??
+                      (selected?.conversation_type === "direct" || !selected?.product_id
+                        ? t("messages.directConversation")
+                        : t("messages.conversationTitle", "Conversation"))}
+                  </CardTitle>
                 </div>
+              </CardHeader>
+              <CardContent className="flex min-h-[62vh] flex-col gap-3">
+                {messagesLoading ? (
+                  <div className="flex flex-1 items-center justify-center">
+                    <Loader2 className="size-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <ChatThreadPanel anchorKey={threadAnchorKey} className="rounded-md border bg-background/30">
+                    {messages.length === 0 ? (
+                      <p className="py-8 text-center text-sm text-muted-foreground">
+                        {(pendingRecipientId || pendingProductId) && !selectedId
+                          ? t("messages.startDirectHint")
+                          : t("messages.threadEmpty")}
+                      </p>
+                    ) : (
+                      messages.map((m) => (
+                        <MessageBubble
+                          key={m.id}
+                          body={m.body}
+                          isOwn={m.user_id === user?.id}
+                          timestamp={m.created_at ? new Date(m.created_at).toLocaleString() : ""}
+                        />
+                      ))
+                    )}
+                  </ChatThreadPanel>
+                )}
                 <form onSubmit={sendMessage} className="flex gap-2">
-                  <Input
+                  <Textarea
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Type a message..."
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault()
+                        sendMessage(e)
+                      }
+                    }}
+                    rows={2}
+                    className="resize-none"
+                    placeholder={t("messages.typeMessage", "Type a message...")}
                   />
-                  <Button type="submit">Send</Button>
+                  <Button type="submit" disabled={sendMutation.isPending || !message.trim()}>
+                    {sendMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+                    <span className="sr-only">{t("messages.send", "Send")}</span>
+                  </Button>
                 </form>
               </CardContent>
             </>
           ) : (
             <CardContent className="flex flex-col items-center justify-center py-24">
               <MessageSquare className="size-12 text-muted-foreground" />
-              <p className="mt-2 text-muted-foreground">Select a conversation</p>
+              <p className="mt-2 text-muted-foreground">{t("messages.selectConversation", "Select a conversation")}</p>
             </CardContent>
           )}
         </Card>
       </div>
       {conversations.length === 0 && (
         <p className="text-center text-muted-foreground py-12">
-          No conversations yet. Contact a seller from a product page to start chatting.
+          {t("messages.empty", "No conversations yet. Contact a seller from a product page to start chatting.")}
         </p>
       )}
     </div>

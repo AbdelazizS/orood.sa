@@ -17,6 +17,8 @@ export function ReviewCard({
   onDelete,
   onReact,
   showActions = true,
+  /** When false, hide like/dislike (e.g. public profile tab). */
+  showReactions = true,
 }) {
   const { user } = useAuthStore()
   const isOwn = review.is_own_review
@@ -24,6 +26,11 @@ export function ReviewCard({
   const dislikeCount = review.dislike_count ?? 0
   const userReaction = review.user_reaction
   const reply = review.reply
+  const reviewerName = review?.reviewer?.username ?? review?.reviewer?.name ?? "—"
+  const ratingLabel =
+    review?.rating_label ||
+    (Number(review?.rating) > 0 ? `${Number(review.rating)}/5` : "")
+  const humanTime = review?.human_time || (review?.created_at ? new Date(review.created_at).toLocaleDateString() : "")
 
   return (
     <div
@@ -42,7 +49,7 @@ export function ReviewCard({
       <div className="min-w-0 flex-1 text-start order-2">
         <div className="flex items-start justify-between gap-2">
           <span className="text-xs text-muted-foreground shrink-0">
-            {review.human_time}
+            {humanTime}
           </span>
           <div className="flex items-center gap-1.5">
             {isOwn && showActions && (
@@ -74,16 +81,14 @@ export function ReviewCard({
               <ShieldCheck size={12} className="shrink-0 text-primary" />
             )}
             <span className="text-sm font-semibold">
-              {review.reviewer?.username ?? review.reviewer?.name ?? "—"}
+              {reviewerName}
             </span>
           </div>
         </div>
 
         <div className="mt-1 flex items-center justify-end gap-2">
           <StarRating value={review.rating} readonly size="xs" />
-          <span className="text-xs text-muted-foreground">
-            {review.rating_label}
-          </span>
+          {ratingLabel ? <span className="text-xs text-muted-foreground">{ratingLabel}</span> : null}
         </div>
 
         {review.comment && (
@@ -108,7 +113,7 @@ export function ReviewCard({
       </div>
 
       {/* Like/Dislike stacked vertically on far left (RTL: last) */}
-      {!isOwn && user && onReact && (
+      {!isOwn && user && onReact && showReactions && (
         <div className="flex shrink-0 flex-col items-center gap-0.5 order-last">
           <Button
             variant="ghost"

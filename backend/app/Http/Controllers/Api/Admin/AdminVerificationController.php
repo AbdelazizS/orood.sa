@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\DocumentVerification;
+use App\Models\Notification;
 use App\Models\User;
+use App\Support\InAppNotificationPayload;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -40,7 +42,7 @@ class AdminVerificationController extends Controller
     {
         $verification = $document_verification;
         if ($verification->status !== DocumentVerification::STATUS_PENDING) {
-            return response()->json(['message' => 'Verification already processed'], 422);
+            return response()->json(['message' => __('compliance.verification_already_processed')], 422);
         }
 
         $user = $verification->user;
@@ -75,6 +77,9 @@ class AdminVerificationController extends Controller
             );
         }
 
+        $verification->refresh();
+        Notification::create(InAppNotificationPayload::documentVerificationApprovedForMember($verification, $user));
+
         return response()->json([
             'message' => __('Verification approved.'),
             'data' => $verification->fresh('user'),
@@ -88,17 +93,22 @@ class AdminVerificationController extends Controller
     {
         $verification = $document_verification;
         if ($verification->status !== DocumentVerification::STATUS_PENDING) {
-            return response()->json(['message' => 'Verification already processed'], 422);
+            return response()->json(['message' => __('compliance.verification_already_processed')], 422);
         }
 
         $validated = $request->validate([
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
 
+        $member = $verification->user;
+
         $verification->update([
             'status' => DocumentVerification::STATUS_REJECTED,
             'rejected_reason' => $validated['reason'] ?? 'Rejected by admin',
         ]);
+
+        $verification->refresh();
+        Notification::create(InAppNotificationPayload::documentVerificationRejectedForMember($verification, $member));
 
         return response()->json([
             'message' => __('Verification rejected.'),

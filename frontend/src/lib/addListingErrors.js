@@ -14,6 +14,9 @@ const FIELD_MAP = {
   subcategory_id: "subcategoryId",
   region_id: "regionId",
   city_id: "cityId",
+  contact_phone: "contactMethods",
+  contact_messages: "contactMethods",
+  contact_phone_number: "contactPhoneNumber",
 }
 
 const MESSAGE_MAP = {

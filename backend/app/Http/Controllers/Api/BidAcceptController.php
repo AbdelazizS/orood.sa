@@ -4,10 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Bid;
-use App\Models\Balance;
-use App\Models\Comment;
-use App\Models\Purchase;
+use App\Models\Notification;
 use App\Models\Product;
+use App\Support\InAppNotificationPayload;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 class BidAcceptController extends Controller
 {
     /**
-     * Accept a bid and create an order (purchase) with escrow.
+     * Accept a bid without auto-creating an order.
      */
     public function __invoke(Request $request, Product $product, Bid $bid): JsonResponse
     {
@@ -27,60 +26,60 @@ class BidAcceptController extends Controller
             return response()->json(['message' => 'Bid not found for this product'], 404);
         }
 
-        if ($bid->status !== 'PENDING') {
+        if (! in_array($bid->status, [Bid::STATUS_PENDING, Bid::STATUS_ACCEPTED], true)) {
             return response()->json(['message' => 'Bid already processed'], 422);
         }
 
-        $buyerBalance = Balance::getOrCreateForUser($bid->user_id);
-        $amount = (float) $bid->amount;
-        $feeRate = 0.0275;
-        $fee = round($amount * $feeRate, 2);
-        $total = $amount + $fee;
+        try {
+            DB::transaction(function () use ($product, $bid) {
+            /** @var Product $lockedProduct */
+            $lockedProduct = Product::query()->whereKey($product->id)->lockForUpdate()->firstOrFail();
+            /** @var Bid $lockedBid */
+            $lockedBid = Bid::query()->whereKey($bid->id)->lockForUpdate()->firstOrFail();
+            if ($lockedBid->status !== Bid::STATUS_PENDING && $lockedBid->status !== Bid::STATUS_ACCEPTED) {
+                throw new \RuntimeException('Bid already processed');
+            }
 
-        if ((float) $buyerBalance->available < $total) {
-            return response()->json(['message' => 'Insufficient balance'], 422);
-        }
-
-        DB::transaction(function () use ($product, $bid, $amount, $fee, $total) {
-            $bid->update([
-                'status' => \App\Models\Bid::STATUS_ACCEPTED,
+            $lockedBid->update([
+                'status' => Bid::STATUS_ACCEPTED,
                 'accepted_at' => now(),
-                'accepted_by' => $product->user_id,
+                'accepted_by' => $lockedProduct->user_id,
             ]);
-            $product->bids()->where('id', '!=', $bid->id)->update([
-                'status' => \App\Models\Bid::STATUS_REJECTED,
+            $losingBids = $lockedProduct->bids()
+                ->where('id', '!=', $lockedBid->id)
+                ->where('status', Bid::STATUS_PENDING)
+                ->get(['id', 'user_id']);
+            $lockedProduct->bids()->whereIn('id', $losingBids->pluck('id'))->update([
+                'status' => Bid::STATUS_REJECTED,
                 'rejected_at' => now(),
             ]);
-            $product->update([
-                'current_bid_user_id' => $bid->user_id,
+            $lockedProduct->update([
+                'current_bid_user_id' => $lockedBid->user_id,
                 'status' => 'sold',
             ]);
-            $product->refreshBidStats();
+            $lockedProduct->refreshBidStats();
 
-            $buyerBalance = Balance::getOrCreateForUser($bid->user_id);
-            $buyerBalance->decrement('available', $total);
-            $buyerBalance->increment('escrow', $amount);
+            Notification::create(
+                InAppNotificationPayload::bidAcceptedForBuyer($lockedProduct, (int) $lockedBid->id, (int) $lockedBid->user_id)
+            );
 
-            $buyer = $bid->user;
-            Purchase::create([
-                'product_id' => $product->id,
-                'buyer_id' => $bid->user_id,
-                'seller_id' => $product->user_id,
-                'amount' => $amount,
-                'payment_method' => 'balance',
-                'status' => Purchase::STATUS_PAID,
-                'buyer_phone' => $buyer->phone ?? null,
-                'buyer_name' => $buyer->name,
-            ]);
-        });
+            foreach ($losingBids as $losingBid) {
+                Notification::create(
+                    InAppNotificationPayload::bidRejectedForBuyer($lockedProduct, (int) $losingBid->id, (int) $losingBid->user_id)
+                );
+            }
+            });
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         return response()->json([
-            'message' => 'Bid accepted. Order created.',
-            'data' => Purchase::where('product_id', $product->id)
-                ->where('buyer_id', $bid->user_id)
-                ->latest()
-                ->first()
-                ->load(['product', 'buyer', 'seller']),
-        ], 201);
+            'message' => 'Bid accepted. Buyer must complete order.',
+            'data' => [
+                'bid_id' => $bid->id,
+                'product_id' => $product->id,
+                'status' => Bid::STATUS_ACCEPTED,
+            ],
+        ]);
     }
 }

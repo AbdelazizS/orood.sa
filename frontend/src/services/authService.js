@@ -1,5 +1,8 @@
+import i18n from "i18next"
 import apiClient from "@/lib/apiClient"
 import { useAuthStore } from "@/store/useAuthStore"
+
+const API_BASE = import.meta.env.VITE_API_URL || "/api/v1"
 
 export async function login(email, password) {
   const { data } = await apiClient.post("/auth/login", { email, password })
@@ -21,6 +24,11 @@ export async function register(payload) {
   return data
 }
 
+export async function getPasswordPolicy() {
+  const { data } = await apiClient.get("/auth/password-policy")
+  return data
+}
+
 export async function verifyEmail(email) {
   const { data } = await apiClient.post("/auth/verify-email", { email })
   return data
@@ -32,12 +40,42 @@ export async function confirmEmail(email, code) {
   return data
 }
 
-export async function logout() {
-  try {
-    await apiClient.post("/auth/logout")
-  } finally {
-    useAuthStore.getState().logout()
+/**
+ * Clear session, navigate away, then revoke the old token on the server (fire-and-forget).
+ * Does not block on the network so logout always feels instant.
+ */
+export function performLogout({ navigate, replaceTo = "/", queryClient } = {}) {
+  const prevToken = useAuthStore.getState().token
+  useAuthStore.getState().logout()
+  queryClient?.clear()
+
+  if (navigate) {
+    navigate(replaceTo, { replace: true })
+  } else if (typeof window !== "undefined") {
+    window.location.replace(replaceTo)
   }
+
+  if (!prevToken) return
+
+  const lang = i18n?.language?.startsWith("ar") ? "ar" : "en"
+  const base = API_BASE.replace(/\/$/, "")
+  const path = `${base}/auth/logout`
+  fetch(path, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${prevToken}`,
+      Accept: "application/json",
+      "Accept-Language": lang,
+      "Content-Type": "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    body: "{}",
+  }).catch(() => {})
+}
+
+/** @deprecated Use performLogout({ navigate }) from components with router access. */
+export async function logout() {
+  performLogout({ replaceTo: "/" })
 }
 
 export async function fetchUser() {
@@ -62,6 +100,11 @@ export async function registerCompany(payload) {
     headers: { "Content-Type": "multipart/form-data" },
   })
   return data
+}
+
+export async function getMyCompanyStatus() {
+  const { data } = await apiClient.get("/companies/my-status")
+  return data?.data ?? null
 }
 
 export async function changePassword(currentPassword, password, passwordConfirmation) {

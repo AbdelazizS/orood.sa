@@ -14,7 +14,7 @@ export function RegisterLayout() {
         <LanguageSwitcher />
       </div>
 
-      <div className="flex flex-1 flex-col items-center justify-center px-4 py-8">
+      <div className="flex flex-1 flex-col items-center justify-start px-4 pb-8 pt-20 sm:justify-center sm:py-8">
         <Outlet />
       </div>
     </div>

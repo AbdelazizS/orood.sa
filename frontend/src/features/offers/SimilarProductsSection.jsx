@@ -14,14 +14,14 @@ import { cn } from "@/lib/utils"
  * Sidebar variant: stacked vertically beside product details.
  */
 export function SimilarProductsSection({ product, variant = "default" }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { id } = useParams()
   const isSidebar = variant === "sidebar"
   const { direction } = useAppDirection()
   const isRtl = direction === "rtl"
 
   const { data, isLoading } = useQuery({
-    queryKey: ["product", id, "similar"],
+    queryKey: ["product", id, "similar", i18n.language],
     queryFn: async () => {
       const { data } = await apiClient.get(`/products/${id}/similar`)
       return data?.data ?? []
@@ -47,7 +47,7 @@ export function SimilarProductsSection({ product, variant = "default" }) {
         </div>
         <div className="overflow-hidden rounded-lg border border-border">
           {Array.from({ length: isSidebar ? 4 : 8 }).map((_, i) => (
-            <Skeleton key={i} className="h-[120px] w-full" />
+            <Skeleton key={i} className="h-[136px] w-full sm:h-[140px]" />
           ))}
         </div>
       </section>
@@ -77,7 +77,7 @@ export function SimilarProductsSection({ product, variant = "default" }) {
       {products.length > 0 ? (
         <div className="overflow-hidden rounded-lg border border-border bg-card">
           {products.map((p) => (
-            <ProductCard key={p.id} product={p} compact={isSidebar} />
+            <ProductCard key={p.id} product={p} compact={false} narrow={isSidebar} />
           ))}
         </div>
       ) : (

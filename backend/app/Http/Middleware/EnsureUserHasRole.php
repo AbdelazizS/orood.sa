@@ -16,8 +16,16 @@ class EnsureUserHasRole
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        // Route params: role:super_admin,admin,manager,employee → passed as separate args
-        $allowed = !empty($roles) ? array_map('trim', $roles) : ['super_admin', 'admin'];
+        // Support both `role:super_admin,admin` (single arg with commas) and multiple args.
+        $allowed = [];
+        foreach ($roles as $chunk) {
+            foreach (preg_split('/\s*,\s*/', (string) $chunk, -1, PREG_SPLIT_NO_EMPTY) as $part) {
+                $allowed[] = $part;
+            }
+        }
+        if ($allowed === []) {
+            $allowed = ['super_admin', 'admin'];
+        }
 
         if (!in_array($user->role, $allowed, true)) {
             return response()->json(['message' => 'Forbidden'], 403);

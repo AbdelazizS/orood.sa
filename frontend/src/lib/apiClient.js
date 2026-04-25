@@ -5,6 +5,9 @@ import { getDemoResponse } from "./demoApi"
 
 const USE_DEMO = import.meta.env.VITE_USE_DEMO === "true" || import.meta.env.VITE_USE_DEMO === "1"
 const API_BASE = import.meta.env.VITE_API_URL || "/api/v1"
+const RETRYABLE_HTTP_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504])
+const RETRYABLE_METHODS = new Set(["GET"])
+const MAX_RETRIES = 2
 
 /** Strip HTML appended after JSON (Laravel debug/error output) */
 function parseJsonSafe(data) {
@@ -58,25 +61,68 @@ if (USE_DEMO) {
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const status = error?.response?.status
+    const method = String(error?.config?.method || "GET").toUpperCase()
+    const url = String(error?.config?.url || "")
+    const isPresence = url.includes("/auth/presence")
+    const retryCount = Number(error?.config?.__retryCount || 0)
+    const shouldRetry =
+      !isPresence &&
+      retryCount < MAX_RETRIES &&
+      RETRYABLE_METHODS.has(method) &&
+      (error?.code === "ECONNABORTED" || !status || RETRYABLE_HTTP_STATUSES.has(status))
+
+    if (shouldRetry) {
+      error.config.__retryCount = retryCount + 1
+      const delayMs = 300 * 2 ** retryCount
+      await new Promise((resolve) => setTimeout(resolve, delayMs))
+      return apiClient.request(error.config)
+    }
+
     if (error.code === "ECONNABORTED") {
       console.error("Request timeout:", error.config?.url)
-      return Promise.reject(new Error("Request timeout - server may be slow"))
+      const timeoutErr = new Error("TIMEOUT")
+      timeoutErr.code = "TIMEOUT"
+      timeoutErr.isApiTimeout = true
+      return Promise.reject(timeoutErr)
     }
     if (error.response?.status === 404) {
-      return Promise.reject(new Error("User not found"))
+      const notFound = new Error("User not found")
+      notFound.code = "NOT_FOUND"
+      return Promise.reject(notFound)
     }
     if (error?.isDemo && error?.__demoResponse) {
+      const raw = error.__demoResponse
+      const status = typeof raw?.__demoStatus === "number" ? raw.__demoStatus : 200
+      let data
+      if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+        const { __demoStatus: _ignored, ...rest } = raw
+        data = rest
+      } else {
+        data = raw
+      }
+      if (status >= 400) {
+        return Promise.reject({
+          isDemo: true,
+          response: { status, data, headers: {}, statusText: "Error" },
+          config: error.config,
+        })
+      }
       return Promise.resolve({
-        data: error.__demoResponse,
-        status: 200,
+        data,
+        status,
         statusText: "OK",
         headers: {},
         config: error.config,
       })
     }
     if (error.response?.status === 401) {
-      useAuthStore.getState().logout()
+      const url = String(error.config?.url ?? "")
+      const isLogoutCall = url.includes("/auth/logout")
+      if (!isLogoutCall) {
+        useAuthStore.getState().logout()
+      }
       return Promise.reject(error)
     }
     if (error.response) {

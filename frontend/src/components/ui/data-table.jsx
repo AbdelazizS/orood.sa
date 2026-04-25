@@ -62,6 +62,10 @@ export function DataTable({
   const { t } = useTranslation()
   const [columnVisibility, setColumnVisibility] = useState({})
   const [sorting, setSorting] = useState([])
+  const safeManualPageIndex = Number.isFinite(pageIndex) ? pageIndex : 0
+  const tableState = manualPagination
+    ? { columnVisibility, sorting, pagination: { pageIndex: safeManualPageIndex, pageSize } }
+    : { columnVisibility, sorting }
 
   const table = useReactTable({
     data,
@@ -73,13 +77,10 @@ export function DataTable({
     onSortingChange: setSorting,
     manualPagination: manualPagination,
     pageCount: manualPagination ? (pageCount ?? 1) : undefined,
-    state: {
-      columnVisibility,
-      sorting,
-      pagination: manualPagination ? { pageIndex, pageSize } : undefined,
-    },
+    state: tableState,
     initialState: pagination && !manualPagination ? { pagination: { pageSize } } : undefined,
   })
+  const clientPageIndex = table.getState().pagination?.pageIndex ?? 0
 
   return (
     <div className="space-y-4">
@@ -176,24 +177,24 @@ export function DataTable({
             )}
             <p className="text-sm text-muted-foreground">
             {manualPagination
-              ? t("admin.pageOf", "Page {{current}} of {{total}}", { current: pageIndex + 1, total: pageCount ?? 1 })
-              : t("admin.pageOf", "Page {{current}} of {{total}}", { current: table.getState().pagination.pageIndex + 1, total: table.getPageCount() })}
+              ? t("admin.pageOf", "Page {{current}} of {{total}}", { current: safeManualPageIndex + 1, total: pageCount ?? 1 })
+              : t("admin.pageOf", "Page {{current}} of {{total}}", { current: clientPageIndex + 1, total: table.getPageCount() })}
             {manualPagination && total != null && ` (${t("admin.itemsTotal", "items")}: ${total})`}
             </p>
           </div>
           <div className="flex items-center space-x-2">
             {manualPagination && onPageChange ? (
               <>
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => onPageChange(0)} disabled={pageIndex <= 0}>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => onPageChange(0)} disabled={safeManualPageIndex <= 0}>
                   <ChevronsLeft className="size-4 rtl:rotate-180" />
                 </Button>
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => onPageChange(pageIndex - 1)} disabled={pageIndex <= 0}>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => onPageChange(safeManualPageIndex - 1)} disabled={safeManualPageIndex <= 0}>
                   <ChevronLeft className="size-4 rtl:rotate-180" />
                 </Button>
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => onPageChange(pageIndex + 1)} disabled={pageIndex >= (pageCount ?? 1) - 1}>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => onPageChange(safeManualPageIndex + 1)} disabled={safeManualPageIndex >= (pageCount ?? 1) - 1}>
                   <ChevronRight className="size-4 rtl:rotate-180" />
                 </Button>
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => onPageChange((pageCount ?? 1) - 1)} disabled={pageIndex >= (pageCount ?? 1) - 1}>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => onPageChange((pageCount ?? 1) - 1)} disabled={safeManualPageIndex >= (pageCount ?? 1) - 1}>
                   <ChevronsRight className="size-4 rtl:rotate-180" />
                 </Button>
               </>

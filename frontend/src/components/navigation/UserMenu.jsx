@@ -1,6 +1,7 @@
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
-import { useQuery } from "@tanstack/react-query"
+import { useQueryClient } from "@tanstack/react-query"
+import { useNotificationsUnreadSummary } from "@/hooks/useNotificationsInbox"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,8 +12,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useAuthStore } from "@/store/useAuthStore"
+import { publicProfilePath } from "@/lib/profileRoutes"
 import * as authService from "@/services/authService"
-import apiClient from "@/lib/apiClient"
 import {
   ChevronDown,
   LayoutDashboard,
@@ -23,30 +24,22 @@ import {
   Plus,
 } from "lucide-react"
 
-function useUnreadCount() {
-  const { data = [] } = useQuery({
-    queryKey: ["notifications"],
-    queryFn: async () => {
-      const { data } = await apiClient.get("/notifications?per_page=1")
-      return data?.data ?? []
-    },
-    retry: false,
-  })
-  return data.filter((n) => !n.read_at).length
-}
-
 /**
  * UserMenu — profile dropdown (big-company style).
  * All items are links with consistent hover. Notifications links to full page.
  */
 export function UserMenu() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { user, token } = useAuthStore()
-  const unreadCount = useUnreadCount()
+  const memberProfileHref = publicProfilePath(user) ?? "/dashboard"
+  const { data: summary } = useNotificationsUnreadSummary()
+  const unreadCount = summary?.unreadCount ?? 0
   const isAdmin = user && ["admin", "super_admin", "manager", "employee"].includes(user.role)
 
   const handleLogout = () => {
-    authService.logout()
+    authService.performLogout({ navigate, replaceTo: "/", queryClient })
   }
 
   if (!token || !user) return null
@@ -109,13 +102,13 @@ export function UserMenu() {
           </DropdownMenuItem>
         )}
         <DropdownMenuItem asChild>
-          <Link to="/dashboard/profile" className="flex cursor-pointer items-center gap-2">
+          <Link to={memberProfileHref} className="flex cursor-pointer items-center gap-2">
             <User className="size-4" />
             {t("nav.profile", "Profile")}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link to="/dashboard/notifications" className="flex cursor-pointer items-center gap-2">
+          <Link to={isAdmin ? "/admin/notifications" : "/dashboard/notifications"} className="flex cursor-pointer items-center gap-2">
             <Bell className="size-4" />
             {t("notifications.title", "Notifications")}
             {unreadCount > 0 && (

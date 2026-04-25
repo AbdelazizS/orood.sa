@@ -1,22 +1,27 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
+import { Link } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import apiClient from "@/lib/apiClient"
+import {
+  formatNotificationTimestamp,
+  getNotificationActions,
+  getNotificationBody,
+  getNotificationTitle,
+} from "@/lib/notificationDisplay"
+import { useNotificationsInbox } from "@/hooks/useNotificationsInbox"
+import { useAccountSectionBasePath } from "@/lib/accountSectionPaths"
 import { Bell, Loader2 } from "lucide-react"
 
 export function NotificationsPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const queryClient = useQueryClient()
+  const basePath = useAccountSectionBasePath()
 
-  const { data: notifications = [], isLoading } = useQuery({
-    queryKey: ["notifications"],
-    queryFn: async () => {
-      const { data } = await apiClient.get("/notifications?per_page=50")
-      return data?.data ?? []
-    },
-  })
+  const { data: inbox, isLoading } = useNotificationsInbox(50)
+  const notifications = inbox?.items ?? []
 
   const markReadMutation = useMutation({
     mutationFn: (id) => apiClient.post(`/notifications/${id}/read`),
@@ -28,7 +33,7 @@ export function NotificationsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
   })
 
-  const unreadCount = notifications.filter((n) => !n.read_at).length
+  const unreadCount = Number(inbox?.meta?.unread_count ?? 0)
 
   return (
     <div className="space-y-6">
@@ -79,28 +84,44 @@ export function NotificationsPage() {
                 {notifications.map((n) => (
                   <div
                     key={n.id}
-                    className={`flex flex-col gap-1 px-4 py-4 transition-colors hover:bg-muted/50 ${!n.read_at ? "bg-muted/30" : ""}`}
+                    className={`flex items-start justify-between gap-4 px-4 py-4 transition-colors hover:bg-muted/50 ${!n.read_at ? "bg-muted/30" : ""}`}
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium">{n.title}</p>
-                        {n.body && <p className="mt-0.5 text-sm text-muted-foreground">{n.body}</p>}
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        to={`${basePath}/notifications/${n.id}`}
+                        className="block rounded-md text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <p className="font-medium hover:underline">{getNotificationTitle(n, t)}</p>
+                        {(getNotificationBody(n, t) || n.body) && (
+                          <p className="mt-0.5 text-sm text-muted-foreground">{getNotificationBody(n, t) || n.body}</p>
+                        )}
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {n.created_at ? new Date(n.created_at).toLocaleString() : ""}
+                          {formatNotificationTimestamp(n.created_at, i18n.language)}
                         </p>
-                      </div>
-                      {!n.read_at && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="shrink-0"
-                          onClick={() => markReadMutation.mutate(n.id)}
-                          disabled={markReadMutation.isPending}
-                        >
-                          {t("notifications.markRead", "Read")}
-                        </Button>
-                      )}
+                      </Link>
+                      {getNotificationActions(n).length > 0 ? (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {getNotificationActions(n).map((a, idx) => (
+                            <Button key={`${n.id}-a-${idx}`} variant="secondary" size="sm" asChild>
+                              <Link to={a.href.startsWith("/") ? a.href : `/${a.href}`}>{t(a.i18n_label_key)}</Link>
+                            </Button>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
+                    {!n.read_at && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0"
+                        onClick={() => {
+                          markReadMutation.mutate(n.id)
+                        }}
+                        disabled={markReadMutation.isPending}
+                      >
+                        {t("notifications.markRead", "Mark as read")}
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>

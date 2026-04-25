@@ -26,6 +26,15 @@ class NotificationController extends Controller
         ]);
     }
 
+    public function show(Notification $notification): JsonResponse
+    {
+        if ($notification->user_id !== request()->user()->id) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        return response()->json(['data' => $notification]);
+    }
+
     public function markAsRead(Notification $notification): JsonResponse
     {
         if ($notification->user_id !== request()->user()->id) {

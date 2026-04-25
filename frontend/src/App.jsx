@@ -12,7 +12,7 @@ import { RegionDropdown } from "@/components/filters/RegionDropdown"
 import { FilterDropdown } from "@/components/filters/FilterDropdown"
 
 function App() {
-  const { feedQuery, categoriesQuery, regionsQuery, companiesQuery } = useHomepageFeed()
+  const { feedQuery, categoriesQuery, regionsQuery } = useHomepageFeed()
 
   return (
     <>

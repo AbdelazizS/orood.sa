@@ -1,10 +1,10 @@
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { cn } from "@/lib/utils"
-import { X, Car, Smartphone, Sofa, Monitor, Shirt, Factory, Laptop, Package } from "lucide-react"
-import { MAIN_CATEGORIES } from "@/data/addListingData"
-
-const ICONS = { Car, Smartphone, Sofa, Monitor, Shirt, Factory, Laptop, Package }
+import { X, Loader2 } from "lucide-react"
+import { useMainCategories, useSubcategories } from "@/hooks/useCategories"
+import { DynamicIcon } from "@/components/ui/DynamicIcon"
+import { useAppDirection } from "@/providers/DirectionProvider"
 
 /**
  * Expandable inline two-column picker — Category.
@@ -13,25 +13,24 @@ const ICONS = { Car, Smartphone, Sofa, Monitor, Shirt, Factory, Laptop, Package 
  */
 export function CategorySelector({ categoryId, subcategoryId, error, onChange }) {
   const { t } = useTranslation()
+  const { direction } = useAppDirection()
   const [expanded, setExpanded] = useState(false)
+  const { data: mainCategories = [], isLoading: loadingMain } = useMainCategories()
+  const main = mainCategories.find((c) => String(c.id) === String(categoryId))
+  const inlineSubs = main && Array.isArray(main.subcategories) ? main.subcategories : null
+  const remoteCategoryId = inlineSubs !== null ? null : categoryId
+  const { data: remoteSubs = [], isLoading: loadingRemote } = useSubcategories(remoteCategoryId)
+  const subcategories = inlineSubs !== null ? inlineSubs : remoteSubs
+  const loadingSub = inlineSubs !== null ? false : loadingRemote
 
-  const main = MAIN_CATEGORIES.find((c) => c.id === categoryId)
-  const subs = main?.subcategories ?? []
-  const sub = subs.find((s) => s.id === subcategoryId)
+  const sub = subcategories.find((s) => String(s.id) === String(subcategoryId))
 
   const handleMainClick = (id) => {
-    const cat = MAIN_CATEGORIES.find((c) => c.id === id)
-    const hasSubs = cat?.subcategories?.length
-    if (!hasSubs) {
-      onChange(id, null)
-      setExpanded(false)
-    } else {
-      onChange(id, null)
-    }
+    onChange(id, null)
   }
 
-  const handleSubClick = (id) => {
-    onChange(categoryId, id)
+  const handleSubClick = (mainCatId, subId) => {
+    onChange(mainCatId, subId)
     setExpanded(false)
   }
 
@@ -39,14 +38,14 @@ export function CategorySelector({ categoryId, subcategoryId, error, onChange })
     onChange(null, null)
   }
 
-  const displayText = main && (!subs.length || sub)
+  const displayText = main
     ? `${main.name}${sub ? ` — ${sub.name}` : ""}`
     : null
 
   return (
     <div
       className="rounded-lg border border-border bg-card p-3 sm:p-4 mb-2"
-      dir="rtl"
+      dir={direction}
     >
       <button
         type="button"
@@ -58,11 +57,11 @@ export function CategorySelector({ categoryId, subcategoryId, error, onChange })
           <span className="text-destructive">*</span>
         </span>
         {displayText ? (
-          <span className="flex-1 truncate text-end text-[14px] text-foreground">
+          <span className="flex-1 truncate text-start text-[14px] text-foreground">
             {displayText}
           </span>
         ) : (
-          <span className="flex-1 truncate text-end text-[14px] text-muted-foreground">
+          <span className="flex-1 truncate text-start text-[14px] text-muted-foreground">
             {t("addListing.categoryPlaceholder")}
           </span>
         )}
@@ -94,9 +93,13 @@ export function CategorySelector({ categoryId, subcategoryId, error, onChange })
               {t("addListing.categoryPlaceholder")}
             </div>
             <div className="max-h-[240px] overflow-y-auto">
-              {MAIN_CATEGORIES.map((c) => {
-                const Icon = ICONS[c.icon] ?? Package
-                const isSelected = categoryId === c.id
+              {loadingMain ? (
+                <div className="flex items-center justify-center py-4 text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                </div>
+              ) : (
+                mainCategories.map((c) => {
+                const isSelected = String(categoryId) === String(c.id)
                 return (
                   <button
                     key={c.id}
@@ -107,11 +110,11 @@ export function CategorySelector({ categoryId, subcategoryId, error, onChange })
                       isSelected ? "border-e-[3px] border-e-primary bg-primary/10 text-primary" : "text-foreground"
                     )}
                   >
-                    <Icon className="size-4 shrink-0" />
+                    <DynamicIcon name={c.icon} className="size-4 shrink-0" />
                     {c.name}
                   </button>
                 )
-              })}
+              }))}
             </div>
           </div>
           <div className="flex-1">
@@ -119,18 +122,24 @@ export function CategorySelector({ categoryId, subcategoryId, error, onChange })
               {t("addListing.categorySub")}
             </div>
             <div className="max-h-[240px] overflow-y-auto">
-              {subs.length === 0 ? (
+              {loadingSub && categoryId ? (
+                <div className="flex items-center justify-center py-4 text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                </div>
+              ) : subcategories.length === 0 ? (
                 <p className="px-3 py-4 text-[14px] text-muted-foreground">
-                  {t("addListing.categorySelectMain")}
+                  {categoryId
+                    ? t("addListing.categoryNoSubcategories")
+                    : t("addListing.categorySelectMain")}
                 </p>
               ) : (
-                subs.map((s) => {
-                  const isSelected = subcategoryId === s.id
+                subcategories.map((s) => {
+                  const isSelected = String(subcategoryId) === String(s.id)
                   return (
                     <button
                       key={s.id}
                       type="button"
-                      onClick={() => handleSubClick(s.id)}
+                      onClick={() => handleSubClick(categoryId, s.id)}
                       className={cn(
                         "flex w-full items-center px-3 py-2.5 text-[14px] text-start transition-colors border-b border-border/50",
                         isSelected ? "bg-primary/10 text-primary" : "text-foreground"

@@ -75,6 +75,7 @@ class AdminProductController extends Controller
             'region_id' => ['sometimes', 'nullable', 'exists:regions,id'],
             'city_id' => ['sometimes', 'nullable', 'exists:cities,id'],
             'status' => ['sometimes', 'in:draft,published,archived,suspended'],
+            'moderation_status' => ['sometimes', 'nullable', 'in:approved,pending,rejected'],
             'accept_bids' => ['sometimes', 'boolean'],
             'bids_visible' => ['sometimes', 'boolean'],
             'wholesale_price' => ['sometimes', 'nullable', 'numeric', 'min:0'],

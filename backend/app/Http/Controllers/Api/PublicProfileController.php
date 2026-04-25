@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\ListingCardResource;
+use App\Http\Resources\ProductResource;
 use App\Http\Resources\ProfileResource;
 use App\Http\Resources\ReviewResource;
 use App\Models\PageVisit;
@@ -51,11 +51,13 @@ class PublicProfileController extends Controller
             ->where(function ($q) {
                 $q->where('moderation_status', 'approved')->orWhereNull('moderation_status');
             })
-            ->with(['category', 'city'])
+            ->with(['category', 'subcategory', 'region', 'city', 'seller'])
             ->withCount(['bids as pending_bids_count' => fn ($q) => $q->where('status', 'PENDING')])
             ->orderByDesc('bumped_at')
             ->limit(20)
             ->get();
+
+        $this->hydrateListingViewerFlags($request, $listings);
 
         $reviews = $user->reviews()
             ->where('is_visible', true)
@@ -77,7 +79,7 @@ class PublicProfileController extends Controller
 
         return response()->json([
             'user' => new ProfileResource($user),
-            'listings' => ListingCardResource::collection($listings),
+            'listings' => ProductResource::collection($listings),
             'reviews' => ReviewResource::collection($reviews),
             'review_summary' => [
                 'average' => round((float) $user->rating, 1),
@@ -101,7 +103,7 @@ class PublicProfileController extends Controller
     {
         $user = User::where('id', $id)->whereNull('banned_at')->firstOrFail();
 
-        return $this->listingsForUser($user);
+        return $this->listingsForUser($request, $user);
     }
 
     /**
@@ -113,22 +115,24 @@ class PublicProfileController extends Controller
             ->whereNull('banned_at')
             ->firstOrFail();
 
-        return $this->listingsForUser($user);
+        return $this->listingsForUser($request, $user);
     }
 
-    private function listingsForUser(User $user): JsonResponse
+    private function listingsForUser(Request $request, User $user): JsonResponse
     {
         $listings = $user->products()
             ->where('status', 'published')
             ->where(function ($q) {
                 $q->where('moderation_status', 'approved')->orWhereNull('moderation_status');
             })
-            ->with(['category', 'city'])
+            ->with(['category', 'subcategory', 'region', 'city', 'seller'])
             ->orderByDesc('bumped_at')
             ->paginate(12);
 
+        $this->hydrateListingViewerFlags($request, $listings->getCollection());
+
         return response()->json([
-            'listings' => ListingCardResource::collection($listings->items()),
+            'listings' => ProductResource::collection($listings->items()),
             'pagination' => [
                 'current_page' => $listings->currentPage(),
                 'last_page' => $listings->lastPage(),
@@ -144,7 +148,7 @@ class PublicProfileController extends Controller
     {
         $user = User::where('id', $id)->firstOrFail();
 
-        return $this->reviewsForUser($user);
+        return $this->reviewsForUser($request, $user);
     }
 
     /**
@@ -154,16 +158,19 @@ class PublicProfileController extends Controller
     {
         $user = User::where('username', $username)->firstOrFail();
 
-        return $this->reviewsForUser($user);
+        return $this->reviewsForUser($request, $user);
     }
 
-    private function reviewsForUser(User $user): JsonResponse
+    private function reviewsForUser(Request $request, User $user): JsonResponse
     {
         $reviews = $user->reviews()
             ->where('is_visible', true)
             ->with('reviewer')
+            ->withReactionCounts()
             ->latest()
             ->paginate(10);
+
+        Review::loadUserReactionsOnPaginator($reviews, $request->user());
 
         return response()->json([
             'reviews' => ReviewResource::collection($reviews->items()),
@@ -173,6 +180,19 @@ class PublicProfileController extends Controller
                 'total' => $reviews->total(),
             ],
         ]);
+    }
+
+    /**
+     * Match homepage feed serialization ({@see ProductResource}) — viewer-specific flags per listing.
+     *
+     * @param \Illuminate\Support\Collection|\Illuminate\Database\Eloquent\Collection $listings
+     */
+    private function hydrateListingViewerFlags(Request $request, $listings): void
+    {
+        $viewer = $request->user();
+        foreach ($listings as $product) {
+            $product->is_owner = (bool) ($viewer && $viewer->id === $product->user_id);
+        }
     }
 
     private function recordVisit(Request $request, int $profileId): void
@@ -192,14 +212,18 @@ class PublicProfileController extends Controller
             default => 'other',
         };
 
-        dispatch(function () use ($request, $profileId, $source) {
+        $visitorId = $request->user()?->id;
+        $ipAddress = $request->ip();
+        $userAgent = substr((string) ($request->userAgent() ?? ''), 0, 300);
+
+        dispatch(function () use ($profileId, $source, $visitorId, $ipAddress, $userAgent) {
             try {
                 PageVisit::create([
                     'profile_id' => $profileId,
-                    'visitor_id' => $request->user()?->id,
+                    'visitor_id' => $visitorId,
                     'source' => $source,
-                    'ip_address' => $request->ip(),
-                    'user_agent' => substr($request->userAgent() ?? '', 0, 300),
+                    'ip_address' => $ipAddress,
+                    'user_agent' => $userAgent,
                 ]);
             } catch (\Throwable $e) {
                 report($e);

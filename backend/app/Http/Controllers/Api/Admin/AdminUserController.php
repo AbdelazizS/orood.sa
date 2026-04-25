@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Balance;
 use App\Models\Guarantee;
 use App\Models\Purchase;
+use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -87,7 +88,7 @@ class AdminUserController extends Controller
     {
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
-            'role' => ['sometimes', 'string', 'in:super_admin,admin,manager,employee,seller,buyer,user'],
+            'role' => ['sometimes', 'string', 'in:super_admin,admin,manager,employee,marketer,company,seller,buyer,user'],
             'email' => ['sometimes', 'email', 'unique:users,email,' . $user->id],
             'phone' => ['sometimes', 'nullable', 'string', 'max:50'],
             'city_id' => ['sometimes', 'nullable', 'integer', 'exists:cities,id'],
@@ -119,8 +120,58 @@ class AdminUserController extends Controller
                 'created_at' => $user->created_at,
                 'avatar_url' => $user->avatar_url,
                 'bio' => $user->bio,
+                'balance' => $this->balanceSnapshot($user->id),
             ],
         ]);
+    }
+
+    /**
+     * Credit user's available or withdrawable balance (finance team / super admin).
+     */
+    public function creditBalance(Request $request, User $user): JsonResponse
+    {
+        $validated = $request->validate([
+            'amount' => ['required', 'numeric', 'min:1'],
+            'apply_to' => ['required', 'string', 'in:available,withdrawable'],
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $amount = (float) $validated['amount'];
+        $field = $validated['apply_to'] === 'withdrawable' ? 'withdrawable' : 'available';
+
+        DB::transaction(function () use ($user, $amount, $field, $validated) {
+            $balance = Balance::getOrCreateForUser($user->id);
+            $balance->increment($field, $amount);
+
+            Transaction::create([
+                'user_id' => $user->id,
+                'type' => Transaction::TYPE_DEPOSIT,
+                'amount' => $amount,
+                'description' => trim(__('Admin balance credit').($validated['note'] ? ': '.$validated['note'] : '')),
+                'status' => Transaction::STATUS_COMPLETED,
+                'completed_at' => now(),
+                'metadata' => ['source' => 'admin_credit', 'note' => $validated['note'] ?? null],
+            ]);
+        });
+
+        return response()->json([
+            'message' => __('Balance credited successfully.'),
+            'data' => [
+                'user_id' => $user->id,
+                'balance' => $this->balanceSnapshot($user->id),
+            ],
+        ], 201);
+    }
+
+    private function balanceSnapshot(int $userId): array
+    {
+        $b = Balance::getOrCreateForUser($userId);
+
+        return [
+            'available' => (float) $b->available,
+            'escrow' => (float) $b->escrow,
+            'withdrawable' => (float) ($b->withdrawable ?? 0),
+        ];
     }
 
     public function ban(User $user): JsonResponse
@@ -189,6 +240,61 @@ class AdminUserController extends Controller
         return response()->json([
             'data' => $user->fresh(),
             'message' => 'Guarantee refunded to user balance.',
+        ]);
+    }
+
+    /**
+     * Partially deduct held financial guarantee (e.g. seller breach / buyer compensation).
+     */
+    public function deductGuarantee(Request $request, User $user): JsonResponse
+    {
+        $validated = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'reason' => ['required', 'string', 'max:2000'],
+            'purchase_id' => ['nullable', 'integer', 'exists:purchases,id'],
+        ]);
+
+        $held = (float) ($user->financial_guarantee ?? 0);
+        $deduct = (float) $validated['amount'];
+
+        if ($held < $deduct) {
+            return response()->json(['message' => __('Deduction exceeds held guarantee.')], 422);
+        }
+
+        DB::transaction(function () use ($user, $deduct, $validated) {
+            $user->decrement('financial_guarantee', $deduct);
+
+            Transaction::create([
+                'user_id' => $user->id,
+                'type' => Transaction::TYPE_GUARANTEE_ADMIN_DEDUCTION,
+                'amount' => -$deduct,
+                'description' => $validated['reason'],
+                'purchase_id' => $validated['purchase_id'] ?? null,
+                'status' => Transaction::STATUS_COMPLETED,
+                'completed_at' => now(),
+            ]);
+
+            if (! empty($validated['purchase_id'])) {
+                $purchase = Purchase::query()->find((int) $validated['purchase_id']);
+                if ($purchase && (int) $purchase->seller_id === (int) $user->id) {
+                    $buyerBalance = Balance::getOrCreateForUser((int) $purchase->buyer_id);
+                    $buyerBalance->increment('available', $deduct);
+                    Transaction::create([
+                        'user_id' => $purchase->buyer_id,
+                        'type' => Transaction::TYPE_REFUND,
+                        'amount' => $deduct,
+                        'description' => __('Compensation from seller guarantee (order #:id)', ['id' => $purchase->id]),
+                        'purchase_id' => $purchase->id,
+                        'status' => Transaction::STATUS_COMPLETED,
+                        'completed_at' => now(),
+                    ]);
+                }
+            }
+        });
+
+        return response()->json([
+            'data' => $user->fresh(),
+            'message' => __('Guarantee deduction recorded.'),
         ]);
     }
 }

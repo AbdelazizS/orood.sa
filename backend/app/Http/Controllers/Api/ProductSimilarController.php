@@ -16,6 +16,10 @@ class ProductSimilarController extends Controller
      */
     public function __invoke(Product $product): JsonResponse
     {
+        if (! $product->isAccessibleBy(request()->user())) {
+            abort(404);
+        }
+
         if (!$product->category_id && !$product->city_id) {
             return response()->json(['data' => []]);
         }

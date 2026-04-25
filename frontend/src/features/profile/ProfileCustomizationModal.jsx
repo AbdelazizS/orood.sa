@@ -16,10 +16,8 @@ import { useAuthStore } from "@/store/useAuthStore"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
 
-/**
- * Modal for profile customization: logo, cover, about me.
- */
-export function ProfileCustomizationModal({ open, onOpenChange, profile, onSuccess }) {
+/** Modal for profile customization: logo, cover, about me. Pass `invalidateQueryKeys` for extra refetches (e.g. public profile). */
+export function ProfileCustomizationModal({ open, onOpenChange, profile, onSuccess, invalidateQueryKeys }) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { user } = useAuthStore()
@@ -39,8 +37,16 @@ export function ProfileCustomizationModal({ open, onOpenChange, profile, onSucce
   const mutation = useMutation({
     mutationFn: (payload) => apiClient.put("/profile", payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["profile", user?.id] })
+      await queryClient.invalidateQueries({ queryKey: ["profile"] })
+      await queryClient.invalidateQueries({ queryKey: ["owner-profile-detail", user?.id] })
       await queryClient.invalidateQueries({ queryKey: ["auth", "user"] })
+      if (Array.isArray(invalidateQueryKeys)) {
+        for (const key of invalidateQueryKeys) {
+          if (Array.isArray(key) && key.length > 0) {
+            await queryClient.invalidateQueries({ queryKey: key })
+          }
+        }
+      }
       toast.success(t("profile.updated", "تم التحديث"))
       onSuccess?.()
     },

@@ -12,16 +12,14 @@ import {
 import { Input } from "@/components/ui/input"
 import { useFiltersStore } from "@/store/useFiltersStore"
 import { FEATURED_FILTERS } from "@/config/navigation"
-import { Search, RotateCcw } from "lucide-react"
+import { PackageSearch, Search } from "lucide-react"
 
 /**
- * Filter toolbar — Search only on button click. Primary search btn at end.
+ * Filter toolbar — Search on button click. No reset (per product spec).
  */
-export function FilterToolbar({ regions = [], features = {} }) {
+export function FilterToolbar({ regions = [] }) {
   const { t } = useTranslation()
   const {
-    categoryId,
-    subcategoryId,
     activeFilter,
     setActiveFilter,
     regionId,
@@ -30,147 +28,124 @@ export function FilterToolbar({ regions = [], features = {} }) {
     setCity,
     searchQuery,
     setSearchQuery,
-    resetFilters,
   } = useFiltersStore()
 
   const [localSearch, setLocalSearch] = useState(searchQuery ?? "")
 
+  /* eslint-disable react-hooks/set-state-in-effect -- keep local input in sync when store search is cleared elsewhere */
   useEffect(() => {
     setLocalSearch(searchQuery ?? "")
   }, [searchQuery])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const selectedRegion = regions.find((r) => r.id === regionId)
   const cities = selectedRegion?.cities ?? []
-
-  const showWholesale = features?.show_wholesale !== false
-  const showCompanyDirectory = features?.show_company_directory !== false
-
-  const hasActiveFilters =
-    categoryId ||
-    subcategoryId ||
-    regionId ||
-    cityId ||
-    (activeFilter && activeFilter !== "all") ||
-    searchQuery
 
   const handleSearchClick = () => {
     setSearchQuery(localSearch || "")
   }
 
   return (
-    <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3 border-b border-border bg-background px-4 py-3 sm:px-6">
-      {/* Filters section — Region, City, Features, Search — always first */}
-      <div className="flex flex-wrap items-center gap-2 sm:gap-3 order-1 flex-1 min-w-0">
-        {/* Region */}
-        <Select
-          value={regionId ? String(regionId) : "all"}
-          onValueChange={(v) => setRegion(v === "all" ? null : Number(v))}
-        >
-          <SelectTrigger className="w-[110px] sm:w-[130px] shrink-0 rounded-md h-10 border-border">
-            <SelectValue placeholder={t("filters.allRegions", "جميع المناطق")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("filters.allRegions", "جميع المناطق")}</SelectItem>
-            {regions.map((r) => (
-              <SelectItem key={r.id} value={String(r.id)}>
-                {r.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+    <div className="border-b border-border bg-background px-4 py-3 sm:px-6">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-[190px_190px_190px_minmax(320px,1fr)_auto_auto]">
+        <div>
+          <Select
+            value={regionId ? String(regionId) : "all"}
+            onValueChange={(v) => setRegion(v === "all" ? null : Number(v))}
+          >
+            <SelectTrigger className="h-12 w-full rounded-md border-border">
+              <SelectValue
+                className="truncate text-sm"
+                placeholder={t("filters.allRegions", "جميع المناطق")}
+              />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t("filters.allRegions", "جميع المناطق")}</SelectItem>
+              {regions.map((r) => (
+                <SelectItem key={r.id} value={String(r.id)}>
+                  {r.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-        {/* City */}
-        <Select
-          value={cityId ? String(cityId) : "all"}
-          onValueChange={(v) => setCity(v === "all" ? null : Number(v))}
-          disabled={!regionId}
-        >
-          <SelectTrigger className="w-[110px] sm:w-[130px] shrink-0 rounded-md h-10 border-border">
-            <SelectValue placeholder={t("filters.allCities", "جميع المدن")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("filters.allCities", "جميع المدن")}</SelectItem>
-            {cities.map((c) => (
-              <SelectItem key={c.id} value={String(c.id)}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div>
+          <Select
+            value={cityId ? String(cityId) : "all"}
+            onValueChange={(v) => setCity(v === "all" ? null : Number(v))}
+            disabled={!regionId}
+          >
+            <SelectTrigger className="h-12 w-full rounded-md border-border">
+              <SelectValue
+                className="truncate text-sm"
+                placeholder={t("filters.allCities", "جميع المدن")}
+              />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t("filters.allCities", "جميع المدن")}</SelectItem>
+              {cities.map((c) => (
+                <SelectItem key={c.id} value={String(c.id)}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-        {/* Features */}
-        <Select value={activeFilter ?? "all"} onValueChange={setActiveFilter}>
-          <SelectTrigger className="w-[120px] sm:w-[130px] shrink-0 rounded-md h-10 border-border">
-            <SelectValue placeholder={t("filters.allFilters", "المميزات")} />
-          </SelectTrigger>
-          <SelectContent>
-            {FEATURED_FILTERS.filter((f) => f.id !== "wholesale").map((f) => (
-              <SelectItem key={f.id} value={f.id}>
-                {t(f.label)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div>
+          <Select value={activeFilter ?? "all"} onValueChange={setActiveFilter}>
+            <SelectTrigger className="h-12 w-full rounded-md border-border">
+              <SelectValue
+                className="truncate text-sm"
+                placeholder={t("filters.allFilters", "المميزات")}
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {FEATURED_FILTERS.filter((f) => f.id !== "wholesale").map((f) => (
+                <SelectItem key={f.id} value={f.id}>
+                  {t(f.label)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-        {/* Search — only on button click. Primary btn at end. */}
-        <div className="flex min-w-[160px] sm:min-w-[220px] flex-1 rounded-md border border-input overflow-hidden">
+        <div className="flex min-w-0 w-full rounded-md border border-input overflow-hidden">
           <Input
             type="search"
-            placeholder={t("feed.searchPlaceholder", "ابحث")}
+            placeholder="ابحث في العروض والطلبات والشركات..."
             value={localSearch}
             onChange={(e) => setLocalSearch(e.target.value)}
-            className="h-10 flex-1 min-w-0 rounded-none border-0 focus-visible:ring-0"
+            className="h-12 flex-1 min-w-0 rounded-none border-0 px-3 text-sm focus-visible:ring-0"
           />
           <Button
             type="button"
             onClick={handleSearchClick}
-            className="shrink-0 h-10 rounded-none bg-primary hover:bg-primary/90 text-primary-foreground px-4"
+            size="icon"
+            className="h-12 w-12 shrink-0 rounded-none bg-primary text-primary-foreground hover:bg-primary/90"
             aria-label={t("feed.search", "بحث")}
           >
-            <Search className="size-4 me-1" />
-            {t("feed.search", "بحث")}
+            <Search className="size-[18px]" />
           </Button>
         </div>
-      </div>
 
-      {/* Action buttons — Reset, Add, Wholesale, Companies */}
-      <div className="flex flex-wrap items-center gap-2 order-2 shrink-0">
-        {hasActiveFilters && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={resetFilters}
-            className="shrink-0 rounded-md h-10"
-          >
-            <RotateCcw className="size-4 me-1" />
-            {t("filters.resetFilters", "إعادة تعيين")}
-          </Button>
-        )}
+        <Button
+          variant="outline"
+          asChild
+          className="h-12 w-full rounded-md px-4 text-sm md:w-auto"
+        >
+          <Link to="/wholesale" className="flex h-full items-center gap-2">
+            <PackageSearch className="size-4" />
+            {t("nav.wholesaleMarket", "سوق الجملة")}
+          </Link>
+        </Button>
         <Button
           asChild
-          className="shrink-0 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-4 py-2 h-10"
+          className="h-12 w-full rounded-md bg-primary px-4 text-sm font-bold text-primary-foreground hover:bg-primary/90 md:w-auto"
         >
-          <Link to="/add">{t("nav.addOfferAndRequest", "اضف عرض و طلب")}</Link>
+          <Link to="/add" className="flex h-full items-center">{t("nav.addOfferAndRequest", "اضف عرض و طلب")}</Link>
         </Button>
-
-        {/* {showWholesale && (
-          <Button
-            variant={activeFilter === "wholesale" ? "secondary" : "default"}
-            className="shrink-0 rounded-md font-bold px-4 py-2 h-10"
-            onClick={() => setActiveFilter(activeFilter === "wholesale" ? "all" : "wholesale")}
-          >
-            {t("filters.wholesale", "سعر الجملة")}
-          </Button>
-        )}
-
-        {showCompanyDirectory && (
-          <Button
-            asChild
-            className="shrink-0 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-4 py-2 h-10"
-          >
-            <Link to="/#companies">{t("feed.companyDirectory", "قائمة الشركات")}</Link>
-          </Button>
-        )} */}
       </div>
     </div>
   )

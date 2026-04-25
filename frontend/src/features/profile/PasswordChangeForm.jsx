@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -14,6 +14,12 @@ export function PasswordChangeForm() {
   const [passwordConfirmation, setPasswordConfirmation] = useState("")
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
+  const { data: passwordPolicy } = useQuery({
+    queryKey: ["auth", "password-policy"],
+    queryFn: authService.getPasswordPolicy,
+    staleTime: 0,
+    refetchOnMount: "always",
+  })
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -37,6 +43,20 @@ export function PasswordChangeForm() {
       setError(t("auth.passwordMismatch"))
       return
     }
+    const minLength = Number(passwordPolicy?.min_length ?? 6)
+    const requires = Array.isArray(passwordPolicy?.requires) ? passwordPolicy.requires : ["letter", "number"]
+    const checks = [
+      password.length >= minLength,
+      !requires.includes("letter") || /[A-Za-z]/.test(password),
+      !requires.includes("number") || /\d/.test(password),
+      !requires.includes("uppercase") || /[A-Z]/.test(password),
+      !requires.includes("lowercase") || /[a-z]/.test(password),
+      !requires.includes("special") || /[^\w\s]/.test(password),
+    ]
+    if (!checks.every(Boolean)) {
+      setError(t("auth.passwordWeak"))
+      return
+    }
     mutation.mutate()
   }
 
@@ -58,7 +78,7 @@ export function PasswordChangeForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          minLength={8}
+          minLength={Number(passwordPolicy?.min_length ?? 6)}
           disabled={mutation.isPending}
           className="mt-1"
         />

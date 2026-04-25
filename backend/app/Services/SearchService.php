@@ -20,32 +20,11 @@ class SearchService
         return $this->product
             ->select(['id', 'title', 'type', 'slug'])
             ->published()
+            ->approved()
             ->where(function ($builder) use ($query) {
                 $builder->where('title', 'like', "%{$query}%")
                     ->orWhere('description', 'like', "%{$query}%");
             })
-            ->limit(10)
-            ->get();
-    }
-}
-<?php
-
-namespace App\Services;
-
-use App\Models\Listing;
-use Illuminate\Support\Collection;
-
-class SearchService
-{
-    public function autocomplete(string $query): Collection
-    {
-        if (blank($query)) {
-            return collect();
-        }
-
-        return Listing::query()
-            ->select(['id', 'title', 'type', 'slug'])
-            ->search($query)
             ->limit(10)
             ->get();
     }

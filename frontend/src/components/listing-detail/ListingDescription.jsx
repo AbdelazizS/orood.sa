@@ -29,9 +29,9 @@ export function ListingDescription({ product }) {
             <button
               type="button"
               onClick={() => setExpanded((e) => !e)}
-              className="me-1 text-sm font-medium text-primary"
+              className="me-1 rounded-sm text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
-              {expanded ? "... أقل" : "... اقرأ المزيد"}
+              {expanded ? t("listingDetail.readLess", "... أقل") : t("listingDetail.readMore", "... اقرأ المزيد")}
             </button>
           )}
         </div>

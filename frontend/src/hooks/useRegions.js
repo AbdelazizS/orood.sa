@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
+import { useTranslation } from "react-i18next"
 import apiClient from "@/lib/apiClient"
 
 const unwrapList = (payload) => {
@@ -8,8 +9,10 @@ const unwrapList = (payload) => {
 }
 
 export function useRegions() {
+  const { i18n } = useTranslation()
+
   return useQuery({
-    queryKey: ["regions"],
+    queryKey: ["regions", i18n.language],
     queryFn: async () => {
       const { data } = await apiClient.get("/regions")
       return unwrapList(data)
@@ -19,8 +22,10 @@ export function useRegions() {
 }
 
 export function useCities(regionId) {
+  const { i18n } = useTranslation()
+
   return useQuery({
-    queryKey: ["regions", regionId, "cities"],
+    queryKey: ["regions", regionId, "cities", i18n.language],
     queryFn: async () => {
       const { data } = await apiClient.get(`/regions/${regionId}/cities`)
       return unwrapList(data)

@@ -7,11 +7,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Services\AdminSettingsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
+    public function __construct(private readonly AdminSettingsService $settings) {}
+
     /**
      * Create an offer or request (authenticated sellers/buyers).
      */
@@ -24,11 +27,22 @@ class ProductController extends Controller
         }
 
         $validated = $request->validated();
+        if ($error = $this->wholesaleGuardError($user, $validated['is_wholesale'] ?? false)) {
+            return $error;
+        }
 
         $imageUrls = $validated['image_urls'] ?? [];
         $mainImage = $validated['image_url'] ?? ($imageUrls[0] ?? null);
         $gallery = array_filter(array_merge([$mainImage], $imageUrls));
         $gallery = array_values(array_unique($gallery));
+
+        $autoPublish = $this->settings->getBool(
+            AdminSettingsService::KEY_LISTINGS_AUTO_PUBLISH,
+            (bool) config('listings.auto_publish_on_create', true)
+        );
+        $defaultBidsVisible = $this->settings->getBool(AdminSettingsService::KEY_DEFAULT_BIDS_VISIBLE, true);
+        $defaultCommentsVisible = $this->settings->getBool(AdminSettingsService::KEY_DEFAULT_COMMENTS_VISIBLE, true);
+        $now = now();
 
         $product = Product::create([
             'user_id' => $user->id,
@@ -43,7 +57,8 @@ class ProductController extends Controller
             'warranty' => ($validated['condition'] ?? 'new') === 'used' ? ($validated['warranty'] ?? null) : null,
             'is_offer' => $validated['type'] === 'offer',
             'accept_bids' => $validated['accept_bids'] ?? false,
-            'bids_visible' => $validated['bids_visible'] ?? true,
+            'bids_visible' => $validated['bids_visible'] ?? $defaultBidsVisible,
+            'show_comments' => $validated['show_comments'] ?? $defaultCommentsVisible,
             'type' => $validated['type'],
             'category_id' => $validated['category_id'] ?? null,
             'subcategory_id' => $validated['subcategory_id'] ?? null,
@@ -55,22 +70,31 @@ class ProductController extends Controller
                 'gallery' => $gallery,
             ],
             'contact_preferences' => [
-                'phone' => $validated['contact_phone'] ?? true,
-                'messages' => $validated['contact_messages'] ?? true,
+                'phone' => $validated['contact_phone'] ?? false,
+                'messages' => $validated['contact_messages'] ?? false,
                 'phone_number' => $validated['contact_phone_number'] ?? null,
             ],
+            'contact_by_call' => (bool) ($validated['contact_phone'] ?? false),
+            'contact_phone' => $validated['contact_phone_number'] ?? null,
             'shipping_details' => [
                 'free_shipping' => $validated['free_shipping'] ?? false,
                 'free_return' => $validated['free_return'] ?? false,
                 'return_days' => $validated['return_days'] ?? null,
                 'view_at_client' => $validated['view_at_client'] ?? false,
             ],
-            'status' => 'pending_review',
-            'published_at' => null,
+            'view_at_location' => (bool) ($validated['view_at_client'] ?? false),
+            'free_shipping' => (bool) ($validated['free_shipping'] ?? false),
+            'free_return' => (bool) ($validated['free_return'] ?? false),
+            'status' => $autoPublish ? 'published' : 'pending_review',
+            'moderation_status' => $autoPublish ? 'approved' : 'pending',
+            'published_at' => $autoPublish ? $now : null,
+            'bumped_at' => $autoPublish ? $now : null,
         ]);
 
         return response()->json([
-            'message' => 'تم إضافة إعلانك وسيتم مراجعته قريباً',
+            'message' => $autoPublish
+                ? 'تم نشر إعلانك بنجاح'
+                : 'تم إضافة إعلانك وسيتم مراجعته قريباً',
             'data' => new ProductResource($product->load(['category', 'subcategory', 'region', 'city', 'seller'])),
         ], 201);
     }
@@ -85,6 +109,9 @@ class ProductController extends Controller
         }
 
         $validated = $request->validated();
+        if ($error = $this->wholesaleGuardError($request->user(), $validated['is_wholesale'] ?? $product->is_wholesale)) {
+            return $error;
+        }
         $imageUrls = $validated['image_urls'] ?? [];
         $mainImage = $validated['image_url'] ?? ($imageUrls[0] ?? $product->image_url);
         $gallery = array_filter(array_merge([$mainImage], $imageUrls));
@@ -108,16 +135,21 @@ class ProductController extends Controller
             'image_url' => $mainImage,
             'media' => ['cover' => $mainImage, 'gallery' => $gallery],
             'contact_preferences' => [
-                'phone' => $validated['contact_phone'] ?? ($product->contact_preferences['phone'] ?? true),
-                'messages' => $validated['contact_messages'] ?? ($product->contact_preferences['messages'] ?? true),
+                'phone' => $validated['contact_phone'] ?? ($product->contact_preferences['phone'] ?? false),
+                'messages' => $validated['contact_messages'] ?? ($product->contact_preferences['messages'] ?? false),
                 'phone_number' => $validated['contact_phone_number'] ?? ($product->contact_preferences['phone_number'] ?? null),
             ],
+            'contact_by_call' => (bool) ($validated['contact_phone'] ?? ($product->contact_by_call ?? false)),
+            'contact_phone' => $validated['contact_phone_number'] ?? $product->contact_phone,
             'shipping_details' => [
                 'free_shipping' => $validated['free_shipping'] ?? ($product->shipping_details['free_shipping'] ?? false),
                 'free_return' => $validated['free_return'] ?? ($product->shipping_details['free_return'] ?? false),
                 'return_days' => $validated['return_days'] ?? ($product->shipping_details['return_days'] ?? null),
                 'view_at_client' => $validated['view_at_client'] ?? ($product->shipping_details['view_at_client'] ?? false),
             ],
+            'view_at_location' => (bool) ($validated['view_at_client'] ?? ($product->view_at_location ?? false)),
+            'free_shipping' => (bool) ($validated['free_shipping'] ?? ($product->free_shipping ?? false)),
+            'free_return' => (bool) ($validated['free_return'] ?? ($product->free_return ?? false)),
         ]);
 
         return response()->json([
@@ -174,12 +206,24 @@ class ProductController extends Controller
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
+        if ($error = $this->wholesaleGuardError($request->user(), (bool) $product->is_wholesale)) {
+            return $error;
+        }
+
+        if ($product->status === 'published') {
+            return response()->json([
+                'message' => 'تم نشر الإعلان بنجاح',
+                'data' => new ProductResource($product->fresh()->load(['category', 'subcategory', 'region', 'city', 'seller'])),
+            ]);
+        }
+
         if ($product->status !== 'pending_review') {
             return response()->json(['message' => 'يمكن نشر الإعلانات قيد المراجعة فقط'], 422);
         }
 
         $product->update([
             'status' => 'published',
+            'moderation_status' => 'approved',
             'published_at' => now(),
             'bumped_at' => now(),
         ]);
@@ -202,5 +246,26 @@ class ProductController extends Controller
         $product->update(['status' => 'deleted']);
 
         return response()->json(['message' => 'Product deleted']);
+    }
+
+    private function wholesaleGuardError($user, bool $isWholesale): ?JsonResponse
+    {
+        if (! $isWholesale) {
+            return null;
+        }
+
+        $company = $user->company;
+        $approved = $company && $company->verification_status === 'approved'
+            && ($user->company_verification_status ?? null) === 'approved'
+            && $user->role === 'company';
+
+        if ($approved) {
+            return null;
+        }
+
+        return response()->json([
+            'message' => __('verification.wholesale_requires_approved_company'),
+            'code' => 'WHOLESALE_VERIFICATION_REQUIRED',
+        ], 403);
     }
 }

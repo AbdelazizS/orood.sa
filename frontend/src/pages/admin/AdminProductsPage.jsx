@@ -38,10 +38,41 @@ import {
 } from "@/components/ui/select"
 import apiClient from "@/lib/apiClient"
 import { useTranslation } from "react-i18next"
-import { MoreHorizontal, Pencil, Trash2, Search, Loader2, Check, X } from "lucide-react"
+import { useAppDirection } from "@/providers/DirectionProvider"
+import { MoreHorizontal, Pencil, Trash2, Search, Loader2, Check, X, EyeOff, Eye } from "lucide-react"
 import { Link } from "react-router-dom"
 
-function productColumns({ t, setEditing, setDeleteConfirm, onApprove, onReject, isApprovePending, isRejectPending }) {
+/** Matches backend Product::isPubliclyListed (public feed visibility). */
+function isProductLiveOnSite(p) {
+  if (typeof p.is_publicly_listed === "boolean") {
+    return p.is_publicly_listed
+  }
+  if (p.status !== "published") return false
+  const m = p.moderation_status
+  return m === "approved" || m == null || m === undefined
+}
+
+function labelProductDbStatus(t, status) {
+  if (status == null || status === "") return "—"
+  return t(`admin.productStatus.${status}`, { defaultValue: String(status) })
+}
+
+function labelModerationCell(t, m) {
+  if (m == null || m === "") return t("admin.moderationStatus.unset")
+  return t(`admin.moderationStatus.${m}`, { defaultValue: String(m) })
+}
+
+function productColumns({
+  t,
+  setEditing,
+  setDeleteConfirm,
+  onApprove,
+  onReject,
+  isApprovePending,
+  isRejectPending,
+  onUpdateVisibility,
+  isUpdatePending,
+}) {
   return [
     {
       id: "image",
@@ -59,7 +90,10 @@ function productColumns({ t, setEditing, setDeleteConfirm, onApprove, onReject, 
       id: "title",
       header: t("addOffer.titleLabel"),
       cell: ({ row }) => (
-        <Link to={`/products/${row.original.id}`} className="font-medium hover:underline">
+        <Link
+          to={`/products/${row.original.id}`}
+          className="font-medium hover:underline inline-block max-w-full text-start break-words"
+        >
           {row.original.title}
         </Link>
       ),
@@ -69,7 +103,7 @@ function productColumns({ t, setEditing, setDeleteConfirm, onApprove, onReject, 
       header: t("admin.type", "Type"),
       cell: ({ row }) => (
         <Badge variant={row.original.type === "offer" ? "default" : "secondary"}>
-          {row.original.type}
+          {row.original.type === "offer" ? t("feed.offer") : t("feed.request")}
         </Badge>
       ),
     },
@@ -83,7 +117,7 @@ function productColumns({ t, setEditing, setDeleteConfirm, onApprove, onReject, 
       header: t("admin.status"),
       cell: ({ row }) => (
         <Badge variant={row.original.status === "published" ? "default" : "outline"}>
-          {row.original.status}
+          {labelProductDbStatus(t, row.original.status)}
         </Badge>
       ),
     },
@@ -95,7 +129,7 @@ function productColumns({ t, setEditing, setDeleteConfirm, onApprove, onReject, 
         return (
           <div className="flex items-center gap-1">
             <Badge variant={p.moderation_status === "approved" ? "default" : p.moderation_status === "rejected" ? "destructive" : "secondary"}>
-              {p.moderation_status ?? "approved"}
+              {labelModerationCell(t, p.moderation_status)}
             </Badge>
             {p.moderation_status === "pending" && (
               <>
@@ -126,9 +160,13 @@ function productColumns({ t, setEditing, setDeleteConfirm, onApprove, onReject, 
     },
     {
       id: "actions",
-      header: "",
+      header: t("admin.actions"),
       cell: ({ row }) => {
         const p = row.original
+        const live = isProductLiveOnSite(p)
+        const canHideFromSite = live && p.status !== "deleted" && p.status !== "sold"
+        const canShowOnSite =
+          !live && p.status !== "deleted" && p.status !== "sold"
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -141,6 +179,26 @@ function productColumns({ t, setEditing, setDeleteConfirm, onApprove, onReject, 
                 <Pencil className="me-2 size-4" />
                 {t("admin.edit")}
               </DropdownMenuItem>
+              {canHideFromSite && (
+                <DropdownMenuItem
+                  onClick={() => onUpdateVisibility(p.id, { status: "suspended" })}
+                  disabled={isUpdatePending}
+                >
+                  <EyeOff className="me-2 size-4" />
+                  {t("admin.hideFromSite")}
+                </DropdownMenuItem>
+              )}
+              {canShowOnSite && (
+                <DropdownMenuItem
+                  onClick={() =>
+                    onUpdateVisibility(p.id, { status: "published", moderation_status: "approved" })
+                  }
+                  disabled={isUpdatePending}
+                >
+                  <Eye className="me-2 size-4" />
+                  {t("admin.showOnSite")}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={() => setDeleteConfirm(p)} className="text-destructive">
                 <Trash2 className="me-2 size-4" />
                 {t("categories.delete")}
@@ -155,6 +213,7 @@ function productColumns({ t, setEditing, setDeleteConfirm, onApprove, onReject, 
 
 function EditProductDialog({ product, onClose, onSave, isPending }) {
   const { t } = useTranslation()
+  const { direction } = useAppDirection()
   const [title, setTitle] = useState(product.title ?? "")
   const [description, setDescription] = useState(product.description ?? "")
   const [price, setPrice] = useState(product.price != null ? String(product.price) : "")
@@ -165,8 +224,8 @@ function EditProductDialog({ product, onClose, onSave, isPending }) {
   const [isWholesale, setIsWholesale] = useState(product.is_wholesale ?? false)
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent dir={direction} className="max-h-[90vh] overflow-y-auto text-start">
+        <DialogHeader className="text-start sm:text-start">
           <DialogTitle>{t("admin.editListing")}</DialogTitle>
         </DialogHeader>
         <form
@@ -195,6 +254,7 @@ function EditProductDialog({ product, onClose, onSave, isPending }) {
               id="edit-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              dir="auto"
               className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               rows={3}
             />
@@ -251,7 +311,7 @@ function EditProductDialog({ product, onClose, onSave, isPending }) {
               </div>
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button type="button" variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
             <Button type="submit" disabled={isPending}>
               {isPending ? <Loader2 className="size-4 animate-spin" /> : t("common.save")}
@@ -265,6 +325,7 @@ function EditProductDialog({ product, onClose, onSave, isPending }) {
 
 export function AdminProductsPage() {
   const { t } = useTranslation()
+  const { direction } = useAppDirection()
   const queryClient = useQueryClient()
   const [search, setSearch] = useState("")
   const [typeFilter, setTypeFilter] = useState("")
@@ -363,6 +424,13 @@ export function AdminProductsPage() {
   const handleApprove = useCallback((id) => approveMutation.mutate(id), [approveMutation])
   const handleReject = useCallback((id) => rejectMutation.mutate(id), [rejectMutation])
 
+  const handleUpdateVisibility = useCallback(
+    (id, payload) => {
+      updateMutation.mutate({ id, payload })
+    },
+    [updateMutation]
+  )
+
   const columns = useMemo(
     () =>
       productColumns({
@@ -373,16 +441,28 @@ export function AdminProductsPage() {
         onReject: handleReject,
         isApprovePending: approveMutation.isPending,
         isRejectPending: rejectMutation.isPending,
+        onUpdateVisibility: handleUpdateVisibility,
+        isUpdatePending: updateMutation.isPending,
       }),
-    [t, setEditing, setDeleteConfirm, handleApprove, handleReject, approveMutation.isPending, rejectMutation.isPending]
+    [
+      t,
+      setEditing,
+      setDeleteConfirm,
+      handleApprove,
+      handleReject,
+      approveMutation.isPending,
+      rejectMutation.isPending,
+      handleUpdateVisibility,
+      updateMutation.isPending,
+    ]
   )
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={direction}>
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
+        <div className="min-w-0 text-start">
           <h1 className="text-2xl font-bold">{t("admin.offersAndRequests")}</h1>
-          <p className="text-sm text-muted-foreground">{total} {t("admin.itemsTotal", "items")}</p>
+          <p className="text-sm text-muted-foreground">{t("admin.productsPageCount", { count: total })}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <div className="relative">
@@ -405,7 +485,7 @@ export function AdminProductsPage() {
             </SelectContent>
           </Select>
           <Select value={statusFilter || "all"} onValueChange={(v) => setStatusFilter(v === "all" ? "" : v)}>
-            <SelectTrigger className="w-32">
+            <SelectTrigger className="w-36 min-w-[9rem]">
               <SelectValue placeholder={t("admin.status")} />
             </SelectTrigger>
             <SelectContent>
@@ -414,6 +494,9 @@ export function AdminProductsPage() {
               <SelectItem value="draft">{t("admin.statusDraft")}</SelectItem>
               <SelectItem value="archived">{t("admin.statusArchived")}</SelectItem>
               <SelectItem value="suspended">{t("admin.statusSuspended")}</SelectItem>
+              <SelectItem value="pending_review">{t("admin.productStatus.pending_review")}</SelectItem>
+              <SelectItem value="hidden">{t("admin.productStatus.hidden")}</SelectItem>
+              <SelectItem value="sold">{t("admin.productStatus.sold")}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={categoryFilter || "all"} onValueChange={(v) => setCategoryFilter(v === "all" ? "" : v)}>
@@ -488,14 +571,14 @@ export function AdminProductsPage() {
 
       {deleteConfirm && (
         <AlertDialog open onOpenChange={(open) => !open && setDeleteConfirm(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
+          <AlertDialogContent dir={direction} className="text-start">
+            <AlertDialogHeader className="text-start sm:text-start">
               <AlertDialogTitle>{t("admin.deleteListing", "Delete Listing")}</AlertDialogTitle>
               <AlertDialogDescription>
                 {t("admin.deleteConfirm", "Are you sure you want to delete")} &quot;{deleteConfirm.title}&quot;? {t("admin.deleteIrreversible", "This action cannot be undone.")}
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
+            <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
               <Button
                 variant="destructive"

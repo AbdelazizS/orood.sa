@@ -42,34 +42,66 @@ use App\Http\Controllers\Api\Admin\AdminAnnouncementController;
 use App\Http\Controllers\Api\Admin\AdminMessageController;
 use App\Http\Controllers\Api\Admin\AdminVisitorController;
 use App\Http\Controllers\Api\PublicProfileController;
+use App\Http\Controllers\Api\ListingController;
+use App\Http\Controllers\Api\HomepageSectionsController;
+use App\Http\Controllers\Api\ListingReportController;
+use App\Http\Controllers\Api\Admin\AdminListingReportController;
+use App\Http\Controllers\Api\Admin\AdminProfileReportController;
+use App\Http\Controllers\Api\ProfileReportController;
+use App\Http\Controllers\Api\Admin\AdminChargeRequestController;
+use App\Http\Controllers\Api\Admin\AdminWithdrawalController;
+use App\Http\Controllers\Api\Admin\AdminGuaranteeRequestController;
+use App\Http\Controllers\Api\Admin\AdminSecuritySettingsController;
+use App\Http\Controllers\Api\Admin\AdminSettingsController;
+use App\Http\Controllers\Api\Admin\AdminBidController;
+use App\Http\Controllers\Api\Admin\AdminCompanyVerificationController;
+use App\Http\Controllers\Api\Company\CompanyWholesaleProductController;
+use App\Http\Controllers\Api\WholesaleMarketController;
 
 Route::prefix('v1')->group(function () {
     // Public
     Route::get('/homepage/feed', HomeFeedController::class);
+    Route::get('/homepage/sections', HomepageSectionsController::class);
     Route::get('/homepage/features', \App\Http\Controllers\Api\HomepageFeaturesController::class);
+    Route::get('/listings', [ListingController::class, 'index']);
+    Route::middleware(['optional.auth.api'])->group(function () {
+        Route::get('/listings/{listing}', [ListingController::class, 'show']);
+        Route::get('/listings/{listing}/reviews', [ReviewController::class, 'forListing']);
+        Route::get('/products/{product}', ProductShowController::class);
+        Route::post('/products/{product}/view', \App\Http\Controllers\Api\ProductViewController::class);
+        Route::get('/products/{product}/similar', ProductSimilarController::class);
+        Route::get('/products/{product}/comments', [CommentController::class, 'index']);
+        Route::get('/products/{product}/bids', [BidController::class, 'index']);
+        Route::get('/profile/by-id/{id}', [PublicProfileController::class, 'showById']);
+        Route::get('/profile/by-id/{id}/listings', [PublicProfileController::class, 'listingsById']);
+        Route::get('/profile/by-id/{id}/reviews', [PublicProfileController::class, 'reviewsById']);
+        Route::get('/profile/{username}', [PublicProfileController::class, 'show']);
+        Route::get('/profile/{username}/listings', [PublicProfileController::class, 'listings']);
+        Route::get('/profile/{username}/reviews', [PublicProfileController::class, 'reviews']);
+    });
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/categories/{category}/subcategories', [CategoryController::class, 'subcategories']);
     Route::get('/regions', [RegionController::class, 'index']);
     Route::get('/areas', [RegionController::class, 'index']);
     Route::get('/regions/{region}/cities', [RegionController::class, 'cities']);
     Route::get('/companies', [CompanyController::class, 'index']);
+    Route::get('/companies/{company}', [CompanyController::class, 'show'])->whereNumber('company');
     Route::get('/search', SearchController::class);
     Route::get('/filters', FilterController::class);
-        Route::get('/products/{product}', ProductShowController::class);
-        Route::post('/products/{product}/view', \App\Http\Controllers\Api\ProductViewController::class);
-        Route::get('/products/{product}/similar', ProductSimilarController::class);
     Route::post('/contact', [ContactController::class, 'store']);
     Route::get('/announcements', [AnnouncementController::class, 'index']);
     Route::post('/visitors/track', [\App\Http\Controllers\Api\VisitorController::class, 'track']);
-    Route::get('/products/{product}/comments', [CommentController::class, 'index']);
+    Route::post('/listings/{listing}/report', [ListingReportController::class, 'store']);
+    Route::prefix('wholesale')->group(function () {
+        Route::get('/products', [WholesaleMarketController::class, 'index']);
+        Route::get('/products/{product}', [WholesaleMarketController::class, 'show']);
+        Route::get('/companies', [CompanyController::class, 'wholesaleCompanies']);
+        Route::get('/companies/{company}', [CompanyController::class, 'wholesaleShow'])->whereNumber('company');
+        Route::get('/companies/{company}/products', [CompanyController::class, 'wholesaleProducts'])->whereNumber('company');
+    });
     Route::get('/users/by-username/{username}', [ProfileController::class, 'showByUsername']);
     Route::get('/users/{user}', [ProfileController::class, 'show']);
-    Route::get('/profile/by-id/{id}', [PublicProfileController::class, 'showById']);
-    Route::get('/profile/by-id/{id}/listings', [PublicProfileController::class, 'listingsById']);
-    Route::get('/profile/by-id/{id}/reviews', [PublicProfileController::class, 'reviewsById']);
-    Route::get('/profile/{username}', [PublicProfileController::class, 'show']);
-    Route::get('/profile/{username}/listings', [PublicProfileController::class, 'listings']);
-    Route::get('/profile/{username}/reviews', [PublicProfileController::class, 'reviews']);
+    Route::post('/users/{user}/report', [ProfileReportController::class, 'store']);
 
     // Auth (public)
     Route::post('/auth/register', [AuthController::class, 'register']);
@@ -77,6 +109,7 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/verify-email', [AuthController::class, 'verifyEmail']);
     Route::post('/auth/confirm-email', [AuthController::class, 'confirmEmail']);
     Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::get('/auth/password-policy', [AuthController::class, 'passwordPolicy']);
 
     // Auth (protected)
     Route::middleware('auth.api')->group(function () {
@@ -84,7 +117,23 @@ Route::prefix('v1')->group(function () {
         Route::post('/auth/register/company', [AuthController::class, 'registerCompany']);
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/user', [AuthController::class, 'user']);
+        Route::post('/auth/presence', [AuthController::class, 'presence']);
+        Route::post('/auth/presence/offline', [AuthController::class, 'presenceOffline']);
         Route::post('/auth/change-password', [AuthController::class, 'changePassword']);
+        Route::post('/auth/change-email-request', [AuthController::class, 'changeEmailRequest']);
+        Route::post('/auth/change-email-confirm', [AuthController::class, 'changeEmailConfirm']);
+        Route::get('/companies/my-status', [CompanyController::class, 'myStatus']);
+        Route::post('/wholesale/products/{product}/reserve', [WholesaleMarketController::class, 'reserve']);
+        Route::delete('/wholesale/products/{product}/reserve', [WholesaleMarketController::class, 'cancelReservation']);
+        Route::get('/wholesale/my-reservations', [WholesaleMarketController::class, 'myReservations']);
+        Route::post('/wholesale/reservations/{reservation}/checkout', [PurchaseController::class, 'wholesaleCheckout']);
+        Route::prefix('company/wholesale')->group(function () {
+            Route::get('/products', [CompanyWholesaleProductController::class, 'index']);
+            Route::post('/products', [CompanyWholesaleProductController::class, 'store']);
+            Route::put('/products/{product}', [CompanyWholesaleProductController::class, 'update']);
+            Route::delete('/products/{product}', [CompanyWholesaleProductController::class, 'destroy']);
+            Route::post('/bulk-offers', [CompanyWholesaleProductController::class, 'storeBulkOffer']);
+        });
         Route::middleware('can.create.listing')->group(function () {
             Route::post('/products', [ProductController::class, 'store']);
             Route::put('/products/{product}', [ProductController::class, 'update']);
@@ -101,13 +150,19 @@ Route::prefix('v1')->group(function () {
         Route::get('/conversations/{conversation}', [MessageController::class, 'show']);
         Route::post('/messages', [MessageController::class, 'store']);
         Route::post('/conversations/{conversation}/messages', [MessageController::class, 'reply']);
-        Route::get('/products/{product}/bids', [BidController::class, 'index']);
         Route::post('/products/{product}/bids', [BidController::class, 'store']);
+        Route::get('/account/bids', [BidController::class, 'mine']);
+        Route::get('/account/bids/incoming', [BidController::class, 'incoming']);
         Route::post('/products/{product}/bids/{bid}/accept', \App\Http\Controllers\Api\BidAcceptController::class);
         Route::post('/products/{product}/bids/{bid}/reject', [BidController::class, 'reject']);
         Route::delete('/products/{product}/bids/{bid}', [BidController::class, 'destroy']);
         Route::patch('/products/{product}/bids/{bid}/visibility', [BidController::class, 'toggleVisibility']);
-        Route::post('/products/{product}/view-request', \App\Http\Controllers\Api\ViewRequestController::class);
+        Route::post('/account/bids/{bid}/create-order', [BidController::class, 'createOrder']);
+        Route::post('/products/{product}/view-request', [\App\Http\Controllers\Api\ViewRequestController::class, 'store']);
+        Route::get('/account/view-requests', [\App\Http\Controllers\Api\ViewRequestController::class, 'indexMine']);
+        Route::get('/account/view-requests/incoming', [\App\Http\Controllers\Api\ViewRequestController::class, 'indexIncoming']);
+        Route::get('/products/{product}/view-requests', [\App\Http\Controllers\Api\ViewRequestController::class, 'indexForProduct']);
+        Route::patch('/view-requests/{viewRequest}', [\App\Http\Controllers\Api\ViewRequestController::class, 'update']);
         Route::post('/products/{product}/comments', [CommentController::class, 'store']);
         // Legacy route (kept): like/dislike
         Route::post('/products/{product}/comments/{comment}/like', \App\Http\Controllers\Api\CommentLikeController::class);
@@ -120,6 +175,7 @@ Route::prefix('v1')->group(function () {
         Route::delete('/products/{product}', [ProductController::class, 'destroy']);
         Route::post('/products/{product}/purchase', [PurchaseController::class, 'store']);
         Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::get('/notifications/{notification}', [NotificationController::class, 'show']);
         Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
         Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
         Route::put('/profile', [ProfileController::class, 'update']);
@@ -129,6 +185,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/reviews', [ReviewController::class, 'store']);
         Route::put('/reviews/{review}', [ReviewController::class, 'update']);
         Route::delete('/reviews/{review}', [ReviewController::class, 'destroy']);
+        Route::post('/reviews/{review}/react', [ReviewController::class, 'react']);
         Route::get('/reviews/my', [ReviewController::class, 'myReviews']);
         Route::get('/reviews/given', [ReviewController::class, 'reviewsGiven']);
 
@@ -136,16 +193,18 @@ Route::prefix('v1')->group(function () {
         Route::post('/account/verify-document', [AccountController::class, 'verifyDocument']);
         Route::get('/account/verification-status', [AccountController::class, 'verificationStatus']);
         Route::post('/account/verify-absher', [AccountController::class, 'verifyAbsher']);
-        Route::post('/account/deposit-guarantee', [AccountController::class, 'depositGuarantee']);
-        Route::post('/account/refund-guarantee', [AccountController::class, 'refundGuarantee']);
+        Route::get('/account/guarantee-requests', [AccountController::class, 'guaranteeRequestsIndex']);
+        Route::post('/account/guarantee-requests', [AccountController::class, 'guaranteeRequestsStore']);
         Route::get('/account/guarantee-status', [AccountController::class, 'guaranteeStatus']);
         Route::get('/account/listings', [ProductController::class, 'index']);
         Route::get('/account/balance', [AccountController::class, 'balance']);
         Route::get('/account/transactions', [AccountController::class, 'transactions']);
         Route::get('/account/reports', [AccountController::class, 'reports']);
         Route::post('/account/balance/charge', [AccountController::class, 'charge']);
+        Route::get('/account/charge-requests', [AccountController::class, 'chargeRequests']);
         Route::post('/account/confirm-receipt', [AccountController::class, 'confirmReceipt']);
         Route::post('/account/withdraw', [AccountController::class, 'withdraw']);
+        Route::get('/account/withdrawal-requests', [AccountController::class, 'withdrawalRequests']);
         Route::get('/account/stats', [AccountController::class, 'stats']);
         Route::get('/dashboard/home', [AccountController::class, 'dashboardHome']);
         Route::prefix('dashboard/listings')->group(function () {
@@ -167,7 +226,7 @@ Route::prefix('v1')->group(function () {
     });
 
     // Admin (protected, role: super_admin, admin, manager)
-    Route::middleware(['auth.api', 'role:super_admin,admin,manager,employee'])->prefix('admin')->group(function () {
+    Route::middleware(['auth.api', 'role:super_admin,admin,manager,employee,moderator'])->prefix('admin')->group(function () {
         Route::post('/comments/{comment}/reply', [CommentController::class, 'teamReply']);
         Route::get('/categories', [AdminCategoryController::class, 'index']);
         Route::post('/categories', [AdminCategoryController::class, 'store']);
@@ -180,9 +239,25 @@ Route::prefix('v1')->group(function () {
         Route::delete('/categories/{category}/subcategories/{subcategory}', [AdminCategoryController::class, 'destroySubcategory']);
         Route::post('/categories/{category}/regions/{region}/toggle', [AdminCategoryController::class, 'toggleRegion']);
         Route::post('/categories/{category}/regions/{region}/wholesale', [AdminCategoryController::class, 'toggleWholesale']);
-        Route::get('/orders', [AdminOrderController::class, 'index']);
-        Route::get('/orders/{purchase}', [AdminOrderController::class, 'show']);
-        Route::put('/orders/{purchase}', [AdminOrderController::class, 'update']);
+        Route::get('/orders', [AdminOrderController::class, 'index'])->middleware('permission:orders.view');
+        Route::get('/orders/{purchase}', [AdminOrderController::class, 'show'])->middleware('permission:orders.view');
+        Route::get('/bids', [AdminBidController::class, 'index'])->middleware(['role:super_admin,admin', 'permission:bids.admin_view']);
+        Route::get('/bids/{bid}', [AdminBidController::class, 'show'])->middleware(['role:super_admin,admin', 'permission:bids.admin_view']);
+        Route::patch('/bids/{bid}/hide', [AdminBidController::class, 'hide'])->middleware(['role:super_admin,admin', 'permission:bids.admin_manage']);
+        Route::delete('/bids/{bid}', [AdminBidController::class, 'destroy'])->middleware(['role:super_admin,admin', 'permission:bids.admin_manage']);
+        Route::put('/orders/{purchase}', [AdminOrderController::class, 'update'])->middleware('permission:orders.update_status');
+        Route::post('/orders/{purchase}/cancel', [AdminOrderController::class, 'cancel'])->middleware('permission:orders.update_status');
+        Route::post('/orders/{purchase}/force-complete', [AdminOrderController::class, 'forceComplete'])->middleware('permission:orders.dispute_resolve');
+        Route::post('/orders/{purchase}/force-refund', [AdminOrderController::class, 'forceRefund'])->middleware('permission:orders.refund');
+        Route::get('/withdrawal-requests', [AdminWithdrawalController::class, 'index'])->middleware('permission:finance.approve_withdrawal');
+        Route::post('/withdrawal-requests/{withdrawal_request}/approve', [AdminWithdrawalController::class, 'approve'])->middleware('permission:finance.approve_withdrawal');
+        Route::post('/withdrawal-requests/{withdrawal_request}/reject', [AdminWithdrawalController::class, 'reject'])->middleware('permission:finance.approve_withdrawal');
+        Route::get('/charge-requests', [AdminChargeRequestController::class, 'index'])->middleware('permission:finance.approve_charge');
+        Route::post('/charge-requests/{charge_request}/approve', [AdminChargeRequestController::class, 'approve'])->middleware('permission:finance.approve_charge');
+        Route::post('/charge-requests/{charge_request}/reject', [AdminChargeRequestController::class, 'reject'])->middleware('permission:finance.approve_charge');
+        Route::get('/guarantee-requests', [AdminGuaranteeRequestController::class, 'index'])->middleware('permission:compliance.review_guarantee_requests');
+        Route::post('/guarantee-requests/{guarantee_request}/approve', [AdminGuaranteeRequestController::class, 'approve'])->middleware('permission:compliance.review_guarantee_requests');
+        Route::post('/guarantee-requests/{guarantee_request}/reject', [AdminGuaranteeRequestController::class, 'reject'])->middleware('permission:compliance.review_guarantee_requests');
         Route::get('/users', [AdminUserController::class, 'index']);
         Route::get('/users/{user}', [AdminUserController::class, 'show']);
         Route::put('/users/{user}', [AdminUserController::class, 'update']);
@@ -202,22 +277,36 @@ Route::prefix('v1')->group(function () {
         Route::get('/permissions', [AdminPermissionController::class, 'index']);
         Route::get('/permissions/roles', [AdminPermissionController::class, 'roles']);
         Route::get('/permissions/roles/{role}', [AdminPermissionController::class, 'rolePermissions']);
-        Route::put('/permissions/roles/{role}', [AdminPermissionController::class, 'syncRole']);
-        Route::get('/tasks', [AdminTaskController::class, 'index']);
-        Route::post('/tasks', [AdminTaskController::class, 'store']);
-        Route::put('/tasks/{task}', [AdminTaskController::class, 'update']);
-        Route::delete('/tasks/{task}', [AdminTaskController::class, 'destroy']);
-        Route::get('/tasks/assignees', [AdminTaskController::class, 'assignees']);
+        Route::put('/permissions/roles/{role}', [AdminPermissionController::class, 'syncRole'])
+            ->middleware('permission:users.assign_roles');
+        Route::get('/tasks', [AdminTaskController::class, 'index'])->middleware('permission:tasks.view');
+        Route::post('/tasks', [AdminTaskController::class, 'store'])->middleware('permission:tasks.create');
+        Route::put('/tasks/{task}', [AdminTaskController::class, 'update'])->middleware('permission:tasks.update');
+        Route::delete('/tasks/{task}', [AdminTaskController::class, 'destroy'])->middleware('permission:tasks.close');
+        Route::get('/tasks/assignees', [AdminTaskController::class, 'assignees'])->middleware('permission:tasks.assign');
         Route::get('/contact-inquiries', [AdminContactInquiryController::class, 'index']);
         Route::get('/contact-inquiries/assignees', [AdminContactInquiryController::class, 'assignees']);
         Route::get('/contact-inquiries/{contact_inquiry}', [AdminContactInquiryController::class, 'show']);
         Route::put('/contact-inquiries/{contact_inquiry}', [AdminContactInquiryController::class, 'update']);
+        Route::get('/listing-reports', [AdminListingReportController::class, 'index']);
+        Route::get('/listing-reports/assignees', [AdminListingReportController::class, 'assignees']);
+        Route::get('/listing-reports/{listing_report}', [AdminListingReportController::class, 'show']);
+        Route::put('/listing-reports/{listing_report}', [AdminListingReportController::class, 'update']);
+        Route::get('/profile-reports', [AdminProfileReportController::class, 'index']);
+        Route::get('/profile-reports/assignees', [AdminProfileReportController::class, 'assignees']);
+        Route::get('/profile-reports/{profile_report}', [AdminProfileReportController::class, 'show']);
+        Route::put('/profile-reports/{profile_report}', [AdminProfileReportController::class, 'update']);
         Route::get('/announcements', [AdminAnnouncementController::class, 'index']);
         Route::post('/announcements', [AdminAnnouncementController::class, 'store']);
         Route::put('/announcements/{admin_announcement}', [AdminAnnouncementController::class, 'update']);
         Route::delete('/announcements/{admin_announcement}', [AdminAnnouncementController::class, 'destroy']);
         Route::get('/conversations', [AdminMessageController::class, 'index']);
+        Route::get('/messages/summary', [AdminMessageController::class, 'unifiedSummary']);
         Route::get('/conversations/{conversation}', [AdminMessageController::class, 'show']);
+        Route::post('/conversations/{conversation}/messages', [AdminMessageController::class, 'reply']);
+        Route::post('/messages/direct', [AdminMessageController::class, 'directMessage']);
+        Route::post('/messages/open-direct-conversation', [AdminMessageController::class, 'openDirectConversation']);
+        Route::post('/messages/open-product-conversation', [AdminMessageController::class, 'openProductConversation']);
         Route::get('/visitors', [AdminVisitorController::class, 'index']);
         Route::post('/users/{user}/ban', [AdminUserController::class, 'ban']);
         Route::post('/users/{user}/unban', [AdminUserController::class, 'unban']);
@@ -225,19 +314,34 @@ Route::prefix('v1')->group(function () {
         Route::post('/users/{user}/unsuspend', [AdminUserController::class, 'unsuspend']);
         Route::post('/users/{user}/verify', [AdminUserController::class, 'verify']);
         Route::post('/users/{user}/refund-guarantee', [AdminUserController::class, 'refundGuarantee']);
+        Route::post('/users/{user}/deduct-guarantee', [AdminUserController::class, 'deductGuarantee']);
+        Route::get('/companies', [AdminCompanyVerificationController::class, 'index']);
+        Route::post('/companies/{company}/approve', [AdminCompanyVerificationController::class, 'approve']);
+        Route::post('/companies/{company}/reject', [AdminCompanyVerificationController::class, 'reject']);
+        Route::post('/users/{user}/credit-balance', [AdminUserController::class, 'creditBalance'])
+            ->middleware('permission:finance.credit_balance');
         Route::post('/products/{product}/approve', [AdminProductController::class, 'approve']);
         Route::post('/products/{product}/reject', [AdminProductController::class, 'reject']);
         Route::get('/analytics', AdminAnalyticsController::class);
         Route::get('/analytics/regions', [AdminAnalyticsController::class, 'regions']);
         Route::get('/overview', AdminOverviewController::class);
         Route::get('/audit-logs', [AdminAuditController::class, 'index']);
-        Route::get('/verifications', [AdminVerificationController::class, 'index']);
-        Route::post('/verifications/{document_verification}/approve', [AdminVerificationController::class, 'approve']);
-        Route::post('/verifications/{document_verification}/reject', [AdminVerificationController::class, 'reject']);
+        Route::get('/verifications', [AdminVerificationController::class, 'index'])->middleware('permission:compliance.review_document_verifications');
+        Route::post('/verifications/{document_verification}/approve', [AdminVerificationController::class, 'approve'])->middleware('permission:compliance.review_document_verifications');
+        Route::post('/verifications/{document_verification}/reject', [AdminVerificationController::class, 'reject'])->middleware('permission:compliance.review_document_verifications');
+        Route::get('/security/password-policy', [AdminSecuritySettingsController::class, 'showPasswordPolicy']);
+        Route::put('/security/password-policy', [AdminSecuritySettingsController::class, 'updatePasswordPolicy']);
+        Route::get('/settings', [AdminSettingsController::class, 'index'])->middleware('permission:settings.view');
+        Route::put('/settings/security', [AdminSettingsController::class, 'updateSecurity'])->middleware('permission:settings.update');
+        Route::put('/settings/account', [AdminSettingsController::class, 'updateAccount'])->middleware('permission:settings.update');
+        Route::put('/settings/auth', [AdminSettingsController::class, 'updateAuth'])->middleware('permission:settings.update');
+        Route::put('/settings/content', [AdminSettingsController::class, 'updateContent'])->middleware('permission:settings.update');
     });
 });
 
 // Backward-compatible public profile endpoints without v1 prefix.
-Route::get('/profile/{username}', [PublicProfileController::class, 'show']);
-Route::get('/profile/{username}/listings', [PublicProfileController::class, 'listings']);
-Route::get('/profile/{username}/reviews', [PublicProfileController::class, 'reviews']);
+Route::middleware(['optional.auth.api'])->group(function () {
+    Route::get('/profile/{username}', [PublicProfileController::class, 'show']);
+    Route::get('/profile/{username}/listings', [PublicProfileController::class, 'listings']);
+    Route::get('/profile/{username}/reviews', [PublicProfileController::class, 'reviews']);
+});

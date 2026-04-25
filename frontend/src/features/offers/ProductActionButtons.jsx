@@ -27,10 +27,21 @@ export function ProductActionButtons({ product }) {
     <div className="flex flex-col gap-2">
       {!isRequest && hasPrice && (
         <Button asChild size="lg" className="w-full gap-2 py-6 text-base font-semibold">
-          <Link to={`/products/${product.id}/purchase`}>
-            <ShoppingCart className="size-5" />
-            {t("purchase.buyNow", "اشتر الآن")}
-          </Link>
+          {token ? (
+            <Link to={`/products/${product.id}/purchase`} className="flex items-center justify-center gap-2">
+              <ShoppingCart className="size-5" />
+              {t("purchase.buyNow", "اشتر الآن")}
+            </Link>
+          ) : (
+            <Link
+              to="/login"
+              state={{ redirectTo: `/products/${product.id}/purchase` }}
+              className="flex items-center justify-center gap-2"
+            >
+              <ShoppingCart className="size-5" />
+              {t("purchase.loginToBuy", "Sign in to buy")}
+            </Link>
+          )}
         </Button>
       )}
       {acceptBids && (

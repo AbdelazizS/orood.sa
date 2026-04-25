@@ -91,6 +91,14 @@ export function AdminRegionsPage() {
       queryClient.refetchQueries({ queryKey: ["admin", "regions"] })
     },
   })
+  const toggleCityActive = useMutation({
+    mutationFn: ({ regionId, cityId, isActive }) =>
+      apiClient.put(`/admin/regions/${regionId}/cities/${cityId}`, { is_active: isActive }),
+    onSuccess: () => {
+      queryClient.refetchQueries({ queryKey: ["admin", "regions"] })
+      queryClient.refetchQueries({ queryKey: ["regions"] })
+    },
+  })
 
   const destroyCity = useMutation({
     mutationFn: ({ regionId, cityId }) => apiClient.delete(`/admin/regions/${regionId}/cities/${cityId}`),
@@ -241,7 +249,12 @@ export function AdminRegionsPage() {
                         >
                           <span>{city.name}</span>
                           <div className="flex items-center gap-2">
-                            <Switch checked={city.is_active} disabled />
+                            <Switch
+                              checked={city.is_active ?? true}
+                              onCheckedChange={(checked) =>
+                                toggleCityActive.mutate({ regionId: region.id, cityId: city.id, isActive: checked })
+                              }
+                            />
                             <Button variant="ghost" size="icon" onClick={() => setEditingCity({ ...city, regionId: region.id })}>
                               <Pencil className="size-4" />
                             </Button>

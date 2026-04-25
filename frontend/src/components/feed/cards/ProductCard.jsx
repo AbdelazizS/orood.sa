@@ -7,24 +7,30 @@ import { useTranslation } from "react-i18next"
 import { formatDistanceToNow } from "date-fns"
 import { ar, enUS } from "date-fns/locale"
 
+/** Canonical row height — keep in sync with FeedSkeleton */
+export const PRODUCT_CARD_ROW_HEIGHT = "h-[136px] sm:h-[140px]"
+
 const formatPrice = (price, t) => {
   if (price === null || price === undefined) return t("feed.priceOnRequest")
   return new Intl.NumberFormat("ar-SA", {
     style: "currency",
     currency: "SAR",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 0,
   }).format(price)
 }
 
 /**
- * Listing card — Haraj-style horizontal layout. Fixed height, modern.
+ * Listing card — Haraj-style horizontal layout. Fixed height everywhere (feed + sidebar).
  * compact: same design, less data (title + price only, no seller/location/stats).
+ * narrow: denser type/padding for narrow columns (e.g. similar products); same fixed height.
  */
-export function ProductCard({ product, compact }) {
+export function ProductCard({ product, compact, narrow }) {
   const { t, i18n } = useTranslation()
   const isRequest = product.type === "request"
-  const isCompany = product.company ?? product.seller?.is_company
+  const hasListingImage = Boolean(product.media?.image_url)
+  const companyBranding = product.company && typeof product.company === "object" ? product.company : null
+  const wantsCompanyTile = Boolean(companyBranding?.name || product.seller?.is_company)
+  const isCompany = wantsCompanyTile && !hasListingImage
   const locale = i18n.language === "ar" ? ar : enUS
 
   const publishedAt = product.published_at ? new Date(product.published_at) : null
@@ -38,24 +44,25 @@ export function ProductCard({ product, compact }) {
     <Link to={`/products/${product.id}`}>
       <article
         className={cn(
-          "flex items-stretch gap-0 border-b border-border bg-card h-[120px]",
-          "hover:bg-muted/50 transition-colors"
+          "flex items-stretch gap-0 overflow-hidden border-b border-border bg-card",
+          "hover:bg-muted/50 transition-colors",
+          PRODUCT_CARD_ROW_HEIGHT
         )}
       >
         {/* Image side — fixed size */}
-        <div className={cn("shrink-0 w-[140px] sm:w-[160px] h-[120px]")}>
+        <div className="h-full w-[140px] shrink-0 sm:w-[160px]">
           {isCompany ? (
             <div className="flex items-center justify-center size-full bg-primary/10 text-primary font-bold text-sm text-center leading-tight p-2 rounded-none">
               {product.company?.name ?? t("feed.companyPlaceholder", "منفذ")}
             </div>
           ) : (
-            <div className="relative size-full overflow-hidden bg-muted">
+            <div className="relative size-full overflow-hidden bg-transparent">
               {product.media?.image_url ? (
                 <>
                   <img
                     src={resolveImageUrl(product.media.image_url)}
                     alt={product.title}
-                    className="size-full object-cover"
+                    className="size-full object-contain p-1 sm:p-1.5"
                     loading="lazy"
                   />
                   {!compact && imageCount > 1 && (
@@ -73,58 +80,71 @@ export function ProductCard({ product, compact }) {
           )}
         </div>
 
-        {/* Text side — image one side, content other. Offer badge light, top. */}
-        <div className="flex-1 min-w-0 flex flex-col justify-between py-3 px-4 sm:px-5 text-start">
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between gap-2">
+        {/* Text side */}
+        <div
+          className={cn(
+            "flex h-full min-w-0 flex-1 flex-col justify-between py-3 text-start sm:px-5",
+            narrow ? "px-3" : "px-4"
+          )}
+        >
+          <div className="flex min-h-0 flex-1 flex-col gap-1">
+            <div className="flex shrink-0 items-center justify-between gap-2">
               <span
                 className={cn(
-                  "text-[11px] font-medium px-1.5 py-0.5 rounded shrink-0 text-muted-foreground bg-muted/60",
+                  "font-medium px-1.5 py-0.5 rounded shrink-0 text-muted-foreground bg-muted/60",
+                  narrow ? "text-[10px]" : "text-[11px]",
                   isRequest && "bg-blue-500/10 text-blue-600 dark:text-blue-400"
                 )}
               >
                 {isRequest ? t("feed.request") : t("feed.offer")}
               </span>
             </div>
-            <h3 className={cn(
-              "font-semibold hover:underline line-clamp-2 text-foreground",
-              compact ? "text-sm" : "text-[15px]"
-            )}>
+            <h3
+              className={cn(
+                "min-h-0 shrink font-semibold leading-snug text-foreground hover:underline line-clamp-2",
+                compact ? "text-sm" : narrow ? "text-sm sm:text-[15px]" : "text-base sm:text-[17px]"
+              )}
+            >
               {product.title}
             </h3>
             {!compact && (
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Avatar className="size-4">
+              <div
+                className={cn(
+                  "mt-auto flex min-h-0 min-w-0 items-center overflow-hidden text-muted-foreground whitespace-nowrap",
+                  narrow ? "gap-x-2 text-[11px] sm:text-xs" : "gap-x-3 text-sm"
+                )}
+              >
+                <span className="flex min-w-0 shrink items-center gap-1">
+                  <Avatar className="size-4 shrink-0">
                     <AvatarFallback className="text-[10px] bg-muted text-muted-foreground">
                       {product.seller?.name?.charAt(0) ?? "?"}
                     </AvatarFallback>
                   </Avatar>
-                  <span>{product.seller?.name ?? "—"}</span>
+                  <span className="truncate">{product.seller?.name ?? "—"}</span>
                 </span>
                 {product.location && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="size-3" />
-                    {product.location}
+                  <span className="flex min-w-0 shrink items-center gap-1">
+                    <MapPin className="size-3 shrink-0" />
+                    <span className="truncate">{product.location}</span>
                   </span>
                 )}
-                <span className="flex items-center gap-1">
-                  <Clock className="size-3" />
-                  {timeAgo}
+                <span className="flex shrink-0 items-center gap-1">
+                  <Clock className="size-3 shrink-0" />
+                  <span className={narrow ? "max-w-[5.5rem] truncate sm:max-w-[7rem]" : ""}>{timeAgo}</span>
                 </span>
-                <span className="flex items-center gap-1">
-                  <MessageCircle className="size-3" />
+                <span className="flex shrink-0 items-center gap-1">
+                  <MessageCircle className="size-3 shrink-0" />
                   {product.stats?.messages ?? product.stats?.comments ?? 0}
                 </span>
-                <span className="flex items-center gap-1">
-                  <Eye className="size-3" />
+                <span className="flex shrink-0 items-center gap-1">
+                  <Eye className="size-3 shrink-0" />
                   {product.stats?.views ?? 0}
                 </span>
               </div>
             )}
           </div>
-          <div className="flex items-center justify-between gap-2 mt-2">
-            <span className="font-medium text-sm text-foreground">
+          <div className="mt-1 flex shrink-0 items-center justify-between gap-2">
+            <span className={cn("font-medium text-foreground", narrow ? "text-sm sm:text-base" : "text-base")}>
               {formatPrice(product.price, t)}
             </span>
           </div>

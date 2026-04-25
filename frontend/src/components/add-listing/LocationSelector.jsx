@@ -1,16 +1,19 @@
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { cn } from "@/lib/utils"
-import { X } from "lucide-react"
-import { SAUDI_REGIONS } from "@/data/addListingData"
+import { X, Loader2 } from "lucide-react"
+import { useRegions, useCities } from "@/hooks/useRegions"
+import { useAppDirection } from "@/providers/DirectionProvider"
 
 export function LocationSelector({ regionId, cityId, error, onChange }) {
   const { t } = useTranslation()
+  const { direction } = useAppDirection()
   const [expanded, setExpanded] = useState(false)
+  const { data: regions = [], isLoading: loadingRegions } = useRegions()
+  const { data: cities = [], isLoading: loadingCities } = useCities(regionId)
 
-  const region = SAUDI_REGIONS.find((r) => r.id === regionId)
-  const cities = region?.cities ?? []
-  const city = cities.find((c) => c.id === cityId)
+  const region = regions.find((r) => String(r.id) === String(regionId))
+  const city = cities.find((c) => String(c.id) === String(cityId))
 
   const handleRegionClick = (id) => onChange(id, null)
   const handleCityClick = (id) => {
@@ -19,12 +22,10 @@ export function LocationSelector({ regionId, cityId, error, onChange }) {
   }
   const handleClear = () => onChange(null, null)
 
-  const displayText = region && city
-    ? `🇸🇦 السعودية — ${region.name} — ${city.name}`
-    : null
+  const displayText = region && city ? `${region.name} — ${city.name}` : null
 
   return (
-    <div className="rounded-lg border border-border bg-card p-3 sm:p-4 mb-2" dir="rtl">
+    <div className="rounded-lg border border-border bg-card p-3 sm:p-4 mb-2" dir={direction}>
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
@@ -35,9 +36,9 @@ export function LocationSelector({ regionId, cityId, error, onChange }) {
           <span className="text-destructive">*</span>
         </span>
         {displayText ? (
-          <span className="flex-1 truncate text-end text-[14px] text-foreground">{displayText}</span>
+          <span className="flex-1 truncate text-start text-[14px] text-foreground">{displayText}</span>
         ) : (
-          <span className="flex-1 truncate text-end text-[14px] text-muted-foreground">
+          <span className="flex-1 truncate text-start text-[14px] text-muted-foreground">
             {t("addListing.locationPlaceholder")}
           </span>
         )}
@@ -58,8 +59,13 @@ export function LocationSelector({ regionId, cityId, error, onChange }) {
           <div className="w-[40%] border-s border-border">
             <div className="bg-muted px-2.5 py-2.5 text-[13px] font-bold text-foreground">{t("addListing.locationPlaceholder")}</div>
             <div className="max-h-[240px] overflow-y-auto">
-              {SAUDI_REGIONS.map((r) => {
-                const isSelected = regionId === r.id
+              {loadingRegions ? (
+                <div className="flex items-center justify-center py-4 text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                </div>
+              ) : (
+                regions.map((r) => {
+                const isSelected = String(regionId) === String(r.id)
                 return (
                   <button
                     key={r.id}
@@ -73,17 +79,21 @@ export function LocationSelector({ regionId, cityId, error, onChange }) {
                     {r.name}
                   </button>
                 )
-              })}
+              }))}
             </div>
           </div>
           <div className="flex-1">
             <div className="bg-muted px-2.5 py-2.5 text-[13px] font-bold text-foreground">{t("addListing.cities")}</div>
             <div className="max-h-[240px] overflow-y-auto">
-              {cities.length === 0 ? (
+              {loadingCities && regionId ? (
+                <div className="flex items-center justify-center py-4 text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                </div>
+              ) : cities.length === 0 ? (
                 <p className="px-3 py-4 text-[14px] text-muted-foreground">{t("addListing.locationSelectRegion")}</p>
               ) : (
                 cities.map((c) => {
-                  const isSelected = cityId === c.id
+                  const isSelected = String(cityId) === String(c.id)
                   return (
                     <button
                       key={c.id}

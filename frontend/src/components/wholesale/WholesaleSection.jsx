@@ -1,11 +1,14 @@
 import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
-import { Link } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
 import apiClient from "@/lib/apiClient"
 import { useFiltersStore } from "@/store/useFiltersStore"
+import { AnnouncementStrip } from "@/components/home/AnnouncementStrip"
 
 export function WholesaleSection() {
   const { t } = useTranslation()
+  const location = useLocation()
+  const from = `${location.pathname}${location.search}`
   const { setActiveFilter } = useFiltersStore()
 
   const { data } = useQuery({
@@ -21,23 +24,24 @@ export function WholesaleSection() {
 
   return (
     <section id="sir-aljomla" className="space-y-4 border-t border-border bg-card p-4 sm:p-6">
+      <AnnouncementStrip target="companies" queryKey="wholesale-companies" />
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs uppercase tracking-wider text-muted-foreground">{t("filters.wholesale")}</p>
           <h2 className="text-xl font-bold">{t("wholesale.title")}</h2>
         </div>
-        <button
-          type="button"
+        <Link
+          to="/wholesale"
           onClick={() => setActiveFilter("wholesale")}
           className="text-sm font-semibold text-primary hover:underline"
         >
           {t("common.all")}
-        </button>
+        </Link>
       </div>
       {hasProducts ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {products.slice(0, 4).map((p) => (
-            <Link key={p.id} to={`/products/${p.id}`} className="block">
+            <Link key={p.id} to={`/products/${p.id}`} className="block" state={{ from }}>
               <div className="rounded-2xl border bg-background/60 overflow-hidden transition-colors hover:bg-muted/50">
                 <div className="aspect-video bg-muted">
                   {p.media?.image_url ? (

@@ -16,6 +16,10 @@ class CommentController extends Controller
     public function index(Request $request, Product $product): JsonResponse
     {
         $viewer = $request->user();
+        if (! $product->isAccessibleBy($viewer)) {
+            abort(404);
+        }
+
         $isOwner = $viewer && $product->user_id === $viewer->id;
         $isAdmin = $viewer && in_array($viewer->role, ['super_admin', 'admin', 'manager', 'employee'], true);
 
@@ -42,8 +46,10 @@ class CommentController extends Controller
             ->whereNull('parent_id')
             ->with([
                 'user:id,name,username,avatar_url,is_verified',
-                'replies' => function ($q) {
-                    $q->where('type', 'TEAM_REPLY')->orderBy('created_at', 'asc');
+                'replies' => function ($q) use ($canSeeAllBecauseOwner) {
+                    $q->whereIn('type', ['TEAM_REPLY', 'REGULAR'])
+                        ->when(! $canSeeAllBecauseOwner, fn ($replyQuery) => $replyQuery->where('is_visible', true))
+                        ->orderBy('created_at', 'asc');
                 },
                 'replies.user:id,name,username,avatar_url,is_verified',
             ]);
@@ -117,11 +123,26 @@ class CommentController extends Controller
 
         $validated = $request->validate([
             'body' => 'required|string|min:1|max:1000',
+            'parent_id' => 'nullable|integer|exists:comments,id',
         ]);
+
+        $parentId = $validated['parent_id'] ?? null;
+        if ($parentId !== null) {
+            $parent = Comment::query()
+                ->where('id', $parentId)
+                ->where('listing_id', $product->id)
+                ->whereNull('parent_id')
+                ->first();
+
+            if (! $parent) {
+                return response()->json(['message' => 'Invalid parent comment'], 422);
+            }
+        }
 
         $comment = Comment::create([
             'listing_id' => $product->id,
             'user_id' => $request->user()->id,
+            'parent_id' => $parentId,
             'body' => $validated['body'],
             'type' => 'REGULAR',
             'is_visible' => true,

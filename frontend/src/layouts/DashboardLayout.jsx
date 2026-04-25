@@ -28,6 +28,7 @@ import { ThemeToggle } from "@/components/navigation/ThemeToggle"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { NotificationBell } from "@/components/notifications/NotificationBell"
 import { MessageIcon } from "@/components/messages/MessageIcon"
+import { useQueryClient } from "@tanstack/react-query"
 import { useAuthStore } from "@/store/useAuthStore"
 import { useSidebar } from "@/components/ui/sidebar"
 import * as authService from "@/services/authService"
@@ -45,45 +46,74 @@ import {
   LogOut,
   MapPin,
   Shield,
+  Landmark,
   ListTodo,
   BarChart3,
+  Wallet,
   FileText,
   Bell,
   ShoppingCart,
+  Gavel,
   Mail,
   Megaphone,
   Eye,
+  Flag,
+  ArrowDownToLine,
+  UserRound,
+  KeyRound,
+  SlidersHorizontal,
 } from "lucide-react"
+import { dashboardUserNavLinks } from "@/navigation/dashboardUserNavLinks"
+import { publicProfilePath } from "@/lib/profileRoutes"
 
-const sidebarLinks = [
-  { to: "/dashboard", labelKey: "dashboard.overview", icon: LayoutDashboard },
-  { to: "/dashboard/orders", labelKey: "dashboard.orderTracking", icon: Package },
-  { to: "/dashboard/balance", labelKey: "dashboard.balance", icon: BarChart3 },
-  { to: "/dashboard/balance", labelKey: "dashboard.financialGuarantee", icon: Shield },
-  { to: "/dashboard/profile", labelKey: "dashboard.personalData", icon: Settings },
-  { to: "/dashboard/verification", labelKey: "dashboard.verification", icon: Shield },
-  { to: "/dashboard/messages", labelKey: "dashboard.messages", icon: MessageSquare },
-  { to: "/dashboard/notifications", labelKey: "dashboard.notifications", icon: Bell },
-  { to: "/dashboard/listings", labelKey: "dashboard.listings", icon: Package },
-  { to: "/dashboard/favorites", labelKey: "dashboard.favorites", icon: Heart },
-  { to: "/dashboard/saved-searches", labelKey: "dashboard.savedSearches", icon: Search },
-]
+function adminLinkVisible(user, link) {
+  if (link.to === "/admin/bids") {
+    const role = String(user?.role ?? "")
+    if (role !== "super_admin" && role !== "admin") return false
+  }
+  if (!link.permission) return true
+  if (!user?.permissions?.length) return false
+  if (user.permissions.includes("*")) return true
+  return user.permissions.includes(link.permission)
+}
+
+function hasPermission(user, permission) {
+  if (!permission) return true
+  const perms = Array.isArray(user?.permissions) ? user.permissions : []
+  return perms.includes("*") || perms.includes(permission)
+}
+
+function memberLinkVisible(_user, _link) {
+  if (_link?.to === "/dashboard/wholesale") {
+    return _user?.role === "company"
+  }
+  return true
+}
 
 const adminLinks = [
   { to: "/admin", labelKey: "admin.dashboardTitle", icon: LayoutDashboard },
-  { to: "/admin/orders", labelKey: "admin.ordersTitle", icon: ShoppingCart },
+  { to: "/admin/orders", labelKey: "admin.ordersTitle", icon: ShoppingCart, permission: "orders.view" },
+  { to: "/admin/bids", labelKey: "admin.bidsTitle", icon: Gavel, permission: "bids.admin_view" },
+  { to: "/admin/charges", labelKey: "admin.chargeRequests", icon: Wallet, permission: "finance.approve_charge" },
+  { to: "/admin/withdrawals", labelKey: "admin.withdrawals", icon: ArrowDownToLine, permission: "finance.approve_withdrawal" },
+  { to: "/admin/financial-guarantees", labelKey: "admin.financialGuaranteesTitle", icon: Landmark },
+  { to: "/admin/guarantee-requests", labelKey: "admin.guaranteeRequestsTitle", icon: Shield, permission: "compliance.review_guarantee_requests" },
   { to: "/admin/products", labelKey: "admin.offersAndRequests", icon: Package },
   { to: "/admin/users", labelKey: "dashboard.users", icon: Users },
+  { to: "/admin/companies", labelKey: "admin.companiesVerificationTitle", icon: Landmark },
   { to: "/admin/categories", labelKey: "dashboard.categories", icon: FolderTree },
   { to: "/admin/regions", labelKey: "admin.regions", icon: MapPin },
   { to: "/admin/tasks", labelKey: "admin.tasks", icon: ListTodo },
   { to: "/admin/contact-inquiries", labelKey: "admin.contactInquiries", icon: Mail },
+  { to: "/admin/listing-reports", labelKey: "admin.listingReports", icon: Flag },
+  { to: "/admin/profile-reports", labelKey: "admin.profileReports", icon: UserRound },
   { to: "/admin/announcements", labelKey: "admin.announcements", icon: Megaphone },
   { to: "/admin/messages", labelKey: "admin.messagesTitle", icon: MessageSquare },
   { to: "/admin/visitors", labelKey: "admin.visitorsTitle", icon: Eye },
-  { to: "/admin/roles", labelKey: "admin.roles", icon: Shield },
+  { to: "/admin/roles", labelKey: "admin.roles", icon: Shield, permission: "users.assign_roles" },
+  { to: "/admin/settings", labelKey: "admin.settingsTitle", icon: SlidersHorizontal, permission: "settings.view" },
   { to: "/admin/analytics", labelKey: "analytics.title", icon: BarChart3 },
-  { to: "/admin/verifications", labelKey: "admin.verifications", icon: Shield },
+  { to: "/admin/verifications", labelKey: "admin.verifications", icon: Shield, permission: "compliance.review_document_verifications" },
   { to: "/admin/audit", labelKey: "dashboard.auditLogs", icon: FileText },
 ]
 
@@ -94,13 +124,14 @@ const adminLinks = [
 export function DashboardLayout({ adminLinks: isAdmin = false, children }) {
   const location = useLocation()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { t } = useTranslation()
   const { user, token } = useAuthStore()
   const { direction } = useAppDirection()
   const { state } = useSidebar()
   const isRtl = direction === "rtl"
   const side = "left"
-  const links = isAdmin ? adminLinks : sidebarLinks
+  const links = isAdmin ? adminLinks.filter((l) => adminLinkVisible(user, l)) : dashboardUserNavLinks.filter((l) => memberLinkVisible(user, l))
   const isCollapsed = state === "collapsed"
 
   return (
@@ -120,7 +151,7 @@ export function DashboardLayout({ adminLinks: isAdmin = false, children }) {
           </Link>
           {!isAdmin && user && (
             <Link
-              to={user?.username ? `/profile/${user.username}` : "/dashboard/profile"}
+              to={publicProfilePath(user) ?? "/dashboard"}
               className={cn(
                 "mt-3 flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-accent transition-colors overflow-hidden",
                 isCollapsed && "justify-center"
@@ -141,10 +172,11 @@ export function DashboardLayout({ adminLinks: isAdmin = false, children }) {
             <SidebarGroupContent>
               <SidebarMenu>
                 {links.map((link) => {
-                const isIndexRoute = link.to === "/admin" || link.to === "/dashboard"
+                const href = link.to
+                const isIndexRoute = href === "/admin" || href === "/dashboard"
                 const isActive = isIndexRoute
-                  ? location.pathname === link.to
-                  : (location.pathname === link.to || location.pathname.startsWith(link.to + "/"))
+                    ? location.pathname === href
+                    : location.pathname === href || location.pathname.startsWith(`${href}/`)
                 return (
                   <SidebarMenuItem key={link.labelKey}>
                     <SidebarMenuButton
@@ -152,7 +184,7 @@ export function DashboardLayout({ adminLinks: isAdmin = false, children }) {
                       isActive={isActive}
                       tooltip={t(link.labelKey)}
                     >
-                      <Link to={link.to}>
+                      <Link to={href}>
                         <link.icon className="size-4" />
                         <span>{t(link.labelKey)}</span>
                       </Link>
@@ -195,7 +227,7 @@ export function DashboardLayout({ adminLinks: isAdmin = false, children }) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align={isRtl ? "start" : "end"} className="w-48">
-                  {(user.role === "admin" || user.role === "super_admin" || user.role === "manager" || user.role === "employee") ? (
+                  {hasPermission(user, "bids.admin_view") || user.role === "admin" || user.role === "super_admin" ? (
                     <DropdownMenuItem asChild>
                       <Link to="/admin">{t("admin.dashboardTitle")}</Link>
                     </DropdownMenuItem>
@@ -205,7 +237,12 @@ export function DashboardLayout({ adminLinks: isAdmin = false, children }) {
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => { authService.logout(); navigate("/", { replace: true }) }} className="text-destructive">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      authService.performLogout({ navigate, replaceTo: "/", queryClient })
+                    }}
+                    className="text-destructive"
+                  >
                     <LogOut className="me-2 size-4" />
                     {t("auth.logout")}
                   </DropdownMenuItem>

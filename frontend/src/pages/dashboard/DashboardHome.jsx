@@ -22,6 +22,8 @@ import {
 } from "@/lib/dashboardUtils"
 import apiClient from "@/lib/apiClient"
 import { useAuthStore } from "@/store/useAuthStore"
+import { publicProfilePath } from "@/lib/profileRoutes"
+import { getNotificationBody, getNotificationTitle } from "@/lib/notificationDisplay"
 import { useAppDirection } from "@/providers/DirectionProvider"
 import { toast } from "sonner"
 import {
@@ -46,6 +48,9 @@ import {
 } from "lucide-react"
 
 function getStatsCardsConfig(stats, user, t) {
+  const perms = Array.isArray(user?.permissions) ? user.permissions : []
+  const canManageIncomingBids = perms.includes("*") || perms.includes("bids.review_listing")
+  const sellerBidsLink = canManageIncomingBids ? "/dashboard/seller-bids" : "/dashboard/bids"
   const h = stats?.listings?.hidden ?? 0
   const w = stats?.views?.thisWeek ?? 0
   return [
@@ -110,7 +115,7 @@ function getStatsCardsConfig(stats, user, t) {
       icon: <Gavel size={18} />,
       iconBg: (stats?.bids?.pending ?? 0) > 0 ? "bg-orange-500/10" : "bg-muted",
       iconColor: (stats?.bids?.pending ?? 0) > 0 ? "text-orange-600" : "text-muted-foreground",
-      link: "/dashboard/listings",
+      link: sellerBidsLink,
       urgent: (stats?.bids?.pending ?? 0) > 0,
     },
     {
@@ -141,6 +146,9 @@ export function DashboardHome() {
   const recentListings = data?.recentListings ?? []
 
   const username = user?.username ?? user?.name ?? user?.id ?? ""
+  const perms = Array.isArray(user?.permissions) ? user.permissions : []
+  const canManageIncomingBids = perms.includes("*") || perms.includes("bids.review_listing")
+  const sellerBidsLink = canManageIncomingBids ? "/dashboard/seller-bids" : "/dashboard/bids"
   const locale = i18n.language === "ar" ? "ar" : "en"
 
   const bumpMutation = useMutation({
@@ -168,7 +176,7 @@ export function DashboardHome() {
     alerts.push({ type: "urgent", messageKey: "dashboard.home.alertPendingOrders", count: stats.orders.pending, link: "/dashboard/orders" })
   }
   if ((stats?.bids?.pending ?? 0) > 0) {
-    alerts.push({ type: "urgent", messageKey: "dashboard.home.alertPendingBids", count: stats.bids.pending, link: "/dashboard/listings" })
+    alerts.push({ type: "urgent", messageKey: "dashboard.home.alertPendingBids", count: stats.bids.pending, link: sellerBidsLink })
   }
   if (!user?.isVerified) {
     alerts.push({ type: "info", messageKey: "dashboard.home.alertVerifyAccount", link: "/dashboard/verification" })
@@ -179,7 +187,7 @@ export function DashboardHome() {
   const displayAlerts = alerts.slice(0, 2)
 
   const statsCards = getStatsCardsConfig(stats, user, t)
-  const profileLink = user?.username ? `/profile/${user.username}` : "/"
+  const profileLink = publicProfilePath(user) ?? "/"
 
   const dateLocale = locale === "ar" ? "ar-SA" : "en-US"
 
@@ -290,7 +298,7 @@ export function DashboardHome() {
 
       {/* 4. Quick actions */}
       <div className="flex gap-2 flex-wrap">
-        <Button size="sm" onClick={() => navigate("/add-listing")} className="gap-1.5">
+        <Button size="sm" onClick={() => navigate("/add")} className="gap-1.5">
           <Plus size={14} /> {t("dashboard.home.addNewListing")}
         </Button>
         <Button
@@ -344,7 +352,7 @@ export function DashboardHome() {
                   variant="ghost"
                   size="sm"
                   className="mt-2 text-primary"
-                  onClick={() => navigate("/add-listing")}
+                  onClick={() => navigate("/add")}
                 >
                   {t("dashboard.home.addFirstListing")}
                 </Button>
@@ -429,6 +437,14 @@ export function DashboardHome() {
               <p className="text-xs text-primary mt-1">
                 {t("dashboard.home.withdrawable")}: {Number(stats?.wallet?.withdrawableBalance ?? 0).toFixed(2)} {t("common.currency")}
               </p>
+              {(Number(stats?.wallet?.pendingCharges ?? 0) > 0 || Number(stats?.wallet?.pendingWithdrawals ?? 0) > 0) && (
+                <p className="text-xs text-amber-600 mt-1">
+                  {t("dashboard.home.pendingFinanceActions", {
+                    charges: Number(stats?.wallet?.pendingCharges ?? 0).toFixed(0),
+                    withdrawals: Number(stats?.wallet?.pendingWithdrawals ?? 0).toFixed(0),
+                  })}
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="border border-border rounded-lg p-3 text-start">
@@ -618,10 +634,10 @@ export function DashboardHome() {
                           !n.isRead ? "font-semibold text-foreground" : "text-foreground"
                         )}
                       >
-                        {n.title}
+                        {getNotificationTitle(n, t)}
                       </p>
                       <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                        {n.body}
+                        {getNotificationBody(n, t) || n.body}
                       </p>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {formatRelativeTime(n.createdAt ?? n.created_at, locale)}

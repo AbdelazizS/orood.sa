@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PageVisit extends Model
 {
-    public $timestamps = false;
+    // Keep Laravel timestamps enabled so future visits always get created_at/updated_at.
+    public $timestamps = true;
 
     protected $fillable = [
         'profile_id',

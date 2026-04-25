@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Review extends Model
 {
@@ -26,7 +28,7 @@ class Review extends Model
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewer_id')
-            ->select(['id', 'username', 'avatar_url', 'is_verified']);
+            ->select(['id', 'name', 'username', 'avatar_url', 'is_verified']);
     }
 
     public function reviewee(): BelongsTo
@@ -48,6 +50,47 @@ class Review extends Model
     public function purchase(): BelongsTo
     {
         return $this->belongsTo(Purchase::class)->withDefault();
+    }
+
+    public function reactions(): HasMany
+    {
+        return $this->hasMany(ReviewReaction::class);
+    }
+
+    public function likes(): HasMany
+    {
+        return $this->hasMany(ReviewReaction::class)->where('type', ReviewReaction::TYPE_LIKE);
+    }
+
+    public function dislikes(): HasMany
+    {
+        return $this->hasMany(ReviewReaction::class)->where('type', ReviewReaction::TYPE_DISLIKE);
+    }
+
+    /**
+     * Adds like/dislike counts for API serialization when `review_reactions` exists.
+     */
+    public function scopeWithReactionCounts(Builder $query): Builder
+    {
+        if (! \Schema::hasTable('review_reactions')) {
+            return $query;
+        }
+
+        return $query->withCount(['likes', 'dislikes']);
+    }
+
+    /**
+     * @param  \Illuminate\Contracts\Pagination\LengthAwarePaginator<int, Review>  $paginator
+     */
+    public static function loadUserReactionsOnPaginator($paginator, ?User $user): void
+    {
+        if (! $user || ! \Schema::hasTable('review_reactions')) {
+            return;
+        }
+
+        $paginator->getCollection()->load([
+            'reactions' => fn ($q) => $q->where('user_id', $user->id),
+        ]);
     }
 
     public function getRatingLabelAttribute(): string

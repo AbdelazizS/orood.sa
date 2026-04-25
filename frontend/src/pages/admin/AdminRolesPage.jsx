@@ -13,12 +13,14 @@ import {
 } from "@/components/ui/select"
 import apiClient from "@/lib/apiClient"
 import { Loader2 } from "lucide-react"
+import { usePermission } from "@/hooks/usePermission"
 
 const EMPTY_IDS = []
 
 export function AdminRolesPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
+  const canAssignRoles = usePermission("users.assign_roles")
   const [selectedRole, setSelectedRole] = useState("admin")
   const syncKeyRef = useRef("")
 
@@ -113,7 +115,7 @@ export function AdminRolesPage() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={handleSave} disabled={syncMutation.isPending} className="mt-6">
+            <Button onClick={handleSave} disabled={!canAssignRoles || syncMutation.isPending} className="mt-6">
               {syncMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : t("admin.savePermissions", "Save Permissions")}
             </Button>
           </div>
@@ -135,6 +137,7 @@ export function AdminRolesPage() {
                         <label key={p.id} className="flex items-center gap-2 cursor-pointer">
                           <Checkbox
                             checked={selected.has(p.id)}
+                            disabled={!canAssignRoles}
                             onCheckedChange={(c) => handleToggle(p.id, !!c)}
                           />
                           <span className="text-sm">{t(`permissions.${(p.name || "").replace(/\./g, "_")}`, p.name)}</span>

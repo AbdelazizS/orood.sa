@@ -63,6 +63,9 @@ class ProfileController extends Controller
                         'name' => $user->city->region->getLocalizedName($locale),
                     ] : null,
                 ] : null,
+                'location_lat' => $user->location_lat !== null ? (float) $user->location_lat : null,
+                'location_lng' => $user->location_lng !== null ? (float) $user->location_lng : null,
+                'location_address' => $user->location_address,
                 'last_seen' => 'Online',
                 'listings_count' => $user->products()->published()->approved()->count(),
                 'sold_items' => $soldItems,
@@ -92,8 +95,20 @@ class ProfileController extends Controller
             'cover_photo_url' => ['sometimes', 'nullable', 'string', 'max:500'],
             'logo_url' => ['sometimes', 'nullable', 'string', 'max:500'],
             'city_id' => ['sometimes', 'nullable', 'integer', 'exists:cities,id'],
+            'location_lat' => ['sometimes', 'nullable', 'numeric', 'between:-90,90'],
+            'location_lng' => ['sometimes', 'nullable', 'numeric', 'between:-180,180'],
+            'location_address' => ['sometimes', 'nullable', 'string', 'max:500'],
             'financial_guarantee' => ['sometimes', 'numeric', 'min:0'],
         ]);
+
+        if (array_key_exists('avatar_url', $validated) && $validated['avatar_url'] === null && $user->avatar_url) {
+            $oldPath = str_replace('/storage/', 'public/', $user->avatar_url);
+            Storage::delete($oldPath);
+        }
+        if (array_key_exists('cover_photo_url', $validated) && $validated['cover_photo_url'] === null && $user->cover_photo_url) {
+            $oldPath = str_replace('/storage/', 'public/', $user->cover_photo_url);
+            Storage::delete($oldPath);
+        }
 
         $user->update($validated);
 

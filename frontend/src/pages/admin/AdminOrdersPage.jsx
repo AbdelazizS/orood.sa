@@ -18,12 +18,15 @@ import { Search, ShoppingCart, Loader2, Package, CheckCircle, XCircle, Truck } f
 import { Link } from "react-router-dom"
 
 const STATUS_MAP = {
-  pending: { labelKey: "orders.statusNew", color: "secondary" },
-  paid: { labelKey: "orders.statusNew", color: "secondary" },
-  shipped: { labelKey: "orders.statusShipping", color: "default" },
-  delivered: { labelKey: "orders.statusShipping", color: "default" },
-  completed: { labelKey: "orders.statusCompleted", color: "default" },
-  cancelled: { labelKey: "orders.statusCancelled", color: "destructive" },
+  pending: { labelKey: "dashboard.status.pending", color: "secondary" },
+  cod_requested: { labelKey: "dashboard.status.cod_requested", color: "secondary" },
+  paid: { labelKey: "dashboard.status.paid", color: "secondary" },
+  awaiting_payment: { labelKey: "dashboard.status.awaiting_payment", color: "secondary" },
+  shipped: { labelKey: "dashboard.status.shipped", color: "default" },
+  delivered: { labelKey: "dashboard.status.delivered", color: "default" },
+  completed: { labelKey: "dashboard.status.completed", color: "default" },
+  cancelled: { labelKey: "dashboard.status.cancelled", color: "destructive" },
+  disputed: { labelKey: "dashboard.status.disputed", color: "destructive" },
 }
 
 const STATUS_FILTERS = [
@@ -38,7 +41,7 @@ function orderColumns(t) {
   return [
     {
       id: "order_number",
-      header: t("admin.orderNumber", "Order #"),
+      header: t("admin.orderNumber"),
       cell: ({ row }) => (
         <Link to={`/admin/orders/${row.original.id}`} className="font-medium hover:underline">
           {row.original.order_number}
@@ -61,7 +64,7 @@ function orderColumns(t) {
     },
     {
       id: "buyer",
-      header: t("admin.buyer", "Buyer"),
+      header: t("admin.buyer"),
       cell: ({ row }) => {
         const b = row.original.buyer
         return b ? <span>{b.name}<br /><span className="text-xs text-muted-foreground">{b.email}</span></span> : "—"
@@ -90,7 +93,7 @@ function orderColumns(t) {
     },
     {
       id: "created_at",
-      header: t("admin.date", "Date"),
+      header: t("admin.date"),
       cell: ({ row }) => new Date(row.original.created_at).toLocaleDateString(),
     },
   ]
@@ -99,7 +102,7 @@ function orderColumns(t) {
 export function AdminOrdersPage() {
   const { t } = useTranslation()
   const [search, setSearch] = useState("")
-  const [statusFilter, setStatusFilter] = useState("new")
+  const [statusFilter, setStatusFilter] = useState("all")
   const [page, setPage] = useState(1)
 
   const { data, isLoading } = useQuery({
@@ -121,7 +124,7 @@ export function AdminOrdersPage() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">{t("admin.ordersTitle", "Orders")}</h1>
+        <h1 className="text-2xl font-bold">{t("admin.ordersTitle")}</h1>
         <div className="flex items-center justify-center p-12">
           <Loader2 className="size-8 animate-spin text-muted-foreground" />
         </div>
@@ -133,8 +136,8 @@ export function AdminOrdersPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{t("admin.ordersTitle", "Orders")}</h1>
-          <p className="text-muted-foreground text-sm">{t("admin.ordersDescription", "Manage purchase orders")}</p>
+          <h1 className="text-2xl font-bold">{t("admin.ordersTitle")}</h1>
+          <p className="text-muted-foreground text-sm">{t("admin.ordersDescription")}</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">

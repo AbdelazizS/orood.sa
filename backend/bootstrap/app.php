@@ -12,9 +12,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->append(\App\Http\Middleware\SetRequestLocale::class);
         $middleware->alias([
             'auth.api' => \App\Http\Middleware\AuthenticateApi::class,
+            'optional.auth.api' => \App\Http\Middleware\OptionalAuthenticateApi::class,
             'role' => \App\Http\Middleware\EnsureUserHasRole::class,
+            'permission' => \App\Http\Middleware\EnsureUserHasPermission::class,
             'can.create.listing' => \App\Http\Middleware\CanCreateListing::class,
         ]);
     })

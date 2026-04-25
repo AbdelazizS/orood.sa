@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 
 class AdminPermissionController extends Controller
 {
-    private const ROLES = ['super_admin', 'admin', 'manager', 'employee', 'seller', 'buyer', 'user'];
+    private const ROLES = ['super_admin', 'admin', 'manager', 'employee', 'marketer', 'company', 'seller', 'buyer', 'user'];
 
     public function index(): JsonResponse
     {

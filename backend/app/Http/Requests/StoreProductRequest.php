@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreProductRequest extends FormRequest
 {
@@ -35,13 +36,14 @@ class StoreProductRequest extends FormRequest
             'image_urls.*' => ['string', 'max:500', 'regex:/^(https?:\/\/|\/)/'],
             'accept_bids' => ['nullable', 'boolean'],
             'bids_visible' => ['nullable', 'boolean'],
+            'show_comments' => ['nullable', 'boolean'],
             'free_shipping' => ['nullable', 'boolean'],
             'free_return' => ['nullable', 'boolean'],
             'return_days' => ['nullable', 'string', 'max:20'],
             'view_at_client' => ['nullable', 'boolean'],
             'contact_phone' => ['nullable', 'boolean'],
             'contact_messages' => ['nullable', 'boolean'],
-            'contact_phone_number' => ['nullable', 'string', 'max:50'],
+            'contact_phone_number' => ['nullable', 'string', 'max:50', 'regex:/^05\d{8}$/'],
             'contact_preferences' => ['nullable', 'array'],
             'shipping_details' => ['nullable', 'array'],
         ];
@@ -52,5 +54,32 @@ class StoreProductRequest extends FormRequest
         }
 
         return $rules;
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            $contactPhone = filter_var($this->input('contact_phone', false), FILTER_VALIDATE_BOOLEAN);
+            $contactMessages = filter_var($this->input('contact_messages', false), FILTER_VALIDATE_BOOLEAN);
+
+            if (! $contactPhone && ! $contactMessages) {
+                $validator->errors()->add('contact_phone', 'At least one contact method must be selected.');
+            }
+
+            $phoneNumber = (string) $this->input('contact_phone_number', '');
+            if ($contactPhone && trim($phoneNumber) === '') {
+                $validator->errors()->add('contact_phone_number', 'Phone number is required when call contact is enabled.');
+            }
+
+            $isWholesale = filter_var($this->input('is_wholesale', false), FILTER_VALIDATE_BOOLEAN);
+            if ($isWholesale) {
+                if ($this->input('wholesale_price') === null) {
+                    $validator->errors()->add('wholesale_price', 'Wholesale price is required for wholesale listings.');
+                }
+                if ($this->input('min_quantity') === null) {
+                    $validator->errors()->add('min_quantity', 'Minimum quantity is required for wholesale listings.');
+                }
+            }
+        });
     }
 }

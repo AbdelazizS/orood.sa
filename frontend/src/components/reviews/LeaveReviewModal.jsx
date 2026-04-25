@@ -21,6 +21,11 @@ export function LeaveReviewModal({
   onClose,
   targetUser,
   existingReview,
+  purchaseId = null,
+  /** When set, invalidates listing seller reviews after submit (product/listing id). */
+  listingProductId = null,
+  /** TanStack query key prefix for public profile (e.g. getProfileQueryKey(identifier)). */
+  profileQueryKey = null,
   onSuccess,
 }) {
   const [rating, setRating] = useState(existingReview?.rating ?? 0)
@@ -35,18 +40,35 @@ export function LeaveReviewModal({
         const { data } = await apiClient.put(`/reviews/${existingReview.id}`, payload)
         return data
       }
-      const { data } = await apiClient.post("/reviews", payload)
+      if (!purchaseId) {
+        throw new Error("purchase_required")
+      }
+      const { data } = await apiClient.post("/reviews", { ...payload, purchase_id: purchaseId })
       return data
     },
     onSuccess: (data) => {
       toast.success(data.message)
-      queryClient.invalidateQueries({ queryKey: ["profile", targetUser.username] })
+      if (Array.isArray(profileQueryKey) && profileQueryKey.length) {
+        queryClient.invalidateQueries({ queryKey: profileQueryKey })
+        queryClient.invalidateQueries({ queryKey: [...profileQueryKey, "reviews"] })
+        queryClient.invalidateQueries({ queryKey: [...profileQueryKey, "listings"] })
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["profile", targetUser.username] })
+        queryClient.invalidateQueries({ queryKey: ["profile-reviews", targetUser.username] })
+      }
       queryClient.invalidateQueries({ queryKey: ["my-reviews"] })
-      queryClient.invalidateQueries({ queryKey: ["profile-reviews", targetUser.username] })
+      queryClient.invalidateQueries({ queryKey: ["product"] })
+      if (listingProductId != null) {
+        queryClient.invalidateQueries({ queryKey: ["listing-reviews", String(listingProductId)] })
+      }
       onSuccess?.(data.review)
       onClose()
     },
     onError: (err) => {
+      if (err?.message === "purchase_required") {
+        toast.error("رقم الطلب مطلوب للتقييم")
+        return
+      }
       toast.error(err?.response?.data?.message ?? "حدث خطأ")
     },
   })
@@ -63,7 +85,12 @@ export function LeaveReviewModal({
   const username = targetUser?.username ?? targetUser?.name ?? ""
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onClose?.()
+      }}
+    >
       <DialogContent dir={direction} className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="text-start">
@@ -131,7 +158,7 @@ export function LeaveReviewModal({
           </Button>
           <Button
             className="flex-1"
-            disabled={rating === 0 || submit.isPending}
+            disabled={rating === 0 || submit.isPending || (!existingReview && !purchaseId)}
             onClick={() => submit.mutate()}
           >
             {submit.isPending && (

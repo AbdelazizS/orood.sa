@@ -198,6 +198,201 @@ export function AdminVisitorsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">{t("admin.visitorsUtmCampaigns")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("filters.searchRegionPlaceholder", "Campaign")}</TableHead>
+                  <TableHead className="text-end">{t("admin.views", "Views")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(d.top_utm_campaigns ?? []).length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-center text-muted-foreground">
+                      {t("analytics.noData")}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  (d.top_utm_campaigns ?? []).map((row) => (
+                    <TableRow key={row.campaign}>
+                      <TableCell className="font-medium">{row.campaign}</TableCell>
+                      <TableCell className="text-end">{row.count}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">{t("admin.visitorsSocialChannels")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("admin.type", "Type")}</TableHead>
+                  <TableHead className="text-end">{t("admin.views", "Views")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(d.by_social_channel ?? []).length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-center text-muted-foreground">
+                      {t("analytics.noData")}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  (d.by_social_channel ?? []).map((row) => (
+                    <TableRow key={row.channel}>
+                      <TableCell className="capitalize">{row.channel}</TableCell>
+                      <TableCell className="text-end">{row.count}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Globe className="size-4" />
+              {t("admin.visitorsReferrerHosts")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Host</TableHead>
+                  <TableHead className="text-end">{t("admin.views", "Views")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(d.top_referrer_hosts ?? []).length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-center text-muted-foreground">
+                      {t("analytics.noData")}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  (d.top_referrer_hosts ?? []).map((row) => (
+                    <TableRow key={row.host}>
+                      <TableCell className="font-mono text-xs">{row.host}</TableCell>
+                      <TableCell className="text-end">{row.count}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">{t("admin.visitorsRegistrationSources")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("listingDetail.reportReason", "Source")}</TableHead>
+                  <TableHead className="text-end">{t("admin.users", "Users")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(d.registration_how_heard ?? []).length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-center text-muted-foreground">
+                      {t("analytics.noData")}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  (d.registration_how_heard ?? []).map((row) => (
+                    <TableRow key={row.label}>
+                      <TableCell>{row.label}</TableCell>
+                      <TableCell className="text-end">{row.count}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">{t("admin.marketerTraffic")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("admin.marketer")}</TableHead>
+                  <TableHead className="text-end">{t("admin.views")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(d.marketer_traffic ?? []).length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-center text-muted-foreground">{t("analytics.noData")}</TableCell>
+                  </TableRow>
+                ) : (
+                  (d.marketer_traffic ?? []).map((row) => (
+                    <TableRow key={`${row.marketer_id}-${row.marketer_name}`}>
+                      <TableCell>{row.marketer_name}</TableCell>
+                      <TableCell className="text-end">{row.count}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">{t("admin.marketerSelectedClients")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("admin.name")}</TableHead>
+                  <TableHead>{t("auth.email")}</TableHead>
+                  <TableHead>{t("admin.marketer")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(d.marketer_selected_clients ?? []).length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-muted-foreground">{t("analytics.noData")}</TableCell>
+                  </TableRow>
+                ) : (
+                  (d.marketer_selected_clients ?? []).map((row) => (
+                    <TableRow key={row.user_id}>
+                      <TableCell>{row.user_name}</TableCell>
+                      <TableCell>{row.user_email}</TableCell>
+                      <TableCell>{row.marketer_name}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

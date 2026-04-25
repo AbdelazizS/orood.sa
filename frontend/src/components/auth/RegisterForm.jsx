@@ -1,12 +1,11 @@
 import { useState } from "react"
-import { useNavigate, Link } from "react-router-dom"
+import { useNavigate, Link, useSearchParams } from "react-router-dom"
 import { useTranslation } from "react-i18next"
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { PasswordInput } from "@/components/ui/password-input"
-import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter"
 import { TermsBox } from "@/components/auth/TermsBox"
 import { CompanyFields } from "@/components/auth/CompanyFields"
 import {
@@ -20,26 +19,29 @@ import { Checkbox } from "@/components/ui/checkbox"
 import * as authService from "@/services/authService"
 import { Loader2, ArrowRight } from "lucide-react"
 
-const PASSWORD_RULES = {
-  min: (p) => p.length >= 8,
-  upper: (p) => /[A-Z]/.test(p),
-  lower: (p) => /[a-z]/.test(p),
-  number: (p) => /\d/.test(p),
-  special: (p) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(p),
-}
-
-function validatePassword(p) {
-  return Object.values(PASSWORD_RULES).every((fn) => fn(p))
-}
-
-const FORM_MAX_WIDTH = "max-w-lg"
+const FORM_MAX_WIDTH = "max-w-md sm:max-w-xl"
 const FIELD_SPACING = "space-y-2"
 const SECTION_SPACING = "space-y-5"
+
+function passwordMatchesPolicy(password, policy) {
+  const minLength = Number(policy?.min_length ?? 6)
+  if (password.length < minLength) return false
+
+  const requires = Array.isArray(policy?.requires) ? policy.requires : ["letter", "number"]
+  if (requires.includes("letter") && !/[A-Za-z]/.test(password)) return false
+  if (requires.includes("number") && !/\d/.test(password)) return false
+  if (requires.includes("uppercase") && !/[A-Z]/.test(password)) return false
+  if (requires.includes("lowercase") && !/[a-z]/.test(password)) return false
+  if (requires.includes("special") && !/[^\w\s]/.test(password)) return false
+  return true
+}
 
 export function RegisterForm() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const [step, setStep] = useState(1)
+  const [searchParams] = useSearchParams()
+  const raw = searchParams.get("redirect") || "/"
+  const redirectTo = typeof raw === "string" && raw.startsWith("/") ? raw : "/"
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -54,7 +56,15 @@ export function RegisterForm() {
     companyProductTypes: "",
     companyLicense: null,
   })
+  const [oathExpanded, setOathExpanded] = useState(false)
   const [fieldErrors, setFieldErrors] = useState({})
+  const [serverNotice, setServerNotice] = useState("")
+  const { data: passwordPolicy } = useQuery({
+    queryKey: ["auth", "password-policy"],
+    queryFn: authService.getPasswordPolicy,
+    staleTime: 0,
+    refetchOnMount: "always",
+  })
 
   const updateField = (key, value) => {
     setFormData((prev) => ({ ...prev, [key]: value }))
@@ -62,23 +72,48 @@ export function RegisterForm() {
   }
 
   const registerMutation = useMutation({
-    mutationFn: () =>
-      authService.register({
+    mutationFn: async () => {
+      const registerRes = await authService.register({
         name: formData.username,
         email: formData.email,
         how_did_you_hear: formData.howDidYouHear || undefined,
         password: formData.password,
         password_confirmation: formData.confirmPassword,
-      }),
+      })
+
+      if (!formData.registerAsCompany) {
+        return registerRes
+      }
+
+      const companyRes = await authService.registerCompany({
+        company_name: formData.companyName.trim(),
+        city_id: String(formData.companyCityId),
+        product_types: formData.companyProductTypes?.trim() || undefined,
+        license: formData.companyLicense || undefined,
+      })
+
+      return { ...registerRes, companyStatus: companyRes?.company_status }
+    },
     onSuccess: (data) => {
-      navigate("/", { replace: true })
+      if (formData.registerAsCompany) {
+        setServerNotice(
+          data?.companyStatus?.status === "pending"
+            ? t("auth.companyVerificationPending")
+            : t("auth.companyVerificationSubmitted")
+        )
+      }
+      navigate(redirectTo, { replace: true })
     },
     onError: (err) => {
       const data = err?.response?.data
       if (data?.errors) {
         const flat = {}
         for (const [k, v] of Object.entries(data.errors)) {
-          flat[k] = Array.isArray(v) ? v[0] : v
+          const normalizedKey = k === "name" ? "username" : k
+          flat[normalizedKey] = Array.isArray(v) ? v[0] : v
+        }
+        if (!flat.username && data?.errors?.name) {
+          flat.username = t("auth.usernameTaken", "This username is already taken")
         }
         setFieldErrors(flat)
       }
@@ -88,20 +123,25 @@ export function RegisterForm() {
   const handleRegister = (e) => {
     e.preventDefault()
     setFieldErrors({})
+    setServerNotice("")
     const errs = {}
     if (!formData.username.trim()) errs.username = t("auth.usernameRequired")
     else if (formData.username.trim().length < 3) errs.username = t("auth.usernameMin")
     if (!formData.email.trim()) errs.email = t("auth.emailRequired")
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errs.email = t("auth.emailInvalid")
     if (!formData.password) errs.password = t("auth.passwordRequired")
-    else if (!validatePassword(formData.password)) errs.password = t("auth.passwordWeak")
+    else if (!passwordMatchesPolicy(formData.password, passwordPolicy)) {
+      errs.password = t("auth.passwordWeak")
+    }
     if (formData.password !== formData.confirmPassword) {
       errs.password_confirmation = t("auth.passwordMismatch")
     }
-    if (!formData.termsAccepted) errs.termsAccepted = t("auth.termsRequired")
+    if (!oathExpanded) errs.oathExpanded = t("auth.oathSectionRequired", "يرجى الاطلاع على قسم التعهدات قبل المتابعة")
+    if (!formData.termsAccepted) errs.termsAccepted = t("auth.oathCheckboxRequired", "يجب الإقرار والتعهد قبل إنشاء الحساب")
     if (formData.registerAsCompany) {
       if (!formData.companyName?.trim()) errs.companyName = t("auth.companyNameRequired")
       if (!formData.companyCityId) errs.companyCityId = t("auth.companyCityRequired")
+      if (!formData.companyLicense) errs.companyLicense = t("auth.companyLicenseRequired")
     }
     if (Object.keys(errs).length) {
       setFieldErrors(errs)
@@ -112,9 +152,9 @@ export function RegisterForm() {
 
   return (
     <div
-      className={`w-full ${FORM_MAX_WIDTH} rounded-xl border border-border bg-card p-8 shadow-sm`}
+      className={`w-full ${FORM_MAX_WIDTH} rounded-xl border border-border bg-card p-4 shadow-sm sm:p-8`}
     >
-      <h1 className="mb-8 text- text-xl font-semibold text-foreground">
+      <h1 className="mb-6 text-xl font-semibold text-foreground sm:mb-8">
         {t("auth.registerSubmit")}
       </h1>
       <form onSubmit={handleRegister} className={SECTION_SPACING}>
@@ -162,11 +202,10 @@ export function RegisterForm() {
             value={formData.password}
             onChange={(e) => updateField("password", e.target.value)}
             placeholder={t("auth.passwordPlaceholder")}
-            minLength={8}
+            minLength={Number(passwordPolicy?.min_length ?? 6)}
             disabled={registerMutation.isPending}
             className={`h-11 ${fieldErrors.password ? "border-destructive" : ""}`}
           />
-          <PasswordStrengthMeter password={formData.password} />
           {fieldErrors.password && (
             <p className="text-xs text-destructive">{fieldErrors.password}</p>
           )}
@@ -181,7 +220,7 @@ export function RegisterForm() {
             value={formData.confirmPassword}
             onChange={(e) => updateField("confirmPassword", e.target.value)}
             placeholder={t("auth.confirmPasswordLabel")}
-            minLength={8}
+            minLength={Number(passwordPolicy?.min_length ?? 6)}
             disabled={registerMutation.isPending}
             className={`h-11 ${fieldErrors.password_confirmation ? "border-destructive" : ""}`}
           />
@@ -213,9 +252,15 @@ export function RegisterForm() {
           </Select>
         </div>
 
-        <TermsBox />
+        <TermsBox expanded={oathExpanded} onExpandedChange={(next) => {
+          setOathExpanded(next)
+          if (next) setFieldErrors((prev) => ({ ...prev, oathExpanded: undefined }))
+        }} />
+        {fieldErrors.oathExpanded && (
+          <p className="text-xs text-destructive">{fieldErrors.oathExpanded}</p>
+        )}
 
-        <div className="flex items-en gap-3">
+        <div className="flex items-start gap-3">
           <Checkbox
             id="terms"
             checked={formData.termsAccepted}
@@ -224,7 +269,7 @@ export function RegisterForm() {
             className={`mt-0.5 ${fieldErrors.termsAccepted ? "border-destructive" : ""}`}
           />
           <Label htmlFor="terms" className="cursor-pointer text-sm leading-relaxed">
-            {t("auth.termsAgree")}
+            {t("auth.oathAgree")}
           </Label>
         </div>
         {fieldErrors.termsAccepted && (
@@ -265,11 +310,13 @@ export function RegisterForm() {
             disabled={registerMutation.isPending}
           />
         )}
-        {(fieldErrors.companyName || fieldErrors.companyCityId) && (
+        {(fieldErrors.companyName || fieldErrors.companyCityId || fieldErrors.companyLicense) && (
           <p className="text-xs text-destructive">
-            {fieldErrors.companyName || fieldErrors.companyCityId}
+            {fieldErrors.companyName || fieldErrors.companyCityId || fieldErrors.companyLicense}
           </p>
         )}
+
+        {serverNotice ? <p className="text-xs text-green-600">{serverNotice}</p> : null}
 
         {registerMutation.isError && !registerMutation.error?.response?.data?.errors && (
           <p className="text-xs text-destructive">
