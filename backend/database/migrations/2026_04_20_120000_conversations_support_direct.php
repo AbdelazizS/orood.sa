@@ -13,12 +13,18 @@ return new class extends Migration {
             $table->string('dedupe_key', 96)->nullable()->after('conversation_type');
         });
 
+        // MySQL: FK on product_id uses the composite unique — drop FK and add indexes first.
         Schema::table('conversations', function (Blueprint $table) {
-            $table->dropUnique(['product_id', 'buyer_id']);
+            $table->index('product_id', 'conversations_product_id_index');
+            $table->index('buyer_id', 'conversations_buyer_id_index');
         });
 
         Schema::table('conversations', function (Blueprint $table) {
             $table->dropForeign(['product_id']);
+        });
+
+        Schema::table('conversations', function (Blueprint $table) {
+            $table->dropUnique(['product_id', 'buyer_id']);
         });
 
         Schema::table('conversations', function (Blueprint $table) {
@@ -61,11 +67,21 @@ return new class extends Migration {
         });
 
         Schema::table('conversations', function (Blueprint $table) {
+            $table->index('product_id', 'conversations_product_id_index');
+            $table->index('buyer_id', 'conversations_buyer_id_index');
+        });
+
+        Schema::table('conversations', function (Blueprint $table) {
             $table->foreign('product_id')->references('id')->on('products')->cascadeOnDelete();
         });
 
         Schema::table('conversations', function (Blueprint $table) {
             $table->unique(['product_id', 'buyer_id']);
+        });
+
+        Schema::table('conversations', function (Blueprint $table) {
+            $table->dropIndex('conversations_product_id_index');
+            $table->dropIndex('conversations_buyer_id_index');
         });
 
         Schema::table('conversations', function (Blueprint $table) {
