@@ -47,7 +47,10 @@ return new class extends Migration
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
 
-            $table->index(['category_id', 'subcategory_id', 'listing_type', 'status']);
+            $table->index(
+                ['category_id', 'subcategory_id', 'listing_type', 'status'],
+                'cls_cat_sub_type_status_idx',
+            );
         });
 
         Schema::create('category_schema_sections', function (Blueprint $table) {
