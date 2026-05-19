@@ -1,13 +1,16 @@
 import { useEffect, useRef } from "react"
-import { useParams, useNavigate } from "react-router-dom"
+import { useParams, useNavigate, Navigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { Skeleton } from "@/components/ui/skeleton"
 import apiClient from "@/lib/apiClient"
 import { useAuthStore } from "@/store/useAuthStore"
 import { useAppDirection } from "@/providers/DirectionProvider"
 import {
-  ListingDetailHeroSection,
-  ListingTitle,
+  ListingDetailHarajHeader,
+  ListingFinancialGuaranteeCard,
+  ListingAdDetailsGrid,
+  ListingAmenitiesSection,
+  ListingAttributesGrid,
   ListingImages,
   ListingDescription,
   PublisherInfoNote,
@@ -17,12 +20,16 @@ import {
   ShippingInfo,
   TrustBanner,
 } from "@/components/listing-detail"
+import { PropertyLocationMap } from "@/components/maps/PropertyLocationMap.jsx"
+import { isRealEstateListing } from "@/lib/listings/isRealEstateListing"
 import { ViewRequestsSellerPanel } from "@/components/listing-detail/ViewRequestsSellerPanel"
 import { BidSection } from "@/features/offers/BidSection"
 import { SimilarProductsSection } from "@/features/offers/SimilarProductsSection"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import { useTranslation } from "react-i18next"
+import { SeoHead, SITE_URL } from "@/components/seo/SeoHead"
+import { buildBreadcrumbSchema, buildProductSchema, mergeJsonLd } from "@/lib/seo/structuredData"
 
 /**
  * Product/Listing detail page — exact layout per PDF pages 7-11.
@@ -47,6 +54,13 @@ export function ProductDetailsPage() {
   })
 
   const isOwner = token && (user?.id === product?.seller?.id || user?.id === product?.user_id)
+  const isRE = isRealEstateListing(product)
+  const listingAttrs = product?.listing_attributes
+  const hasListingAttrs =
+    listingAttrs &&
+    (Array.isArray(listingAttrs) ? listingAttrs.length > 0 : Object.keys(listingAttrs).length > 0)
+  const hasSchemaSections = (product?.listing_attribute_sections?.length ?? 0) > 0
+  const showAttributesGrid = hasSchemaSections || (isRE && hasListingAttrs)
 
   useEffect(() => {
     if (!id || !product?.id || isOwner || viewTrackedRef.current) return
@@ -121,7 +135,40 @@ export function ProductDetailsPage() {
     )
   }
 
+  if (product?.is_wholesale) {
+    return <Navigate to={`/wholesale/product/${id}`} replace />
+  }
+
+  const seoImage = product?.media?.image_url ?? product?.media?.gallery?.[0]
+  const categoryName = product?.category?.name ?? product?.subcategory?.name
+  const categorySlug = product?.category?.slug
+  const breadcrumbItems = [
+    { name: t("nav.home", "الرئيسية"), url: `${SITE_URL}/` },
+  ]
+  if (categoryName && categorySlug) {
+    breadcrumbItems.push({
+      name: categoryName,
+      url: `${SITE_URL}/?cat=${categorySlug}`,
+    })
+  }
+  breadcrumbItems.push({
+    name: product?.title ?? "",
+    url: `${SITE_URL}/products/${id}`,
+  })
+  const productJsonLd = mergeJsonLd(
+    buildProductSchema(product, id),
+    buildBreadcrumbSchema(breadcrumbItems)
+  )
+
   return (
+    <>
+      <SeoHead
+        title={product?.title}
+        description={product?.description?.slice(0, 160) || undefined}
+        path={`/products/${id}`}
+        image={seoImage}
+        jsonLd={productJsonLd}
+      />
     <div dir={direction} className="min-h-screen bg-background">
       <main className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 pb-24 pt-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,430px)] xl:grid-cols-[minmax(0,1fr)_minmax(0,470px)]">
         {/* Main content — product details card */}
@@ -138,17 +185,30 @@ export function ProductDetailsPage() {
               {t("common.back", "رجوع")}
             </Button>
           </div>
-          <ListingDetailHeroSection product={product} />
-          <ListingTitle product={product} />
+          <ListingDetailHarajHeader product={product} />
           <ListingImages product={product} />
           <ListingDescription product={product} />
+          {showAttributesGrid ? (
+            <ListingAttributesGrid
+              sections={product?.listing_attribute_sections}
+              attributes={listingAttrs}
+              variant={isRE ? "elevated" : "plain"}
+            />
+          ) : isRE && product?.real_estate ? (
+            <>
+              <ListingAdDetailsGrid product={product} />
+              <ListingAmenitiesSection product={product} />
+            </>
+          ) : null}
           <PublisherInfoNote product={product} />
+          {isRE ? <PropertyLocationMap product={product} /> : null}
           {!isOwner && <ListingActions product={product} />}
           {!isOwner && <BidSection product={product} />}
           <CommentsSection product={product} />
           <ListingStatsRow product={product} />
+          <ListingFinancialGuaranteeCard product={product} />
           <ShippingInfo product={product} />
-          <TrustBanner />
+          {!isRE ? <TrustBanner /> : null}
           {isOwner ? (
             <ViewRequestsSellerPanel productId={product?.id ?? id} enabled={Boolean(isOwner && (product?.id ?? id))} />
           ) : null}
@@ -162,5 +222,6 @@ export function ProductDetailsPage() {
         </aside>
       </main>
     </div>
+    </>
   )
 }

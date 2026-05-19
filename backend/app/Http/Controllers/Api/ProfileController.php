@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductResource;
 use App\Models\User;
+use App\Services\CompanyLocationSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -112,7 +113,17 @@ class ProfileController extends Controller
 
         $user->update($validated);
 
-        return response()->json(['data' => $user->fresh()]);
+        if (array_key_exists('city_id', $validated)) {
+            $user->load('company');
+            if ($user->company) {
+                app(CompanyLocationSyncService::class)->syncFromCityId(
+                    $user->company,
+                    $validated['city_id'] !== null ? (int) $validated['city_id'] : null
+                );
+            }
+        }
+
+        return response()->json(['data' => $user->fresh(['city.region', 'company.city', 'company.region'])]);
     }
 
     /**

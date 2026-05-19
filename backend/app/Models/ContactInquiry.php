@@ -11,10 +11,17 @@ class ContactInquiry extends Model
         'name',
         'email',
         'phone',
+        'inquiry_type',
+        'subject',
         'message',
         'status',
         'assigned_to',
         'admin_notes',
+        'form_data',
+    ];
+
+    protected $casts = [
+        'form_data' => 'array',
     ];
 
     public const STATUS_NEW = 'new';

@@ -17,12 +17,18 @@ class GuaranteeRequest extends Model
 
     public const STATUS_REJECTED = 'rejected';
 
+    public const FUNDING_PLATFORM_WALLET = 'platform_wallet';
+
+    public const FUNDING_EXTERNAL = 'external';
+
     protected $fillable = [
         'user_id',
         'type',
         'amount',
+        'funding_source',
         'status',
         'admin_note',
+        'approval_note',
         'processed_by',
         'processed_at',
     ];

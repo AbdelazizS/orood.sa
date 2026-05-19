@@ -23,8 +23,9 @@ import { useAppDirection } from "@/providers/DirectionProvider"
 import { Shield, Loader2, CheckCircle2 } from "lucide-react"
 import { toast } from "sonner"
 
-export function GuaranteePage() {
+export function GuaranteePage({ variant = "standalone" } = {}) {
   const { t } = useTranslation()
+  const embedded = variant === "wallet-embedded"
   const queryClient = useQueryClient()
   const { user } = useAuthStore()
   const { direction } = useAppDirection()
@@ -91,7 +92,7 @@ export function GuaranteePage() {
   if (isLoading) {
     return (
       <div className="space-y-6" dir={direction}>
-        <h1 className="text-2xl font-bold">{t("dashboard.financialGuarantee")}</h1>
+        {!embedded && <h1 className="text-2xl font-bold">{t("dashboard.financialGuarantee")}</h1>}
         <Skeleton className="h-32" />
       </div>
     )
@@ -99,10 +100,15 @@ export function GuaranteePage() {
 
   return (
     <div className="min-w-0 space-y-6" dir={direction}>
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t("dashboard.financialGuarantee")}</h1>
-        <p className="mt-1 max-w-2xl text-muted-foreground">{t("dashboard.financialGuaranteeDescription")}</p>
-      </div>
+      {!embedded && (
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{t("dashboard.financialGuarantee")}</h1>
+          <p className="mt-1 max-w-2xl text-muted-foreground">{t("dashboard.financialGuaranteeDescription")}</p>
+        </div>
+      )}
+      {embedded && (
+        <p className="text-sm text-muted-foreground max-w-2xl">{t("dashboard.financialGuaranteeDescription")}</p>
+      )}
 
       {pendingRequest && (
         <Card className="border-amber-500/30 bg-amber-500/5">

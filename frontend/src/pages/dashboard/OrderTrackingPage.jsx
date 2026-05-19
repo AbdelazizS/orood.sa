@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
+import { useSearchParams } from "react-router-dom"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -21,6 +22,8 @@ import apiClient from "@/lib/apiClient"
 import { resolveImageUrl } from "@/lib/imageUrl"
 import { Link } from "react-router-dom"
 import { toast } from "sonner"
+import { MyBidsPage } from "@/pages/dashboard/MyBidsPage"
+import { ViewRequestsPage } from "@/pages/dashboard/ViewRequestsPage"
 
 const statusColors = {
   pending: "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400",
@@ -238,9 +241,30 @@ function OrderCard({
 export function OrderTrackingPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [role, setRole] = useState("all")
   const [page, setPage] = useState(1)
   const [confirmOrder, setConfirmOrder] = useState(null)
+
+  const section = useMemo(() => {
+    const s = (searchParams.get("section") || "orders").toLowerCase()
+    return ["orders", "bids", "viewings"].includes(s) ? s : "orders"
+  }, [searchParams])
+
+  const setSection = useCallback(
+    (value) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          if (value === "orders") next.delete("section")
+          else next.set("section", value)
+          return next
+        },
+        { replace: true },
+      )
+    },
+    [setSearchParams],
+  )
 
   useEffect(() => {
     setPage(1)
@@ -334,7 +358,7 @@ export function OrderTrackingPage() {
                 <Link to="/">{t("orders.browseOffers", "تصفح العروض")}</Link>
               </Button>
               <Button asChild variant="outline">
-                <Link to="/dashboard/balance">{t("orders.emptyWalletCta", "المحفظة وشحن الرصيد")}</Link>
+                <Link to="/dashboard/wallet">{t("orders.emptyWalletCta", "المحفظة وشحن الرصيد")}</Link>
               </Button>
             </div>
           </CardContent>
@@ -393,21 +417,49 @@ export function OrderTrackingPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">{t("dashboard.orderTracking", "تتبع الطلبات")}</h1>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">{t("dashboard.nav.orderCenter")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground max-w-2xl">{t("dashboard.orderCenterSubtitle")}</p>
+      </div>
 
-      <Tabs
-        value={role}
-        onValueChange={(v) => {
-          setRole(v)
-        }}
-      >
-        <TabsList>
-          <TabsTrigger value="all">{t("orders.all", "الكل")}</TabsTrigger>
-          <TabsTrigger value="buyer">{t("orders.asBuyer", "كمشتري")}</TabsTrigger>
-          <TabsTrigger value="seller">{t("orders.asSeller", "كبائع")}</TabsTrigger>
+      <Tabs value={section} onValueChange={setSection} className="w-full">
+        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-xl bg-muted/40 p-1">
+          <TabsTrigger value="orders" className="rounded-lg px-4 py-2">
+            {t("dashboard.nav.ordersSectionCurrent")}
+          </TabsTrigger>
+          <TabsTrigger value="bids" className="rounded-lg px-4 py-2">
+            {t("dashboard.nav.ordersSectionAuctions")}
+          </TabsTrigger>
+          <TabsTrigger value="viewings" className="rounded-lg px-4 py-2">
+            {t("dashboard.nav.ordersSectionViewings")}
+          </TabsTrigger>
         </TabsList>
-        <TabsContent value={role} className="mt-6">
-          {listBody()}
+
+        <TabsContent value="orders" className="mt-6 space-y-6 outline-none">
+          <h2 className="text-lg font-semibold text-foreground">{t("dashboard.orderTracking", "تتبع الطلبات")}</h2>
+          <Tabs
+            value={role}
+            onValueChange={(v) => {
+              setRole(v)
+            }}
+          >
+            <TabsList>
+              <TabsTrigger value="all">{t("orders.all", "الكل")}</TabsTrigger>
+              <TabsTrigger value="buyer">{t("orders.asBuyer", "كمشتري")}</TabsTrigger>
+              <TabsTrigger value="seller">{t("orders.asSeller", "كبائع")}</TabsTrigger>
+            </TabsList>
+            <TabsContent value={role} className="mt-6">
+              {listBody()}
+            </TabsContent>
+          </Tabs>
+        </TabsContent>
+
+        <TabsContent value="bids" className="mt-6 outline-none">
+          <MyBidsPage embedded />
+        </TabsContent>
+
+        <TabsContent value="viewings" className="mt-6 outline-none">
+          <ViewRequestsPage embedded />
         </TabsContent>
       </Tabs>
 

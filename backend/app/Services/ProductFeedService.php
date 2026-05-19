@@ -15,10 +15,14 @@ class ProductFeedService
     {
         $query = $this->product
             ->query()
-            ->with(['category', 'subcategory', 'region', 'city', 'seller'])
+            ->with(['category', 'subcategory', 'region', 'city', 'seller', 'realEstateDetail'])
             ->published()
             ->approved()
             ->filterByRequest($filters);
+
+        if (data_get($filters, 'filter') !== 'wholesale') {
+            $query->where('is_wholesale', false);
+        }
 
         $hasOrderFilter = in_array(data_get($filters, 'filter'), ['most-sold', 'cheapest', 'most-viewed'], true);
         if (!$hasOrderFilter) {

@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import apiClient from "@/lib/apiClient"
 import {
   formatNotificationTimestamp,
+  getNotificationActionButtonVariant,
   getNotificationActions,
   getNotificationBody,
   getNotificationTitle,
@@ -15,10 +16,12 @@ import { useNotificationsInbox } from "@/hooks/useNotificationsInbox"
 import { useAccountSectionBasePath } from "@/lib/accountSectionPaths"
 import { Bell, Loader2 } from "lucide-react"
 
-export function NotificationsPage() {
+export function NotificationsPage({ embedded = false } = {}) {
   const { t, i18n } = useTranslation()
   const queryClient = useQueryClient()
   const basePath = useAccountSectionBasePath()
+  const detailTo = (id) =>
+    embedded ? `/dashboard/messages?hub=notifications&nid=${encodeURIComponent(String(id))}` : `${basePath}/notifications/${id}`
 
   const { data: inbox, isLoading } = useNotificationsInbox(50)
   const notifications = inbox?.items ?? []
@@ -37,30 +40,58 @@ export function NotificationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("notifications.title", "Notifications")}</h1>
-          <p className="text-muted-foreground">
-            {unreadCount > 0
-              ? t("notifications.unreadCount", "{{count}} unread", { count: unreadCount })
-              : t("notifications.allRead", "All caught up")}
-          </p>
+      {!embedded && (
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">{t("notifications.title", "Notifications")}</h1>
+            <p className="text-muted-foreground">
+              {unreadCount > 0
+                ? t("notifications.unreadCount", "{{count}} unread", { count: unreadCount })
+                : t("notifications.allRead", "All caught up")}
+            </p>
+          </div>
+          {unreadCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => markAllReadMutation.mutate()}
+              disabled={markAllReadMutation.isPending}
+            >
+              {markAllReadMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                t("notifications.markAllRead", "Mark all read")
+              )}
+            </Button>
+          )}
         </div>
-        {unreadCount > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => markAllReadMutation.mutate()}
-            disabled={markAllReadMutation.isPending}
-          >
-            {markAllReadMutation.isPending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              t("notifications.markAllRead", "Mark all read")
-            )}
-          </Button>
-        )}
-      </div>
+      )}
+      {embedded && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">{t("notifications.title", "Notifications")}</h2>
+            <p className="text-sm text-muted-foreground">
+              {unreadCount > 0
+                ? t("notifications.unreadCount", "{{count}} unread", { count: unreadCount })
+                : t("notifications.allRead", "All caught up")}
+            </p>
+          </div>
+          {unreadCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => markAllReadMutation.mutate()}
+              disabled={markAllReadMutation.isPending}
+            >
+              {markAllReadMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                t("notifications.markAllRead", "Mark all read")
+              )}
+            </Button>
+          )}
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -88,7 +119,7 @@ export function NotificationsPage() {
                   >
                     <div className="min-w-0 flex-1">
                       <Link
-                        to={`${basePath}/notifications/${n.id}`}
+                        to={detailTo(n.id)}
                         className="block rounded-md text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         <p className="font-medium hover:underline">{getNotificationTitle(n, t)}</p>
@@ -99,15 +130,24 @@ export function NotificationsPage() {
                           {formatNotificationTimestamp(n.created_at, i18n.language)}
                         </p>
                       </Link>
-                      {getNotificationActions(n).length > 0 ? (
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {getNotificationActions(n).map((a, idx) => (
-                            <Button key={`${n.id}-a-${idx}`} variant="secondary" size="sm" asChild>
-                              <Link to={a.href.startsWith("/") ? a.href : `/${a.href}`}>{t(a.i18n_label_key)}</Link>
-                            </Button>
-                          ))}
-                        </div>
-                      ) : null}
+                      {(() => {
+                        const actions = getNotificationActions(n)
+                        if (actions.length === 0) return null
+                        return (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {actions.map((a, idx) => (
+                              <Button
+                                key={`${n.id}-a-${idx}`}
+                                variant={getNotificationActionButtonVariant(a, idx)}
+                                size="sm"
+                                asChild
+                              >
+                                <Link to={a.href.startsWith("/") ? a.href : `/${a.href}`}>{t(a.i18n_label_key)}</Link>
+                              </Button>
+                            ))}
+                          </div>
+                        )
+                      })()}
                     </div>
                     {!n.read_at && (
                       <Button

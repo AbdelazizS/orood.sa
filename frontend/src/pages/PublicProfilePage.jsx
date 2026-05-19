@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react"
-import { useParams } from "react-router-dom"
+import { Navigate, useParams } from "react-router-dom"
+import { reservedPathForProfileSlug } from "@/lib/reservedPublicPaths"
 import { useProfile, useProfileListings, useProfileReviews, getProfileQueryKey } from "@/hooks/useProfile"
 import { useTranslation } from "@/hooks/useTranslation"
 import { useAuthStore } from "@/store/useAuthStore"
@@ -10,6 +11,7 @@ import { ProfileCoverAvatar } from "@/components/profile/ProfileCoverAvatar"
 import { ProfileTrustStrip } from "@/components/profile/ProfileTrustStrip"
 import { ProfileBioMap } from "@/components/profile/ProfileBioMap"
 import { ProfileTabs } from "@/components/profile/ProfileTabs"
+import { ProfileWholesaleStorefrontCta } from "@/components/profile/ProfileWholesaleStorefrontCta"
 import { LeaveReviewModal } from "@/components/reviews/LeaveReviewModal"
 import { OwnerProfileManagementPanel } from "@/features/profile/OwnerProfileManagementPanel"
 import { ProfileCustomizationModal } from "@/features/profile/ProfileCustomizationModal"
@@ -58,6 +60,11 @@ export function PublicProfilePage() {
   const myReview = profileQuery.data?.my_review ?? null
   const initialListings = Array.isArray(profileQuery.data?.listings) ? profileQuery.data.listings : []
   const initialReviews = Array.isArray(profileQuery.data?.reviews) ? profileQuery.data.reviews : []
+
+  const reservedPath = reservedPathForProfileSlug(identifier)
+  if (reservedPath) {
+    return <Navigate to={reservedPath} replace />
+  }
 
   if (!hasValidIdentifier) {
     return (
@@ -109,6 +116,9 @@ export function PublicProfilePage() {
 
       <div className={cn(PUBLIC_PROFILE_CONTAINER, "space-y-5 pb-16 pt-2")}>
         <ProfileTrustStrip user={user} reviewSummary={reviewSummary} />
+        {company?.id && company?.can_post_wholesale !== false ? (
+          <ProfileWholesaleStorefrontCta companyId={company.id} isVerified={company.is_verified} />
+        ) : null}
         <ProfileBioMap user={user} company={company} isOwner={isOwner} />
       </div>
 

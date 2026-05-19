@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import { Link } from "react-router-dom"
@@ -13,6 +14,7 @@ import { ProfileEditForm } from "@/features/profile/ProfileEditForm"
 import { PasswordChangeForm } from "@/features/profile/PasswordChangeForm"
 import { PlusCircle, User, FileText, Package, Star } from "lucide-react"
 import { getProfileQueryKey } from "@/hooks/useProfile"
+import { mergeProfileCacheUser } from "@/features/profile/mergeProfileCacheUser"
 
 /**
  * Owner-only tools (tabs: overview / account / listings / reviews).
@@ -25,12 +27,28 @@ export function OwnerProfileManagementPanel({ identifier, profile }) {
 
   const trimmed = typeof identifier === "string" ? identifier.trim() : ""
   const listings = profile?.listings ?? []
+  const [activeTab, setActiveTab] = useState("overview")
 
   const updateMutation = useMutation({
     mutationFn: (payload) => apiClient.put("/profile", payload),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: getProfileQueryKey(trimmed) })
-      await queryClient.invalidateQueries({ queryKey: ["auth", "user"] })
+    onSuccess: async (response, variables) => {
+      const queryKey = getProfileQueryKey(trimmed)
+      const responseUser = response?.data?.data ?? response?.data ?? null
+
+      queryClient.setQueryData(queryKey, (old) => {
+        if (!old?.user) return old
+        return {
+          ...old,
+          user: mergeProfileCacheUser(old.user, variables, responseUser),
+        }
+      })
+
+      await queryClient.invalidateQueries({ queryKey, refetchType: "active" })
+
+      if (variables?.name && variables.name !== profile?.name) {
+        await queryClient.invalidateQueries({ queryKey: ["auth", "user"] })
+      }
+
       toast.success(t("profile.updated", "تم تحديث الملف الشخصي"))
     },
     onError: (err) => {
@@ -46,7 +64,7 @@ export function OwnerProfileManagementPanel({ identifier, profile }) {
         {t("publicProfile.accountManagement", "Account management")}
       </h2>
 
-      <Tabs defaultValue="overview" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="flex h-auto min-h-11 w-full flex-wrap justify-start gap-1 bg-muted/40 p-1">
           <TabsTrigger value="overview" className="gap-2">
             <User className="size-4 shrink-0" />
@@ -81,14 +99,14 @@ export function OwnerProfileManagementPanel({ identifier, profile }) {
           </Card>
           <div className="grid gap-4 sm:grid-cols-2">
             <Button variant="outline" asChild className="h-auto py-4">
-              <Link to="/dashboard/verification" className="text-start">
+              <Link to="/dashboard/account?tab=verification" className="text-start">
                 <strong>{t("dashboard.verification")}</strong>
                 <br />
                 <span className="text-sm text-muted-foreground">{t("profile.verifyAccount", "توثيق حسابك")}</span>
               </Link>
             </Button>
             <Button variant="outline" asChild className="h-auto py-4">
-              <Link to="/dashboard/balance" className="text-start">
+              <Link to="/dashboard/wallet?tab=guarantee" className="text-start">
                 <strong>{t("dashboard.financialGuarantee")}</strong>
                 <br />
                 <span className="text-sm text-muted-foreground">
@@ -112,6 +130,7 @@ export function OwnerProfileManagementPanel({ identifier, profile }) {
                 profile={profile}
                 onSubmit={(payload) => updateMutation.mutate(payload)}
                 isPending={updateMutation.isPending}
+                mapActive={activeTab === "personal"}
               />
             </CardContent>
           </Card>

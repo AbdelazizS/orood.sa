@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { MapPin, Clock, MessageSquare, Phone, Pencil, Share2, Flag } from "lucide-react"
 import { VerificationBadge } from "@/components/auth/VerificationBadge"
+import { AccountKindBadge } from "@/components/profile/AccountKindBadge"
+import { AccountKindBadge } from "@/components/profile/AccountKindBadge"
 import { ContactDialog } from "@/components/chat/ContactDialog"
 import { cn } from "@/lib/utils"
 import { getSellerPresenceUi } from "@/lib/sellerPresence"
@@ -44,7 +46,7 @@ export function ProfileHeader({ profile, isOwnProfile, firstProductId, firstProd
       )}
     >
       {/* Cover image */}
-      <div className="relative h-32 sm:h-40 bg-gradient-to-br from-primary/10 via-background to-primary/5">
+      <div className="relative h-32 bg-gradient-to-br from-primary/10 via-background to-primary/5 sm:h-36">
         {coverUrl ? (
           <img src={coverUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
         ) : null}
@@ -91,6 +93,7 @@ export function ProfileHeader({ profile, isOwnProfile, firstProductId, firstProd
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-2xl font-bold sm:text-3xl">{profile?.name}</h1>
+                <AccountKindBadge user={profile} />
                 <VerificationBadge
                   emailVerified={profile?.email_verified ?? profile?.is_verified}
                   level={profile?.verification_level === "company_verified" ? "blue" : profile?.verification_level === "id_verified" ? "gold" : profile?.verification_level === "email" ? "green" : "grey"}
@@ -102,11 +105,6 @@ export function ProfileHeader({ profile, isOwnProfile, firstProductId, firstProd
                   </span>
                 )}
               </div>
-              {profile?.role && (
-                <p className="mt-0.5 text-sm text-muted-foreground capitalize">
-                  {profile.role.replace(/_/g, " ")}
-                </p>
-              )}
               <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                 {locationText && (
                   <span className="flex items-center gap-1.5">

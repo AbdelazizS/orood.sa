@@ -129,7 +129,7 @@ export function AdminRolesPage() {
             <div className="space-y-6">
               {groups.map((group) => (
                 <div key={group}>
-                  <h3 className="font-medium capitalize mb-2">{group}</h3>
+                  <h3 className="font-medium mb-2">{t(`admin.permissionGroup.${group}`, group)}</h3>
                   <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
                     {(permissions ?? [])
                       .filter((p) => p.group === group)

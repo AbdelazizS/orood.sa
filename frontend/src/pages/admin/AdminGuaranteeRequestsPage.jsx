@@ -1,15 +1,18 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Label } from "@/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import apiClient from "@/lib/apiClient"
-import { Loader2, Shield } from "lucide-react"
+import { Loader2, Shield, Wallet, Landmark } from "lucide-react"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -17,6 +20,9 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
 import { usePermission } from "@/hooks/usePermission"
+
+const FUNDING_PLATFORM = "platform_wallet"
+const FUNDING_EXTERNAL = "external"
 
 export function AdminGuaranteeRequestsPage() {
   const { t } = useTranslation()
@@ -27,6 +33,9 @@ export function AdminGuaranteeRequestsPage() {
   const canReview = usePermission("compliance.review_guarantee_requests")
   const [rejectId, setRejectId] = useState(null)
   const [rejectNote, setRejectNote] = useState("")
+  const [approveRow, setApproveRow] = useState(null)
+  const [fundingSource, setFundingSource] = useState(FUNDING_PLATFORM)
+  const [approvalNote, setApprovalNote] = useState("")
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin", "guarantee-requests"],
@@ -37,20 +46,56 @@ export function AdminGuaranteeRequestsPage() {
     enabled: canReview,
   })
 
+  const approveAmount = approveRow?.amount != null ? Number(approveRow.amount) : 0
+  const memberBalance = approveRow?.member_available_balance != null ? Number(approveRow.member_available_balance) : 0
+  const walletCoversDeposit = memberBalance >= approveAmount
+
+  const defaultFundingSource = useMemo(() => {
+    if (!approveRow || approveRow.type !== "deposit") return FUNDING_PLATFORM
+    return walletCoversDeposit ? FUNDING_PLATFORM : FUNDING_EXTERNAL
+  }, [approveRow, walletCoversDeposit])
+
   useEffect(() => {
     if (!focusId || !data?.length) return
     const el = document.getElementById(`guarantee-row-${focusId}`)
     el?.scrollIntoView({ block: "nearest", behavior: "smooth" })
   }, [focusId, data])
 
+  useEffect(() => {
+    if (approveRow) {
+      setFundingSource(defaultFundingSource)
+      setApprovalNote("")
+    }
+  }, [approveRow, defaultFundingSource])
+
+  const closeApproveDialog = () => {
+    setApproveRow(null)
+    setFundingSource(FUNDING_PLATFORM)
+    setApprovalNote("")
+  }
+
   const approveMutation = useMutation({
-    mutationFn: (id) => apiClient.post(`/admin/guarantee-requests/${id}/approve`),
+    mutationFn: ({ id, payload }) => apiClient.post(`/admin/guarantee-requests/${id}/approve`, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "guarantee-requests"] })
+      closeApproveDialog()
       toast.success(t("admin.guaranteeRequestApproved"))
     },
     onError: (err) => {
-      const msg = err?.response?.data?.message
+      const body = err?.response?.data
+      const code = body?.code
+      if (code === "INSUFFICIENT_WALLET_FOR_GUARANTEE" && approveRow) {
+        setFundingSource(FUNDING_EXTERNAL)
+        toast.error(
+          t("admin.guaranteeApproveInsufficientWallet", {
+            available: Number(body.member_available_balance ?? 0).toLocaleString(),
+            amount: Number(body.requested_amount ?? approveAmount).toLocaleString(),
+            defaultValue: `Wallet balance (${body.member_available_balance}) is less than the requested amount. Choose external payment if you received funds outside the platform.`,
+          }),
+        )
+        return
+      }
+      const msg = body?.message
       toast.error(typeof msg === "string" ? msg : t("common.error"))
     },
   })
@@ -68,6 +113,33 @@ export function AdminGuaranteeRequestsPage() {
       toast.error(typeof msg === "string" ? msg : t("common.error"))
     },
   })
+
+  const openApprove = (row) => {
+    if (row.type === "refund") {
+      approveMutation.mutate({ id: row.id, payload: {} })
+      return
+    }
+    setApproveRow(row)
+  }
+
+  const submitApprove = () => {
+    if (!approveRow) return
+    if (fundingSource === FUNDING_PLATFORM && !walletCoversDeposit) {
+      toast.error(t("admin.guaranteeApprovePickExternal", "Choose external payment — member wallet balance is insufficient."))
+      return
+    }
+    if (fundingSource === FUNDING_EXTERNAL && !approvalNote.trim()) {
+      toast.error(t("admin.guaranteeApproveNoteRequired", "Describe how payment was received (bank transfer, cash, etc.)."))
+      return
+    }
+    approveMutation.mutate({
+      id: approveRow.id,
+      payload: {
+        funding_source: fundingSource,
+        approval_note: approvalNote.trim() || null,
+      },
+    })
+  }
 
   if (!canReview) {
     return <div className="p-6 text-muted-foreground">{t("admin.noPermission", "You do not have permission to view this page.")}</div>
@@ -117,6 +189,11 @@ export function AdminGuaranteeRequestsPage() {
                           {Number(row.amount).toLocaleString()} {t("common.currency")}
                         </Badge>
                       )}
+                      {row.type === "deposit" && row.member_available_balance != null && (
+                        <Badge variant="outline" className="font-normal">
+                          {t("admin.guaranteeMemberWallet", "Wallet")}: {Number(row.member_available_balance).toLocaleString()} {t("common.currency")}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -131,7 +208,11 @@ export function AdminGuaranteeRequestsPage() {
                     >
                       {t("admin.contactClient", "Contact client")}
                     </Button>
-                    <Button size="sm" onClick={() => approveMutation.mutate(row.id)} disabled={approveMutation.isPending}>
+                    <Button
+                      size="sm"
+                      onClick={() => openApprove(row)}
+                      disabled={approveMutation.isPending}
+                    >
                       {t("admin.guaranteeRequestApprove")}
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => setRejectId(row.id)}>
@@ -144,6 +225,97 @@ export function AdminGuaranteeRequestsPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={approveRow != null} onOpenChange={(o) => !o && closeApproveDialog()}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("admin.guaranteeApproveModalTitle", "Approve guarantee deposit")}</DialogTitle>
+            <DialogDescription>
+              {t(
+                "admin.guaranteeApproveModalDesc",
+                "Choose where this deposit is funded. Use external payment when you confirmed receipt via bank transfer, cash, or after contacting the member.",
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {approveRow && (
+            <div className="space-y-4 text-sm">
+              <div className="rounded-lg border bg-muted/40 p-3 space-y-1">
+                <p>
+                  <span className="text-muted-foreground">{t("admin.guaranteeApproveMember", "Member")}: </span>
+                  {approveRow.user?.name} ({approveRow.user?.email})
+                </p>
+                <p>
+                  <span className="text-muted-foreground">{t("admin.guaranteeApproveAmount", "Amount")}: </span>
+                  <strong>{approveAmount.toLocaleString()} {t("common.currency")}</strong>
+                </p>
+                <p>
+                  <span className="text-muted-foreground">{t("admin.guaranteeMemberWallet", "Platform wallet")}: </span>
+                  {memberBalance.toLocaleString()} {t("common.currency")}
+                  {!walletCoversDeposit && (
+                    <span className="ms-2 text-amber-600 dark:text-amber-400">
+                      ({t("admin.guaranteeWalletInsufficient", "insufficient for this deposit")})
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              <RadioGroup value={fundingSource} onValueChange={setFundingSource} className="gap-3">
+                <div className="flex items-start gap-3 rounded-lg border p-3">
+                  <RadioGroupItem value={FUNDING_PLATFORM} id="fund-wallet" className="mt-1" disabled={!walletCoversDeposit} />
+                  <Label htmlFor="fund-wallet" className={`flex-1 cursor-pointer ${!walletCoversDeposit ? "opacity-50" : ""}`}>
+                    <span className="flex items-center gap-2 font-medium">
+                      <Wallet className="size-4" />
+                      {t("admin.guaranteeFundingPlatform", "Platform wallet")}
+                    </span>
+                    <span className="block text-xs text-muted-foreground font-normal mt-1">
+                      {t("admin.guaranteeFundingPlatformHint", "Deduct from the member's available wallet balance on Orood.")}
+                    </span>
+                  </Label>
+                </div>
+                <div className="flex items-start gap-3 rounded-lg border p-3">
+                  <RadioGroupItem value={FUNDING_EXTERNAL} id="fund-external" className="mt-1" />
+                  <Label htmlFor="fund-external" className="flex-1 cursor-pointer">
+                    <span className="flex items-center gap-2 font-medium">
+                      <Landmark className="size-4" />
+                      {t("admin.guaranteeFundingExternal", "External payment")}
+                    </span>
+                    <span className="block text-xs text-muted-foreground font-normal mt-1">
+                      {t(
+                        "admin.guaranteeFundingExternalHint",
+                        "Member paid outside the wallet (bank transfer, cash, etc.) — you verified with the client.",
+                      )}
+                    </span>
+                  </Label>
+                </div>
+              </RadioGroup>
+
+              {fundingSource === FUNDING_EXTERNAL && (
+                <div className="space-y-2">
+                  <Label htmlFor="approval-note">{t("admin.guaranteeApprovalNote", "How was payment received?")}</Label>
+                  <Textarea
+                    id="approval-note"
+                    value={approvalNote}
+                    onChange={(e) => setApprovalNote(e.target.value)}
+                    placeholder={t("admin.guaranteeApprovalNotePlaceholder", "e.g. Bank transfer ref 12345, confirmed via phone on …")}
+                    rows={3}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeApproveDialog}>
+              {t("common.cancel")}
+            </Button>
+            <Button disabled={approveMutation.isPending} onClick={submitApprove}>
+              {approveMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
+              {t("admin.guaranteeRequestApprove")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={rejectId != null} onOpenChange={(o) => !o && setRejectId(null)}>
         <DialogContent>

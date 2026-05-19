@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Services\CompanyVerificationApprovalService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -26,25 +27,9 @@ class AdminCompanyVerificationController extends Controller
         return response()->json($companies);
     }
 
-    public function approve(Request $request, Company $company): JsonResponse
+    public function approve(Request $request, Company $company, CompanyVerificationApprovalService $approval): JsonResponse
     {
-        $admin = $request->user();
-
-        $company->forceFill([
-            'verification_status' => 'approved',
-            'rejection_reason' => null,
-            'reviewed_by' => $admin->id,
-            'reviewed_at' => now(),
-        ])->save();
-
-        $user = $company->user;
-        if ($user) {
-            $user->forceFill([
-                'role' => 'company',
-                'company_verification_status' => 'approved',
-                'company_verification_note' => null,
-            ])->save();
-        }
+        $approval->approve($company, $request->user()?->id);
 
         return response()->json([
             'message' => __('verification.company_approved'),

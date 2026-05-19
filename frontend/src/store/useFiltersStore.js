@@ -6,7 +6,13 @@ const DEFAULT_STATE = {
   regionId: null,
   cityId: null,
   activeFilter: "all",
+  listingType: null,
   searchQuery: "",
+  rePurpose: null,
+  rePropertyType: null,
+  reMinArea: "",
+  reMaxArea: "",
+  reBedroomsMin: "",
 }
 
 export const useFiltersStore = create((set) => ({
@@ -15,6 +21,11 @@ export const useFiltersStore = create((set) => ({
     set(() => ({
       categoryId,
       subcategoryId: null,
+      rePurpose: null,
+      rePropertyType: null,
+      reMinArea: "",
+      reMaxArea: "",
+      reBedroomsMin: "",
     })),
   setSubcategory: (subcategoryId) => set({ subcategoryId }),
   setRegion: (regionId) =>
@@ -24,6 +35,12 @@ export const useFiltersStore = create((set) => ({
     })),
   setCity: (cityId) => set({ cityId }),
   setActiveFilter: (activeFilter) => set({ activeFilter }),
+  setListingType: (listingType) => set({ listingType }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
+  setRePurpose: (rePurpose) => set({ rePurpose }),
+  setRePropertyType: (rePropertyType) => set({ rePropertyType }),
+  setReMinArea: (reMinArea) => set({ reMinArea }),
+  setReMaxArea: (reMaxArea) => set({ reMaxArea }),
+  setReBedroomsMin: (reBedroomsMin) => set({ reBedroomsMin }),
   resetFilters: () => set(DEFAULT_STATE),
 }))

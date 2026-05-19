@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Balance;
 use App\Models\ChargeRequest;
+use App\Models\PaymentMethod;
 use App\Models\DocumentVerification;
 use App\Models\Notification;
 use App\Models\GuaranteeRequest;
@@ -267,11 +268,7 @@ class AccountController extends Controller
                 'financial_guarantee' => $guarantee,
                 'pending_withdrawals' => $pendingWithdrawals,
                 'pending_charges' => $pendingCharges,
-                'bank_transfer' => [
-                    'account_name' => config('finance.bank_transfer.account_name'),
-                    'bank_name' => config('finance.bank_transfer.bank_name'),
-                    'iban' => config('finance.bank_transfer.iban'),
-                ],
+                'bank_transfer' => $this->walletBankTransferInstructions(),
             ],
         ]);
     }
@@ -955,5 +952,26 @@ class AccountController extends Controller
         }
 
         return response()->json(['data' => $reports]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function walletBankTransferInstructions(): array
+    {
+        $method = PaymentMethod::query()
+            ->where('code', PaymentMethod::CODE_BANK_TRANSFER)
+            ->first();
+
+        $locale = app()->getLocale() === 'en' ? 'en' : 'ar';
+        $instructions = $method?->instructions[$locale] ?? $method?->instructions['ar'] ?? [];
+
+        return [
+            'account_name' => $instructions['account_name'] ?? '',
+            'bank_name' => $instructions['bank_name'] ?? '',
+            'iban' => $instructions['iban'] ?? '',
+            'intro' => $instructions['intro'] ?? null,
+            'steps' => $instructions['steps'] ?? [],
+        ];
     }
 }

@@ -1,0 +1,5 @@
+# Laravel scheduler (sitemap daily, etc.) — install:
+# crontab -e
+# * * * * * cd /var/www/arooth/backend && php artisan schedule:run >> /dev/null 2>&1
+
+* * * * * cd /var/www/arooth/backend && php artisan schedule:run >> /dev/null 2>&1

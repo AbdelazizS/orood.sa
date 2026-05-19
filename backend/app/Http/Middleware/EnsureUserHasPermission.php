@@ -22,10 +22,14 @@ class EnsureUserHasPermission
             return $next($request);
         }
 
+        $cacheKey = $user->role === 'assistant'
+            ? "user_permissions:{$user->id}"
+            : "role_permissions:{$user->role}";
+
         $permissions = Cache::remember(
-            "role_permissions:{$user->role}",
+            $cacheKey,
             now()->addMinutes(5),
-            fn () => Permission::getForRole($user->role)
+            fn () => Permission::getForUser($user)
         );
         if (!in_array($permission, $permissions, true)) {
             return response()->json(['message' => 'Forbidden'], 403);

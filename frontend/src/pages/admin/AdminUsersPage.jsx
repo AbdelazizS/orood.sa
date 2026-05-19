@@ -31,11 +31,16 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Label } from "@/components/ui/label"
 import apiClient from "@/lib/apiClient"
-import { MoreHorizontal, Pencil, Loader2, Ban, UserX, Search, ShieldCheck, Wallet, Check, Eye } from "lucide-react"
+import { MoreHorizontal, Pencil, Loader2, Ban, UserX, Search, ShieldCheck, Wallet, Check, Eye, UserPlus } from "lucide-react"
 import { VerificationBadge } from "@/components/auth/VerificationBadge"
 import { useAuthStore } from "@/store/useAuthStore"
+import { PasswordInput } from "@/components/ui/password-input"
+import { usePermission } from "@/hooks/usePermission"
+import * as authService from "@/services/authService"
+import { isAroothComEmail, passwordMatchesPolicy } from "@/lib/passwordPolicy"
 
 const ROLES = ["super_admin", "admin", "manager", "employee", "marketer", "company", "seller", "buyer", "user"]
+const STAFF_CREATE_ROLES = ["super_admin", "admin", "manager", "employee"]
 const VERIFICATION_LEVELS = [
   { value: "unverified", labelKey: "verification.unverified", color: "grey" },
   { value: "email", labelKey: "verification.emailVerified", color: "green" },
@@ -195,6 +200,15 @@ export function AdminUsersPage() {
   const [cityFilter, setCityFilter] = useState("")
   const [verificationFilter, setVerificationFilter] = useState("")
   const [page, setPage] = useState(1)
+  const [createOpen, setCreateOpen] = useState(false)
+  const canCreateStaff = usePermission("users.assign_roles")
+
+  const { data: passwordPolicy } = useQuery({
+    queryKey: ["auth", "password-policy"],
+    queryFn: authService.getPasswordPolicy,
+    staleTime: 0,
+    enabled: createOpen,
+  })
 
   useEffect(() => {
     setPage(1)
@@ -223,6 +237,22 @@ export function AdminUsersPage() {
       params.set("page", String(page))
       const { data: res } = await apiClient.get(`/admin/users?${params}`)
       return res ?? {}
+    },
+  })
+
+  const createMutation = useMutation({
+    mutationFn: (payload) => apiClient.post("/admin/users", payload),
+    onSuccess: () => {
+      setCreateOpen(false)
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] })
+      toast.success(t("admin.staff.created"))
+    },
+    onError: (err) => {
+      const validationErrors = err?.response?.data?.errors
+      const firstValidationMessage = validationErrors
+        ? Object.values(validationErrors)?.flat?.()?.[0]
+        : null
+      toast.error(firstValidationMessage || err?.response?.data?.message || t("common.error"))
     },
   })
 
@@ -342,6 +372,12 @@ export function AdminUsersPage() {
               ))}
             </SelectContent>
           </Select>
+          {canCreateStaff ? (
+            <Button type="button" onClick={() => setCreateOpen(true)}>
+              <UserPlus className="me-2 size-4" />
+              {t("admin.staff.create")}
+            </Button>
+          ) : null}
         </div>
       </div>
       <Card>
@@ -385,7 +421,129 @@ export function AdminUsersPage() {
           isPending={modMutation.isPending}
         />
       )}
+
+      {createOpen ? (
+        <CreateStaffDialog
+          passwordPolicy={passwordPolicy}
+          onClose={() => setCreateOpen(false)}
+          onSave={(payload) => createMutation.mutate(payload)}
+          isPending={createMutation.isPending}
+        />
+      ) : null}
     </div>
+  )
+}
+
+function CreateStaffDialog({ passwordPolicy, onClose, onSave, isPending }) {
+  const { t } = useTranslation()
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [phone, setPhone] = useState("")
+  const [role, setRole] = useState("admin")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [localError, setLocalError] = useState("")
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t("admin.staff.createTitle")}</DialogTitle>
+        </DialogHeader>
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault()
+            setLocalError("")
+            if (!isAroothComEmail(email)) {
+              setLocalError(t("auth.validation.aroothComEmail", "Staff email must use @arooth.com"))
+              return
+            }
+            if (password !== confirmPassword) {
+              setLocalError(t("auth.passwordMismatch", "Passwords do not match"))
+              return
+            }
+            if (!passwordMatchesPolicy(password, passwordPolicy)) {
+              setLocalError(passwordPolicy?.hint || t("auth.passwordWeak", "Password does not meet policy"))
+              return
+            }
+            onSave({
+              name,
+              email: email.trim().toLowerCase(),
+              phone: phone || undefined,
+              role,
+              password,
+              password_confirmation: confirmPassword,
+            })
+          }}
+        >
+          <p className="text-sm text-muted-foreground">{t("admin.staff.emailHint")}</p>
+          {localError ? <p className="text-sm text-destructive">{localError}</p> : null}
+          <div>
+            <Label>{t("admin.name")}</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1" required />
+          </div>
+          <div>
+            <Label>{t("auth.email")}</Label>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-1"
+              placeholder="name@arooth.com"
+              required
+            />
+          </div>
+          <div>
+            <Label>{t("admin.phone")}</Label>
+            <Input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1" />
+          </div>
+          <div>
+            <Label>{t("admin.roleLabel")}</Label>
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STAFF_CREATE_ROLES.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {t(`admin.role.${r}`, r.replace(/_/g, " "))}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>{t("auth.password")}</Label>
+            <PasswordInput
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="mt-1"
+              autoComplete="new-password"
+              required
+            />
+          </div>
+          <div>
+            <Label>{t("auth.confirmPassword")}</Label>
+            <PasswordInput
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="mt-1"
+              autoComplete="new-password"
+              required
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              {t("common.cancel")}
+            </Button>
+            <Button type="submit" disabled={isPending}>
+              {isPending ? <Loader2 className="size-4 animate-spin" /> : t("admin.staff.create")}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
 

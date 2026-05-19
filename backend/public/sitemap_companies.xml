@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>http://localhost/wholesale/company/5</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-05-17T13:26:44+00:00</lastmod>
+  </url>
+  <url>
+    <loc>http://localhost/wholesale/company/7</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-05-17T18:58:46+00:00</lastmod>
+  </url>
+  <url>
+    <loc>http://localhost/wholesale/company/8</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-05-17T12:54:13+00:00</lastmod>
+  </url>
+  <url>
+    <loc>http://localhost/wholesale/company/9</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-05-17T18:48:47+00:00</lastmod>
+  </url>
+</urlset>

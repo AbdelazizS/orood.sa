@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Purchase extends Model
 {
@@ -23,12 +25,18 @@ class Purchase extends Model
         'wholesale_campaign_completed_at',
         'quantity',
         'payment_method',
+        'payment_method_id',
         'status',
+        'cod_policy_accepted_at',
         'shipping_address',
         'shipping_lat',
         'shipping_lng',
         'buyer_note',
         'cod_seller_accepted_at',
+        'seller_transfer_confirmed_at',
+        'transfer_confirmed_by',
+        'buyer_transfer_confirmed_at',
+        'buyer_transfer_confirmed_by',
         'tracking_number',
         'carrier',
         'tracking_url',
@@ -50,6 +58,8 @@ class Purchase extends Model
         'shipping_lat' => 'decimal:7',
         'shipping_lng' => 'decimal:7',
         'cod_seller_accepted_at' => 'datetime',
+        'seller_transfer_confirmed_at' => 'datetime',
+        'buyer_transfer_confirmed_at' => 'datetime',
         'admin_cancelled_at' => 'datetime',
         'wholesale_checkout_deadline_at' => 'datetime',
         'wholesale_campaign_completed_at' => 'datetime',
@@ -90,4 +100,52 @@ class Purchase extends Model
     {
         return $this->belongsTo(GroupBuyReservation::class, 'group_buy_reservation_id');
     }
+
+    public function orderPaymentRequests(): HasMany
+    {
+        return $this->hasMany(OrderPaymentRequest::class);
+    }
+
+    public function latestOrderPaymentRequest(): HasOne
+    {
+        return $this->hasOne(OrderPaymentRequest::class)->latestOfMany();
+    }
+
+    public function isDirectTransfer(): bool
+    {
+        return $this->payment_method === 'direct_transfer';
+    }
+
+    public function sellerConfirmedDirectTransfer(): bool
+    {
+        return $this->seller_transfer_confirmed_at !== null;
+    }
+
+    public function buyerConfirmedTransferSent(): bool
+    {
+        return $this->buyer_transfer_confirmed_at !== null;
+    }
+
+    public function hasTransferReceiptUploaded(): bool
+    {
+        $req = $this->relationLoaded('latestOrderPaymentRequest')
+            ? $this->latestOrderPaymentRequest
+            : $this->latestOrderPaymentRequest()->with('values')->first();
+
+        if (! $req) {
+            return false;
+        }
+
+        foreach ($req->values as $value) {
+            if ($value->file_url) {
+                return true;
+            }
+            if (str_contains((string) $value->field_key, 'receipt') && $value->value_text) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
+

@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { MessageCircle, Phone } from "lucide-react"
+import { SAUDI_PHONE_INPUT_PROPS } from "@/lib/phone/saudiPhone"
 
 export function StepContact({
   contactChat,
@@ -47,10 +48,9 @@ export function StepContact({
             </Label>
             <Input
               id="phoneNumber"
-              type="tel"
+              {...SAUDI_PHONE_INPUT_PROPS}
               value={phoneNumber}
               onChange={(e) => onChange({ phoneNumber: e.target.value })}
-              placeholder="+966 5XX XXX XXXX"
               disabled={disabled}
             />
           </div>

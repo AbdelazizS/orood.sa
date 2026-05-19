@@ -1,4 +1,4 @@
-import { lazy, Suspense, useRef, useState } from "react"
+import { useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { addMinutes, format, isBefore, startOfDay } from "date-fns"
@@ -12,21 +12,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ScheduleTimePicker } from "@/components/ui/schedule-time-picker.jsx"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { LocationMapPicker } from "@/components/maps/LocationMapPicker"
 import { useAuthStore } from "@/store/useAuthStore"
 import apiClient from "@/lib/apiClient"
 import { toast } from "sonner"
-import { CalendarIcon } from "lucide-react"
+import { CalendarIcon, MapPin } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-const LocationMapPicker = lazy(() =>
-  import("@/components/maps/LocationMapPicker.jsx").then((m) => ({ default: m.LocationMapPicker }))
-)
+import { MAP_PICKER_EDIT_PROPS, MAP_PICKER_SHELL_CLASS } from "@/lib/maps/mapPickerUi"
 
 function combineDateAndTime(date, timeHHmm) {
   if (!date || !timeHHmm || typeof timeHHmm !== "string") return null
@@ -45,7 +41,6 @@ function ViewAtLocationForm({ productId, onOpenChange }) {
   const { token } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
-  const addressRef = useRef(null)
   const [scheduleDate, setScheduleDate] = useState(undefined)
   const [scheduleTime, setScheduleTime] = useState("12:00")
   const [calOpen, setCalOpen] = useState(false)
@@ -115,7 +110,7 @@ function ViewAtLocationForm({ productId, onOpenChange }) {
           {t("purchase.viewAtLocation", "أرغب بمشاهدة المنتج في موقعي")}
         </DialogTitle>
       </DialogHeader>
-      <div className="grid gap-3">
+      <div className="grid gap-4">
         <div className="space-y-2">
           <Label className="text-xs text-muted-foreground">{t("purchase.preferredDateTime")}</Label>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -150,50 +145,43 @@ function ViewAtLocationForm({ productId, onOpenChange }) {
             />
           </div>
         </div>
-        <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground">
-            {t("purchase.locationAddress", "عنوان الموقع")}
-          </Label>
-          <Input
-            ref={addressRef}
-            value={locationAddress}
-            onChange={(e) => setLocationAddress(e.target.value)}
-            placeholder={t("purchase.locationAddressPlaceholder", "المدينة، الحي، الشارع أو معلم واضح")}
-          />
-        </div>
 
-        <div className="space-y-1">
+        <div className="space-y-2">
           <Label className="text-xs text-muted-foreground">
             {t("purchase.mapSelectLabel", "موقع المعاينة على الخريطة")}
           </Label>
-          <Suspense
-            fallback={
-              <Skeleton className="flex h-[220px] w-full items-center justify-center rounded-md border border-border text-xs text-muted-foreground">
-                {t("common.loading", "جار التحميل...")}
-              </Skeleton>
-            }
-          >
-            <LocationMapPicker
-              key={`${productId}-map`}
-              language={i18n.language}
-              lat={pin?.lat}
-              lng={pin?.lng}
-              addressInputRef={addressRef}
-              onChange={({ lat, lng }) => {
-                setPin({ lat, lng })
-                setLocationPlaceId(null)
-                setMapError(null)
-              }}
-              onPlaceResolved={(addr, _la, _ln, meta) => {
-                setLocationAddress(addr)
-                setLocationPlaceId(meta?.placeId ?? null)
-                setMapError(null)
-              }}
-              onReverseGeocode={(addr) => {
-                setLocationAddress(addr ?? "")
-              }}
-            />
-          </Suspense>
+          <LocationMapPicker
+            {...MAP_PICKER_EDIT_PROPS}
+            key={`${productId}-map`}
+            language={i18n.language}
+            lat={pin?.lat}
+            lng={pin?.lng}
+            searchValue={locationAddress}
+            searchPlaceholder={t(
+              "addListing.propertyLocationSearchPlaceholder",
+              "ابحث عن حي، شارع، أو معلم…"
+            )}
+            className={MAP_PICKER_SHELL_CLASS}
+            onChange={({ lat, lng }) => {
+              setPin({ lat, lng })
+              setLocationPlaceId(null)
+              setMapError(null)
+            }}
+            onPlaceResolved={(addr, _la, _ln, meta) => {
+              setLocationAddress(addr ?? "")
+              setLocationPlaceId(meta?.placeId ?? null)
+              setMapError(null)
+            }}
+            onReverseGeocode={(addr) => {
+              setLocationAddress(addr ?? "")
+            }}
+          />
+          {locationAddress ? (
+            <p className="flex items-start gap-1.5 rounded-lg bg-muted/40 px-3 py-2 text-xs text-foreground">
+              <MapPin className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden />
+              <span>{locationAddress}</span>
+            </p>
+          ) : null}
           {mapError ? <p className="text-xs text-destructive">{mapError}</p> : null}
         </div>
       </div>

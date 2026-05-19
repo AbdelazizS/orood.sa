@@ -7,6 +7,8 @@ export const useAuthStore = create(
     (set, get) => ({
       user: null,
       token: null,
+      _hasHydrated: false,
+      setHasHydrated: (value) => set({ _hasHydrated: value }),
       setAuth: (user, token) => set({ user, token }),
       logout: () => set({ user: null, token: null }),
       isAuthenticated: () => {
@@ -21,6 +23,11 @@ export const useAuthStore = create(
         await fetchUser()
       },
     }),
-    { name: "arood-auth" },
+    {
+      name: "arood-auth",
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true)
+      },
+    },
   ),
 )

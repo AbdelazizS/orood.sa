@@ -16,15 +16,42 @@ class Category extends Model
         'name_en',
         'slug',
         'icon',
+        'image_url',
         'is_active',
         'show_company_directory',
+        'sort_order',
+        'offer_enabled',
+        'request_enabled',
+        'wholesale_enabled',
+        'role_restrictions',
+        'dynamic_schema_enabled',
+        'parent_id',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'show_company_directory' => 'boolean',
+        'offer_enabled' => 'boolean',
+        'request_enabled' => 'boolean',
+        'wholesale_enabled' => 'boolean',
+        'dynamic_schema_enabled' => 'boolean',
+        'role_restrictions' => 'array',
     ];
 
+    public function parent()
+    {
+        return $this->belongsTo(Category::class, 'parent_id');
+    }
+
+    public function children()
+    {
+        return $this->hasMany(Category::class, 'parent_id');
+    }
+
+    public function listingSchemas()
+    {
+        return $this->hasMany(CategoryListingSchema::class);
+    }
 
     public function subcategories()
     {

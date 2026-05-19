@@ -33,5 +33,6 @@ return [
         'password_rule_simple' => 'Password must be at least 6 characters and include at least one letter and one number.',
         'password_rule_complex' => 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.',
         'password_confirmed' => 'Password confirmation does not match.',
+        'arooth_com_email' => 'Staff email must use the @arooth.com domain.',
     ],
 ];

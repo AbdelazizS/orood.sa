@@ -8,13 +8,19 @@ use App\Models\GroupBuyReservation;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\Transaction;
+use App\Services\Finance\OrderPaymentOrchestrator;
+use App\Services\Finance\PaymentEligibilityEngine;
+use App\Services\Finance\PhoneNormalizationService;
 use App\Services\Notifications\PurchaseOrderNotifications;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class PurchaseController extends Controller
 {
+    public function __construct(private readonly PhoneNormalizationService $phones) {}
+
     /**
      * Create a purchase (Buy Now) — escrow or COD.
      * Escrow: deduct buyer available, hold in buyer escrow until receipt confirmation; seller is credited on confirm.
@@ -28,7 +34,7 @@ class PurchaseController extends Controller
         }
 
         $validated = $request->validate([
-            'payment_method' => ['required', 'in:escrow,cod'],
+            'payment_method' => ['required', 'in:escrow,cod,direct_transfer'],
             'quantity' => ['sometimes', 'integer', 'min:1', 'max:999'],
             'shipping_address' => ['nullable', 'string', 'max:500'],
             'shipping_lat' => ['nullable', 'numeric', 'between:-90,90'],
@@ -37,76 +43,38 @@ class PurchaseController extends Controller
             'buyer_phone' => ['nullable', 'string', 'max:20'],
             'buyer_email' => ['nullable', 'email'],
             'buyer_name' => ['nullable', 'string', 'max:255'],
+            'cod_accepted' => ['sometimes', 'boolean'],
+            'payment_fields' => ['sometimes', 'array'],
         ]);
+
+        $validated = $this->normalizeBuyerPhone($validated);
 
         $price = (float) $product->price;
         if ($price <= 0) {
             return response()->json(['message' => 'Product has no fixed price'], 422);
         }
 
-        $quantity = (int) ($validated['quantity'] ?? 1);
-        $totalAmount = round($price * $quantity, 2);
-        if ($totalAmount <= 0) {
-            return response()->json(['message' => __('Invalid order total.')], 422);
-        }
-
-        $paymentMethod = $validated['payment_method'];
-
-        if ($paymentMethod === 'cod' && !($product->allow_cod ?? true)) {
+        $product->load('seller.sellerPayoutProfile.values');
+        $options = app(PaymentEligibilityEngine::class)->checkoutPaymentOptions($product, $user);
+        $allowedLegacy = collect($options)->pluck('legacy_code')->all();
+        if (! in_array($validated['payment_method'], $allowedLegacy, true)) {
             return response()->json([
-                'message' => __('Cash on delivery is not available for this listing.'),
+                'message' => __('finance.payment_method_not_available'),
             ], 422);
         }
 
-        $status = $paymentMethod === 'escrow'
-            ? Purchase::STATUS_AWAITING_PAYMENT
-            : Purchase::STATUS_COD_REQUESTED;
-
         try {
-            $purchase = DB::transaction(function () use ($product, $user, $validated, $totalAmount, $quantity, $paymentMethod, $status) {
-                $purchase = Purchase::create([
-                    'product_id' => $product->id,
-                    'buyer_id' => $user->id,
-                    'seller_id' => $product->user_id,
-                    'amount' => $totalAmount,
-                    'quantity' => $quantity,
-                    'payment_method' => $paymentMethod,
-                    'status' => $status,
-                    'shipping_address' => $validated['shipping_address'] ?? null,
-                    'shipping_lat' => $validated['shipping_lat'] ?? null,
-                    'shipping_lng' => $validated['shipping_lng'] ?? null,
-                    'buyer_note' => $validated['buyer_note'] ?? null,
-                    'buyer_phone' => $validated['buyer_phone'] ?? $user->phone,
-                    'buyer_email' => $validated['buyer_email'] ?? $user->email,
-                    'buyer_name' => $validated['buyer_name'] ?? $user->name,
-                ]);
-
-                if ($paymentMethod === 'escrow') {
-                    $buyerBalance = Balance::getOrCreateForUser($user->id);
-                    if ((float) $buyerBalance->available < $totalAmount) {
-                        throw new \RuntimeException('INSUFFICIENT_BALANCE');
-                    }
-
-                    $buyerBalance->decrement('available', $totalAmount);
-                    $buyerBalance->increment('escrow', $totalAmount);
-
-                    Transaction::create([
-                        'user_id' => $user->id,
-                        'type' => Transaction::TYPE_ORDER_PAYMENT,
-                        'amount' => -$totalAmount,
-                        'description' => __('Escrow hold for purchase').' #'.$purchase->id,
-                        'purchase_id' => $purchase->id,
-                        'status' => Transaction::STATUS_COMPLETED,
-                        'completed_at' => now(),
-                    ]);
-                }
-
-                $stats = $product->stats ?? [];
-                $stats['purchases'] = ($stats['purchases'] ?? 0) + 1;
-                $product->update(['stats' => $stats]);
-
-                return $purchase;
-            });
+            $purchase = app(OrderPaymentOrchestrator::class)->createPurchase($user, $product, $validated);
+        } catch (\InvalidArgumentException $e) {
+            return match ($e->getMessage()) {
+                'COD_NOT_ALLOWED' => response()->json([
+                    'message' => __('Cash on delivery is not available for this listing.'),
+                ], 422),
+                'COD_ACCEPTANCE_REQUIRED' => response()->json([
+                    'message' => __('finance.cod_acceptance_required'),
+                ], 422),
+                default => response()->json(['message' => $e->getMessage()], 422),
+            };
         } catch (\RuntimeException $e) {
             if ($e->getMessage() === 'INSUFFICIENT_BALANCE') {
                 return response()->json([
@@ -159,6 +127,8 @@ class PurchaseController extends Controller
             'buyer_email' => ['nullable', 'email'],
             'buyer_name' => ['nullable', 'string', 'max:255'],
         ]);
+
+        $validated = $this->normalizeBuyerPhone($validated);
 
         $quantity = max(1, (int) $reservation->quantity);
         $unitPrice = (float) ($reservation->price_snapshot ?? $product->wholesale_price ?? $product->price ?? 0);
@@ -246,5 +216,28 @@ class PurchaseController extends Controller
             'message' => __('wholesale.checkout_success'),
             'data' => $purchase->load(['product', 'buyer', 'seller']),
         ], 201);
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function normalizeBuyerPhone(array $validated): array
+    {
+        $incoming = trim((string) ($validated['buyer_phone'] ?? ''));
+        if ($incoming === '') {
+            return $validated;
+        }
+
+        $normalized = $this->phones->normalize($incoming);
+        if (! $this->phones->isValidSaudiMobile($normalized)) {
+            throw ValidationException::withMessages([
+                'buyer_phone' => __('Use a Saudi mobile number, e.g. 05xxxxxxxx.'),
+            ]);
+        }
+
+        $validated['buyer_phone'] = $normalized;
+
+        return $validated;
     }
 }

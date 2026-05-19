@@ -8,6 +8,17 @@ import markerShadow from "leaflet/dist/images/marker-shadow.png"
 import { Button } from "@/components/ui/button"
 import { useTranslation } from "react-i18next"
 import { Navigation } from "lucide-react"
+import { useMapRasterTiles } from "@/hooks/maps/useMapTheme"
+import { usePrefersReducedMotion } from "@/hooks/maps/useMapInteractions"
+import { reversePlace } from "@/lib/maps/geocoder"
+import {
+  DEFAULT_SA_OVERVIEW_ZOOM,
+  getDefaultCenterFromEnv,
+} from "@/lib/maps/constants"
+import { MapPickerEmptyHint } from "@/components/maps/MapPickerEmptyHint.jsx"
+import { MapSearchBar } from "@/components/maps/shell/MapSearchBar.jsx"
+import { cn } from "@/lib/utils"
+import { MAP_PICKER_MAP_CLASS } from "@/lib/maps/mapPickerUi"
 
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -15,13 +26,6 @@ L.Icon.Default.mergeOptions({
   iconRetinaUrl: markerIcon2x,
   shadowUrl: markerShadow,
 })
-
-function parseEnvCoord(val, fallback) {
-  const n = Number.parseFloat(String(val ?? "").trim())
-  return Number.isFinite(n) ? n : fallback
-}
-
-const RIYADH = [24.7136, 46.6753]
 
 function MapEvents({ onPick }) {
   useMapEvents({
@@ -32,46 +36,46 @@ function MapEvents({ onPick }) {
   return null
 }
 
-function FlyToPin({ lat, lng }) {
+function ResizeWhenActive({ active }) {
   const map = useMap()
   useEffect(() => {
-    if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) return
-    map.flyTo([lat, lng], Math.max(map.getZoom(), 13), { duration: 0.45 })
-  }, [lat, lng, map])
+    if (!active) return
+    requestAnimationFrame(() => {
+      try {
+        map.invalidateSize()
+      } catch {
+        /* ignore */
+      }
+    })
+  }, [active, map])
   return null
 }
 
-async function reverseGeocodeNominatim(lat, lng, signal, attempt = 0) {
-  const url = new URL("https://nominatim.openstreetmap.org/reverse")
-  url.searchParams.set("format", "json")
-  url.searchParams.set("lat", String(lat))
-  url.searchParams.set("lon", String(lng))
-  url.searchParams.set("accept-language", "ar,en")
-  try {
-    const res = await fetch(url.toString(), {
-      signal,
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "AroothMarketplace/1.0 (view-at-location)",
-      },
-    })
-    if (!res.ok) {
-      if (attempt < 1 && !signal.aborted) {
-        await new Promise((r) => setTimeout(r, 1000))
-        return reverseGeocodeNominatim(lat, lng, signal, attempt + 1)
-      }
-      return null
-    }
-    const data = await res.json()
-    const label = data?.display_name
-    return typeof label === "string" && label.trim() ? label.trim() : null
-  } catch {
-    if (attempt < 1 && !signal.aborted) {
-      await new Promise((r) => setTimeout(r, 1000))
-      return reverseGeocodeNominatim(lat, lng, signal, attempt + 1)
-    }
-    return null
-  }
+function FlyToPin({ lat, lng }) {
+  const map = useMap()
+  const reducedMotion = usePrefersReducedMotion()
+  useEffect(() => {
+    if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) return
+    map.flyTo([lat, lng], Math.max(map.getZoom(), 13), { duration: reducedMotion ? 0 : 0.45 })
+  }, [lat, lng, map, reducedMotion])
+  return null
+}
+
+function SetViewWhenNoPin({ lat, lng }) {
+  const map = useMap()
+  const reducedMotion = usePrefersReducedMotion()
+  const defaultCenter = useMemo(() => {
+    const c = getDefaultCenterFromEnv()
+    return [c.lat, c.lng]
+  }, [])
+
+  useEffect(() => {
+    const hasPin = lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng)
+    if (hasPin) return
+    map.setView(defaultCenter, DEFAULT_SA_OVERVIEW_ZOOM, { animate: !reducedMotion })
+  }, [lat, lng, map, defaultCenter, reducedMotion])
+
+  return null
 }
 
 /**
@@ -82,13 +86,24 @@ export function OsmLocationMapPicker({
   lng,
   onChange,
   onReverseGeocode,
+  onGeocodeResolved,
   className = "",
+  showInlineHint = true,
+  showLocateControl = true,
+  showSearch = false,
+  searchPlaceholder,
+  searchValue,
+  hideMapAttribution = false,
+  mapActive = true,
+  readOnly = false,
+  hintInFooter = false,
+  mapClassName: mapClassNameProp,
 }) {
   const { t } = useTranslation()
+  const raster = useMapRasterTiles()
   const initialCenter = useMemo(() => {
-    const la = parseEnvCoord(import.meta.env.VITE_MAP_DEFAULT_LAT, RIYADH[0])
-    const ln = parseEnvCoord(import.meta.env.VITE_MAP_DEFAULT_LNG, RIYADH[1])
-    return [la, ln]
+    const c = getDefaultCenterFromEnv()
+    return [c.lat, c.lng]
   }, [])
 
   const position =
@@ -127,9 +142,15 @@ export function OsmLocationMapPicker({
 
   const debounceRef = useRef(null)
   const abortRef = useRef(null)
+  const skipReverseRef = useRef(false)
 
   useEffect(() => {
-    if (!onReverseGeocode || lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+    if (readOnly) return undefined
+    if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return
+    }
+    if (skipReverseRef.current) {
+      skipReverseRef.current = false
       return
     }
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -140,8 +161,11 @@ export function OsmLocationMapPicker({
       const ac = new AbortController()
       abortRef.current = ac
       try {
-        const addr = await reverseGeocodeNominatim(lat, lng, ac.signal)
-        if (addr) onReverseGeocode(addr)
+        const detail = await reversePlace(lat, lng, ac.signal)
+        if (detail?.placeName && onReverseGeocode) {
+          onReverseGeocode(detail.placeName, { lat, lng })
+        }
+        if (detail) onGeocodeResolved?.(detail)
       } catch {
         /* ignore abort / network */
       }
@@ -151,46 +175,101 @@ export function OsmLocationMapPicker({
       if (debounceRef.current) clearTimeout(debounceRef.current)
       if (abortRef.current) abortRef.current.abort()
     }
-  }, [lat, lng, onReverseGeocode])
+  }, [lat, lng, onReverseGeocode, onGeocodeResolved, readOnly])
+
+  const hasPin = position != null
+  const initialZoom = hasPin ? 13 : DEFAULT_SA_OVERVIEW_ZOOM
+
+  const hintText = readOnly
+    ? t("maps.propertyMapHint", "اسحب الخريطة للتحريك، وقرّب/بعّد بإصبعين أو عجلة الفأرة")
+    : t("purchase.mapHint", "انقر على الخريطة أو اسحب الدبوس لتحديد موقع المعاينة")
+
+  const handleSearchSelect = useCallback(
+    (item) => {
+      if (item?.lat == null || item?.lng == null) return
+      skipReverseRef.current = true
+      if (item.label && onReverseGeocode) {
+        onReverseGeocode(item.label, { lat: item.lat, lng: item.lng })
+      }
+      handlePick(item.lat, item.lng)
+    },
+    [handlePick, onReverseGeocode]
+  )
 
   return (
-    <div className={`space-y-2 ${className}`}>
-      <div className="relative z-0 overflow-hidden rounded-md border border-border">
-        <MapContainer
-          center={initialCenter}
-          zoom={11}
-          className="h-[220px] w-full touch-manipulation"
-          scrollWheelZoom
-        >
-          <FlyToPin lat={lat} lng={lng} />
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <MapEvents onPick={handlePick} />
-          {position ? (
-            <Marker
-              position={position}
-              draggable
-              eventHandlers={{
-                dragend: (e) => {
-                  const ll = e.target.getLatLng()
-                  handlePick(ll.lat, ll.lng)
-                },
-              }}
-            />
+    <div className={cn("space-y-2", className)}>
+      <div
+        className={cn(
+          "overflow-hidden rounded-2xl bg-muted/20 shadow-md ring-1 ring-border/50",
+          hideMapAttribution && "map-picker-clean"
+        )}
+      >
+        <div className={cn("relative z-0", mapClassNameProp ?? MAP_PICKER_MAP_CLASS)}>
+          {showSearch && !readOnly ? (
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-20 p-2">
+              <div className="pointer-events-auto">
+                <MapSearchBar
+                  debounceMs={500}
+                  placeholder={searchPlaceholder}
+                  resolvedValue={searchValue}
+                  onSelect={handleSearchSelect}
+                />
+              </div>
+            </div>
           ) : null}
-        </MapContainer>
+          <MapContainer
+            center={initialCenter}
+            zoom={initialZoom}
+            className={cn(
+              "absolute inset-0 h-full w-full touch-manipulation",
+              hideMapAttribution && "map-embed-preview"
+            )}
+            scrollWheelZoom
+          >
+            <ResizeWhenActive active={mapActive} />
+            <SetViewWhenNoPin lat={lat} lng={lng} />
+            <FlyToPin lat={lat} lng={lng} />
+            <TileLayer
+              attribution={hideMapAttribution ? "" : raster.attribution}
+              url={raster.url}
+            />
+            {!readOnly ? <MapEvents onPick={handlePick} /> : null}
+            {position ? (
+              <Marker
+                position={position}
+                draggable={!readOnly}
+                eventHandlers={
+                  readOnly
+                    ? undefined
+                    : {
+                        dragend: (e) => {
+                          const ll = e.target.getLatLng()
+                          handlePick(ll.lat, ll.lng)
+                        },
+                      }
+                }
+              />
+            ) : null}
+          </MapContainer>
+          {mapActive && !hasPin && !readOnly ? <MapPickerEmptyHint /> : null}
+        </div>
+        {showLocateControl && !readOnly ? (
+          <div className="flex flex-wrap gap-2 border-t border-border/40 px-3 py-2">
+            <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={handleMyLocation}>
+              <Navigation className="size-3.5 shrink-0" />
+              {t("purchase.mapUseMyLocation", "موقعي الحالي")}
+            </Button>
+          </div>
+        ) : null}
+        {showInlineHint && hintInFooter ? (
+          <div className="border-t border-border/40 bg-muted/30 px-3 py-2.5 text-start sm:px-4">
+            <p className="text-xs leading-relaxed text-muted-foreground">{hintText}</p>
+          </div>
+        ) : null}
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={handleMyLocation}>
-          <Navigation className="size-3.5 shrink-0" />
-          {t("purchase.mapUseMyLocation", "موقعي الحالي")}
-        </Button>
-        <p className="text-[11px] text-muted-foreground">
-          {t("purchase.mapHint", "انقر على الخريطة أو اسحب الدبوس لتحديد موقع المعاينة")}
-        </p>
-      </div>
+      {showInlineHint && !hintInFooter ? (
+        <p className="text-xs leading-relaxed text-muted-foreground">{hintText}</p>
+      ) : null}
       {geoError ? <p className="text-xs text-destructive">{geoError}</p> : null}
     </div>
   )

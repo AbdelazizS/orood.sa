@@ -10,6 +10,11 @@ class ListingIndexRequest extends FeedRequest
             'type' => 'nullable|in:offer,request',
             'sort' => 'nullable|in:latest,most-sold,cheapest,most-viewed',
             'per_page' => 'nullable|integer|min:1|max:50',
+            'purpose' => 'nullable|in:sale,rent',
+            'property_type' => 'nullable|in:apartment,villa,land,building,floor,shop,farm',
+            'min_area' => 'nullable|numeric|min:0',
+            'max_area' => 'nullable|numeric|min:0',
+            'bedrooms_min' => 'nullable|integer|min:0|max:50',
         ]);
     }
 

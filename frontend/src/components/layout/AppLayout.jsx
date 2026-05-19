@@ -1,8 +1,8 @@
 /** Shared max-width for header, content, cards — uniform layout */
 export function AppLayout({ children }) {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto flex w-full max-w-7xl flex-col">
+    <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
+      <div className="mx-auto flex w-full max-w-7xl flex-col overflow-x-hidden">
         {children}
       </div>
     </div>

@@ -10,6 +10,9 @@
     "english": "English",
     "loading": "جاري التحميل...",
     "error": "حدث خطأ",
+    "saved": "تم الحفظ",
+    "cancel": "إلغاء",
+    "currencySar": "ر.س",
     "all": "الكل",
     "login": "تسجيل الدخول",
     "register": "إنشاء حساب",
@@ -19,6 +22,9 @@
     "errorGeneric": "حدث خطأ غير متوقع.",
     "reload": "إعادة تحميل الصفحة",
     "cancel": "إلغاء",
+    "yes": "نعم",
+    "no": "لا",
+    "listSeparator": "، ",
     "save": "حفظ",
     "optional": "اختياري",
     "noResults": "لا توجد نتائج",
@@ -37,6 +43,233 @@
     "edit": "تعديل",
     "delete": "حذف"
   },
+  "companies": {
+    "backToList": "العودة إلى قائمة الشركات",
+    "backHome": "العودة إلى الرئيسية"
+  },
+  "map": {
+    "title": "مواقع الشركات",
+    "subtitle": "استعرض الشركات الموثقة التي نشرت إحداثياتها على الخريطة.",
+    "noCoordinates": "لا توجد شركات بإحداثيات خريطة بعد.",
+    "openInMaps": "فتح في الخرائط",
+    "openInGoogleMaps": "فتح في Google Maps",
+    "directions": "الاتجاهات",
+    "propertyLocationTitle": "موقع العقار",
+    "expandMap": "خريطة أكبر",
+    "previewLoading": "جاري تحميل الخريطة…"
+  },
+  "listingState": {
+    "blockingBadge": "يتطلب إجراء",
+    "status": {
+      "awaiting_payment_setup": "بانتظار التفعيل",
+      "pending_moderation": "قيد المراجعة",
+      "moderation_rejected": "مرفوض",
+      "payout_profile_pending_review": "الدفع قيد المراجعة",
+      "pending_publish": "جاهز للنشر"
+    }
+  },
+  "listingActions": {
+    "setupPayments": "إعداد المدفوعات",
+    "activateWithWallet": "حفظ وتفعيل (محفظة)",
+    "learnMore": "معرفة المزيد",
+    "editListing": "تعديل الإعلان",
+    "viewListing": "عرض الإعلان",
+    "viewRejection": "عرض السبب",
+    "viewListings": "إعلاناتي",
+    "showListing": "إظهار الإعلان",
+    "renewListing": "تحديث الإعلان",
+    "cancelListing": "إلغاء الإعلان"
+  },
+  "finance": {
+    "paymentSetupTitle": "إعداد استلام المدفوعات",
+    "paymentSetupIntro": "محفظة المنصة مفعّلة دائماً. اضغط حفظ لتفعيل إعلاناتك. التحويل البنكي والدفع عند الاستلام إضافات اختيارية.",
+    "completePayoutSetup": "يرجى استكمال إعدادات استلام المدفوعات لتفعيل إعلاناتك واستقبال الطلبات.",
+    "walletOnlySaveHint": "محفظة المنصة كافية. اضغط حفظ أدناه لتفعيل إعلاناتك — لا تحتاج حساباً بنكياً ولا الدفع عند الاستلام.",
+    "directBankPendingOrUseWallet": "بياناتك البنكية قيد مراجعة الإدارة. يمكنك الانتظار، أو إخفاء قسم البنك والضغط على حفظ لاستخدام المحفظة فقط.",
+    "payoutProfileRejectedHint": "تم رفض بياناتك البنكية. صحّحها في قسم البنك الاختياري، أو أخفِ القسم واضغط حفظ للمتابعة بالمحفظة فقط.",
+    "walletOnlyEnough": "لا يلزم حساب بنكي",
+    "saveToActivate": "حفظ وتفعيل الإعلانات",
+    "payoutActive": "إعداد استلام المدفوعات مكتمل. يمكن نشر إعلاناتك.",
+    "optionalSection": "اختياري",
+    "addBankOptional": "إضافة حساب بنكي (اختياري)",
+    "hideBankSection": "إخفاء نموذج البنك",
+    "bankSkippedUseWallet": "لم تُدخل بيانات البنك — تم الحفظ بمحفظة المنصة.",
+    "directBankFieldsRequired": "أكمل حقول البنك أو أخفِ قسم البنك للحفظ بالمحفظة فقط.",
+    "ibanPlaceholder": "SA03 8000 0000 6080 1016 7519",
+    "ibanExampleFormatted": "SA03 8000 0000 6080 1016 7519",
+    "ibanHint": "الصيغة: SA + 22 رقمًا (24 حرفًا). مثال: {{example}}",
+    "ibanExampleOnly": "مثال: {{example}}",
+    "walletChargeReceiptFormats": "JPG أو PNG أو PDF — حتى 10 ميجابايت",
+    "ibanInvalid": "رقم الآيبان غير صحيح. الصيغة: SA متبوعاً بـ 22 رقمًا. مثال: {{example}}",
+    "payoutSaved": "تم حفظ إعدادات استلام المدفوعات.",
+    "fileUploaded": "تم رفع الملف",
+    "fileAttached": "ملف مرفق",
+    "uploadNoUrl": "لم يُرجع الخادم رابط الملف. حاول مرة أخرى.",
+    "walletSectionTitle": "محفظة المنصة",
+    "walletSectionDesc": "استلم المبالغ في محفظتك على عروض بعد تأكيد التسليم. هذه الطريقة مفعّلة دائماً.",
+    "walletAlwaysOn": "مفعّلة",
+    "directBankSectionTitle": "تحويل بنكي مباشر",
+    "directBankEnabled": "تفعيل استلام المدفوعات على حسابي البنكي",
+    "directBankEnabledDesc": "يظهر للمشتري خيار التحويل إلى حسابك بعد موافقة الإدارة على بياناتك.",
+    "directBankDisabledByAdmin": "التحويل البنكي المباشر غير متاح حالياً من إعدادات المنصة.",
+    "directBankPendingReview": "بياناتك البنكية قيد المراجعة من الإدارة.",
+    "codSectionTitle": "الدفع عند الاستلام",
+    "acceptCodLabel": "السماح بالدفع عند الاستلام على إعلاناتي",
+    "acceptCodDesc": "يظهر للمشترين خيار الدفع نقداً عند الاستلام على إعلاناتك الجديدة.",
+    "codDisabledByAdmin": "الدفع عند الاستلام غير مفعّل على المنصة. يمكن للإدارة تفعيله من إعدادات المدفوعات.",
+    "status": {
+      "escrow": {
+        "awaiting_payment": {
+          "buyer": "المبلغ محجوز لدى المنصة حتى تأكيد الاستلام",
+          "seller": "المبلغ محجوز لدى المنصة — يمكنك الشحن بعد الدفع"
+        }
+      },
+      "direct_transfer": {
+        "awaiting_payment": {
+          "buyer": "بانتظار تأكيد البائع لاستلام التحويل",
+          "seller": "راجع السند وأكّد استلام المبلغ"
+        },
+        "pending": {
+          "buyer": "بانتظار تأكيد البائع لاستلام التحويل",
+          "seller": "أكّد استلام المبلغ قبل الشحن"
+        }
+      },
+      "cod": {
+        "cod_requested": {
+          "buyer": "بانتظار قبول البائع للدفع عند الاستلام",
+          "seller": "اقبل الطلب لتأكيد الدفع عند الاستلام"
+        }
+      }
+    },
+    "requestType": {
+      "wallet_charge": "شحن محفظة",
+      "wallet_withdraw": "سحب",
+      "guarantee_deposit": "إيداع ضمان",
+      "guarantee_refund": "استرداد ضمان"
+    },
+    "requestStatus": {
+      "pending": "قيد الانتظار",
+      "approved": "موافق عليه",
+      "rejected": "مرفوض",
+      "under_review": "قيد المراجعة"
+    }
+  },
+  "validation": {
+    "required": "هذا الحقل مطلوب",
+    "generic": "تحقق من البيانات المدخلة",
+    "email": "أدخل بريداً إلكترونياً صالحاً",
+    "saudiPhoneHint": "رقم سعودي: 05xxxxxxxx",
+    "saudiPhoneInvalid": "رقم الجوال غير صالح"
+  },
+  "legal": {
+    "pageNotFound": "الصفحة غير متوفرة حالياً.",
+    "lastUpdated": "آخر تحديث",
+    "companyKicker": "منصة عروض Arooth",
+    "needHelp": "لم تجد إجابتك؟",
+    "needHelpHint": "تواصل مع فريق الدعم أو قدّم بلاغاً رسمياً.",
+    "runSeederHint": "تأكد من تشغيل: php artisan cms:refresh-content"
+  },
+  "seo": {
+    "routes": {
+      "home": {
+        "title": "عروض | سوق المستعمل والجديد وسعر الجملة في السعودية",
+        "description": "أكبر حراج سعودي للمستعمل والجديد والجملة. بيع واشتري عقارات، سيارات، أثاث، إلكترونيات. اكتشف عروض سوق الجملة بخصومات تصل إلى 35% - انشر إعلانك مجاناً"
+      },
+      "wholesale": {
+        "title": "سوق الجملة | عروض",
+        "description": "اكتشف المنتجات بأسعار الجملة وخصومات تصل حتى 35%"
+      },
+      "add": {
+        "title": "أضف عرض أو طلب | عروض",
+        "description": "انشر عرضك أو طلبك بسهولة ووصل إلى آلاف العملاء"
+      },
+      "login": {
+        "title": "تسجيل الدخول | عروض",
+        "description": "سجل دخولك للوصول إلى حسابك وإدارة عروضك وطلباتك"
+      },
+      "requests": {
+        "title": "طلبات الشراء",
+        "description": "تصفح طلبات الشراء على منصة عروض — ابحث عن ما تحتاجه أو انشر طلبك مجاناً"
+      },
+      "contact": { "title": "تواصل معنا", "description": "دعم واستفسارات عروض" },
+      "privacy": { "title": "سياسة الخصوصية", "description": "كيف نتعامل مع بياناتك" },
+      "terms": { "title": "الشروط والأحكام", "description": "شروط استخدام المنصة" },
+      "refund": { "title": "سياسة الاسترجاع", "description": "الاسترداد والنزاعات" },
+      "payment": { "title": "سياسة الدفع", "description": "الضمان والتحويل والدفع عند الاستلام" },
+      "listing": { "title": "سياسة الإعلانات", "description": "المسموح والممنوع" },
+      "safety": { "title": "الأمان", "description": "نصائح ضد الاحتيال" },
+      "fees": { "title": "العمولات", "description": "رسوم المنصة" },
+      "about": { "title": "عن عروض", "description": "من نحن" },
+      "help": { "title": "مركز المساعدة", "description": "أسئلة شائعة ودليل الاستخدام" }
+    }
+  },
+  "location": {
+    "confirmed": "الموقع المحدد",
+    "resolvingAddress": "جاري تحديد العنوان…",
+    "pinDropped": "تم تحديد الموقع على الخريطة",
+    "changeLocation": "تغيير",
+    "setLocationCta": "حدد الموقع",
+    "setLocationHint": "اضغط لتحديد الموقع على الخريطة"
+  },
+  "maps": {
+    "manfithFallbackHint": "محرك Mapbox (Manfith) يعمل عند ضبط رمز الوصول العام.",
+    "manfithTokenMissingHint": "المحرك مضبوط على Manfith/Mapbox لكن VITE_MANFITH_MAP_PUBLIC_TOKEN غير موجود — جارٍ استخدام OpenStreetMap.",
+    "mapboxTokenMissing": "أضف VITE_MANFITH_MAP_PUBLIC_TOKEN (أو VITE_MAPBOX_ACCESS_TOKEN) لتفعيل خرائط Mapbox.",
+    "mapboxLoadError": "تعذّر تحميل Mapbox GL. تحقق من الرمز وقيود النطاق.",
+    "mapboxFallbackOsm": "تعذّر تحميل Mapbox. تم التبديل إلى OpenStreetMap — حدّد الموقع على الخريطة.",
+    "mapboxAddressEnterHint": "اكتب العنوان واضغط Enter للبحث على الخريطة.",
+    "pickLocationOnMap": "انقر على الخريطة لتحديد موقعك",
+    "openInMaps": "فتح في الخرائط",
+    "openInGoogleMaps": "فتح في Google Maps",
+    "directions": "الاتجاهات",
+    "propertyLocationTitle": "موقع العقار",
+    "expandMap": "خريطة أكبر",
+    "propertyMapHint": "اسحب الخريطة للتحريك، وقرّب أو بعّد بإصبعين أو عجلة الفأرة",
+    "previewLoading": "جاري تحميل الخريطة…",
+    "trackingPlaceholder": "ستظهر متابعة التوصيل المباشرة هنا عندما تتوفر بيانات المسار.",
+    "searchPlaceholder": "ابحث عن عنوان…",
+    "searchLoading": "جاري البحث…",
+    "searchNoResults": "لم يُعثر على نتائج",
+    "searchError": "تعذّر البحث — تحقق من الاتصال وحاول مرة أخرى",
+    "confirmLocation": "تأكيد الموقع",
+    "confirmHint": "اسحب الدبوس أو انقر على الخريطة",
+    "locateMe": "موقعي",
+    "fullscreen": "ملء الشاشة",
+    "filterCity": "تصفية حسب المدينة…",
+    "noCompaniesInCity": "لا توجد شركات في هذه المدينة.",
+    "companyHqTitle": "موقع الشركة",
+    "viewOnMap": "عرض على الخريطة"
+  },
+  "mapsTest": {
+    "title": "اختبار Mapbox",
+    "subtitle": "صفحة تطوير فقط — محول Manfith (الرياض، دبوس واحد، RTL).",
+    "loadingConfig": "جاري تحميل إعدادات الخريطة من API…",
+    "mapAria": "خريطة اختبار Mapbox",
+    "zoomIn": "تكبير",
+    "zoomOut": "تصغير",
+    "reverseGeocode": "عنوان من الإحداثيات (عربي)",
+    "geocodeBusy": "جاري الجيوكود…",
+    "geocodeEmpty": "لم يُرجع عنوان.",
+    "geocodeFailed": "فشل الجيوكود.",
+    "successHint": "تم تحميل الخريطة — تحقق من Network لبلاط Mapbox واسحب الدبوس."
+  },
+  "trustShopConfidence": {
+    "sectionTitle": "تسوّق وأنت مطمئن",
+    "sectionSubtitle": "أربعة محاور لحماية المشتري والبائع في منصة عروض.",
+    "card1Title": "اشترِ وأنت مطمئن",
+    "card1Body": "بائعون موثّقون، ومطابقة للوصف، واسترداد عند اختلاف المنتج عن المعروض.",
+    "card2Title": "اشحن وأنت مطمئن",
+    "card2Body": "تغطية التلف أثناء النقل، ونوافذ تسليم واضحة داخل المدينة، وخيار المعاينة في موقعك قبل الدفع.",
+    "card3Title": "ادفع وأنت مطمئن",
+    "card3Body": "قنوات دفع آمنة، وتسوية عبر طرف ثالث حيث ينطبق ذلك، والدفع عند الاستلام عند توفره.",
+    "card4Title": "تواصل معنا وأنت مطمئن",
+    "card4Body": "دعم سريع إذا حدث خطأ — نساعدك على إتمام الصفقة بأمان."
+  },
+  "company": {
+    "listingsFromCompany": "إعلانات من هذه الشركة",
+    "noProducts": "لا توجد إعلانات بعد.",
+    "openMap": "فتح في خرائط Google"
+  },
   "breadcrumb": {
     "ariaLabel": "مسار التصفح"
   },
@@ -47,7 +280,7 @@
     "cheapest": "الأقل سعراً",
     "mostViewed": "الأكثر مشاهدة",
     "onlineNow": "متصل الآن",
-    "wholesale": "سعر الجملة",
+    "wholesale": "منتجات جديدة بسعر الجملة",
     "location": "الموقع",
     "searchRegionPlaceholder": "ابحث عن المنطقة أو المدينة...",
     "allCategories": "جميع الفئات",
@@ -55,6 +288,7 @@
     "allCities": "جميع المدن",
     "allSubcategories": "جميع التصنيفات الفرعية",
     "allFilters": "جميع الفلاتر",
+    "searchPlaceholder": "ابحث في العروض والطلبات والشركات...",
     "resetFilters": "إعادة تعيين الفلاتر",
     "showFilters": "الفلاتر",
     "priceRange": "نطاق السعر",
@@ -109,6 +343,7 @@
     "addListing": "إضافة إعلان",
     "addOfferAndRequest": "اضف عرض و طلب",
     "wholesaleMarket": "سوق الجملة",
+    "services": "خدمات",
     "profile": "الملف الشخصي",
     "profileMenu": "قائمة الملف الشخصي"
   },
@@ -130,6 +365,8 @@
     "views": "مشاهدة",
     "categoryNotAvailableInArea": "هذا القسم غير متوفر في منطقتك.",
     "empty": "لا توجد عروض أو طلبات بعد. كن أول من يضيف!",
+    "networkError": "تعذر الاتصال بالخادم. للتطوير المحلي شغّل Laravel واترك VITE_API_URL فارغاً ليمر الطلب عبر وكيل Vite.",
+    "timeoutError": "انتهت مهلة الطلب. تحقق من الشبكة أو من أن الخادم يعمل ثم أعد المحاولة.",
     "suggestions": "اقتراحات",
     "loadMore": "تحميل المزيد"
   },
@@ -139,6 +376,45 @@
   "footer": {
     "categories": "الفئات",
     "quickLinks": "روابط سريعة",
+    "compact": {
+      "sections": {
+        "categories": "أقسام الموقع",
+        "quick": "روابط سريعة",
+        "support": "خدمات العملاء",
+        "legal": "منصة عروض"
+      },
+      "categories": {
+        "realEstate": "عقارات",
+        "cars": "سيارات",
+        "furniture": "أثاث",
+        "electronics": "إلكترونيات"
+      },
+      "quick": {
+        "wholesale": "سوق الجملة",
+        "addListing": "أضف عرض",
+        "requests": "طلبات الشراء",
+        "myListings": "إعلاناتي"
+      },
+      "support": {
+        "helpCenter": "مركز المساعدة",
+        "customerService": "خدمات العملاء",
+        "reportIssue": "الإبلاغ عن مشكلة",
+        "contact": "تواصل معنا"
+      },
+      "legal": {
+        "about": "عن المنصة",
+        "terms": "الشروط والأحكام",
+        "privacy": "الخصوصية",
+        "refund": "سياسة الاسترجاع"
+      },
+      "mobileMenu": "القائمة الرئيسية",
+      "tagline": "Arooth · منصة عروض – سوق موثوق للعروض والطلبات وسوق الجملة",
+      "taglineShort": "سوق موثوق للعروض والطلبات وسوق الجملة",
+      "developedBy": "تم التطوير بواسطة",
+      "bottomHelp": "مركز المساعدة",
+      "bottomContact": "خدمات العملاء",
+      "bottomReport": "الإبلاغ عن مشكلة"
+    },
     "enterprise": {
       "platform": {
         "title": "منصة عروض",
@@ -215,7 +491,9 @@
       },
       "bottom": {
         "copyright": "© {{year}} منصة عروض. جميع الحقوق محفوظة.",
-        "country": "🇸🇦 السعودية"
+        "copyrightBody": "منصة عروض © {year} — جميع الحقوق محفوظة",
+        "country": "🇸🇦 السعودية",
+        "countryLabel": "المملكة العربية السعودية"
       }
     }
   },
@@ -323,6 +601,7 @@
     "termsLeft3": "المنصة غير مسؤولة في حال خالف النظام أو القوانين",
     "termsColumnsShort": "ملخص الشروط: الموافقة على الاستخدام، الرسائل الترويجية، ومسؤولية البيانات.",
     "registerAsCompany": "تسجيل كشركة",
+    "registerAsServiceProvider": "أريد تقديم خدمات على المنصة",
     "registerSubmit": "تسجيل حساب جديد",
     "loginLink": "تسجيل الدخول",
     "loginTitle": "تسجيل الدخول إلى حسابك",
@@ -337,6 +616,9 @@
     "companyName": "اسم الشركة",
     "companyNamePlaceholder": "أدخل اسم الشركة",
     "companyNameRequired": "اسم الشركة مطلوب",
+    "companyMainCategory": "التصنيف الرئيسي للنشاط",
+    "companyMainCategoryPlaceholder": "اختر التصنيف الرئيسي",
+    "companyMainCategoryRequired": "التصنيف الرئيسي مطلوب",
     "companyCity": "المدينة",
     "companyCityRequired": "المدينة مطلوبة",
     "selectRegion": "اختر المنطقة",
@@ -381,9 +663,14 @@
     "priceCurrency": "ريال سعودي",
     "priceIncludeTax": "شامل الضريبة",
     "priceTaxNote": "إن وجدت",
+    "optionsSectionTitle": "خيارات الإعلان",
     "freeShipping": "شحن المنتج مجاني",
     "freeReturn": "إرجاع مجاني في نفس اليوم",
-    "viewAtClient": "عرض المنتج في موقع العميل",
+    "freeReturnPrefix": "استرجاع المنتج مجاناً في نفس اليوم أو خلال",
+    "freeReturnSuffix": "يوماً",
+    "returnDaysLabel": "عدد أيام الاسترجاع",
+    "viewAtClient": "عرض عند المشتري في موقعه",
+    "viewAtClientHint": "للمشتريين فقط: يمكنهم طلب معاينة المنتج في موقعهم (ليس «عميل» في صفحة الإعلان).",
     "showCommentsPublic": "إظهار التعليقات للعامة",
     "contactPhone": "التواصل عبر مكالمة",
     "contactMessages": "التواصل عبر الرسائل",
@@ -424,6 +711,9 @@
     "biddingPublicExample": "مثال: أعلى عرض 200 ريال",
     "biddingHiddenLabel": "عرض مخفي — الناشر فقط يرى العروض",
     "biddingHiddenExample": "الآخرون يرون: السوم نشط",
+    "propertyLocationLabel": "موقع العقار على الخريطة",
+    "propertyLocationHint": "ابحث عن العنوان أو انقر على الخريطة واسحب الدبوس لتعديل الموقع",
+    "propertyLocationSearchPlaceholder": "ابحث عن حي، شارع، أو معلم…",
     "errors": {
       "categoryRequired": "اختر القسم",
       "subcategoryRequired": "يرجى اختيار تصنيف فرعي لهذا القسم",
@@ -432,6 +722,7 @@
       "locationRequired": "اختر الموقع",
       "titleRequired": "العنوان مطلوب",
       "descriptionRequired": "الوصف مطلوب",
+      "propertyLocationRequired": "حدد موقع العقار على الخريطة (ابحث أو انقر على الخريطة)",
       "imagesRequired": "مطلوب صورة واحدة على الأقل للعروض",
       "imageUrlInvalid": "صيغة رابط الصورة غير صحيحة. يرجى رفع الصور من جديد.",
       "generic": "حدث خطأ. راجع الحقول المميزة أدناه."
@@ -503,13 +794,45 @@
     "toggleMenu": "فتح/إغلاق القائمة",
     "overview": "نظرة عامة",
     "welcome": "مرحباً",
+    "nav": {
+      "sectionWorkspace": "حسابك",
+      "orderCenter": "متابعة الطلبات",
+      "wallet": "المحفظة",
+      "inbox": "الرسائل",
+      "account": "بيانات الحساب",
+      "listings": "إعلاناتي",
+      "help": "المساعدة",
+      "ordersSectionCurrent": "الطلبات الحالية",
+      "ordersSectionAuctions": "السوم والمفاوضات",
+      "ordersSectionViewings": "طلبات المعاينة",
+      "walletTabBalance": "الرصيد",
+      "walletTabGuarantee": "الضمان المالي",
+      "walletTabActivity": "المعاملات والمدفوعات",
+      "listingsTabRetail": "إعلانات التجزئة",
+      "listingsTabWholesale": "الجملة",
+      "inboxTabConversations": "المحادثات",
+      "inboxTabNotifications": "الإشعارات",
+      "accountTabProfile": "المعلومات الشخصية",
+      "accountTabVerification": "التحقق والتوثيق",
+      "accountTabReports": "التقارير والإحصائيات",
+      "accountTabSettings": "إعدادات الحساب",
+      "accountTabViews": "زيارات الملف",
+      "accountTabReviews": "التقييمات"
+    },
+    "orderCenterSubtitle": "تتبّع مشترياتك والسوم وطلبات المعاينة في مكان واحد.",
+    "walletHubSubtitle": "الرصيد والضمان وحركة الأموال في مكان واحد.",
+    "walletActivityIntro": "الشحن، السحب، طلبات الإيداع، ونشاط المدفوعات.",
+    "inboxSubtitle": "المحادثات والتنبيهات في صندوق واحد.",
+    "accountHubSubtitle": "الملف، التوثيق، الزيارات، التقارير، والإعدادات.",
+    "accountSettingsHubDesc": "إدارة ظهور ملفك العام في السوق.",
+    "accountOpenPublicProfile": "فتح الملف العام",
     "viewAll": "عرض الكل",
     "open": "فتح",
     "addListing": "إضافة إعلان",
     "addOffer": "إضافة عرض/طلب",
     "listings": "إعلاناتي",
     "listingHide": "إخفاء",
-    "listingShow": "إظهار",
+    "listingShow": "إعادة النشر",
     "listingStatus": {
       "ACTIVE": "نشط",
       "SOLD": "مباع",
@@ -529,6 +852,10 @@
       "tabActive": "نشط",
       "tabSold": "مباع",
       "tabHidden": "مخفي",
+      "tabCancelled": "ملغي",
+      "tabNeedsAction": "يحتاج إجراء",
+      "emptyNeedsActionOnPage": "لا توجد إعلانات تحتاج إجراء في هذه الصفحة.",
+      "needsActionAlert": "لديك {{count}} إعلاناً يحتاج إجراءاً لتفعيله أو إكماله.",
       "sortPlaceholder": "الترتيب",
       "sortNewest": "الأحدث",
       "sortOldest": "الأقدم",
@@ -770,7 +1097,18 @@
     "admin": "الإدارة",
     "chargeSuccess": "تم شحن الرصيد بنجاح",
     "chargePendingApproval": "تم إرسال طلب الشحن وبانتظار موافقة الإدارة",
+    "walletChargeUnavailable": "شحن المحفظة غير متاح حالياً من التطبيق.",
+    "walletWithdrawUnavailable": "السحب غير متاح حالياً من التطبيق.",
+    "contactAdminForWallet": "تواصل مع الدعم أو الإدارة لإتمام العملية يدوياً.",
+    "walletContactSupport": "تواصل مع الدعم",
     "chargeMinError": "الحد الأدنى للشحن 10 ر.س",
+    "chargeMinErrorDynamic": "الحد الأدنى {{min}} ر.س",
+    "chargeMaxError": "الحد الأقصى {{max}} ر.س",
+    "withdrawDialogDescDynamic": "يُخصم من رصيدك القابل للسحب. الحد الأدنى {{min}} ر.س.",
+    "withdrawDialogDescBank": "يُخصم من رصيدك القابل للسحب عبر التحويل البنكي. الحد الأدنى {{min}} ر.س.",
+    "submitWithdraw": "إرسال طلب السحب",
+    "chargeDescDynamic": "أدخل بيانات الشحن. الحد الأدنى {{min}} ر.س",
+    "pendingChargeBanner": "لديك طلب شحن قيد المراجعة. سيُضاف المبلغ لرصيدك بعد موافقة الإدارة.",
     "chargeDesc": "أدخل المبلغ الذي تريد إضافته إلى رصيدك. الحد الأدنى 10 ر.س",
     "chargeRequests": "طلبات الشحن",
     "chargeProofRequired": "يرجى إدخال اسم بنك المُحوِّل ورقم مرجع الحوالة",
@@ -846,7 +1184,9 @@
       "pending": "معلق",
       "cod_requested": "دفع عند الاستلام — بانتظار البائع",
       "paid": "مدفوع",
-      "awaiting_payment": "المبلغ محجوز لدى المنصة",
+      "awaiting_payment": "بانتظار إتمام الدفع",
+      "awaiting_payment_escrow": "المبلغ محجوز لدى المنصة",
+      "awaiting_payment_direct_transfer": "بانتظار تأكيد البائع",
       "shipped": "تم الشحن",
       "delivered": "تم التوصيل",
       "completed": "مكتمل",
@@ -856,10 +1196,34 @@
     },
     "paymentMethodLabel": {
       "escrow": "دفع عبر المنصة (ضمان)",
-      "cod": "الدفع عند الاستلام"
+      "cod": "الدفع عند الاستلام",
+      "direct_transfer": "تحويل بنكي مباشر"
     }
   },
   "admin": {
+    "navOverview": "نظرة عامة",
+    "navCommerce": "التجارة",
+    "navFinance": "المالية",
+    "navUsersTrust": "المستخدمون والثقة",
+    "navContent": "المحتوى",
+    "navAdvanced": "متقدم",
+    "listingSchemaTitle": "مخطط الإعلان",
+    "listingSchemaEmpty": "لا يوجد مخطط إعلان لهذا القسم بعد.",
+    "createListingSchema": "إنشاء مخطط إعلان",
+    "createDraftSchema": "مسودة جديدة للتعديل",
+    "publishSchema": "نشر المخطط",
+    "publishedSchemaHint": "المخطط المنشور يعمل على /add.",
+    "schemaCreated": "تم إنشاء المخطط",
+    "schemaPublished": "تم نشر المخطط",
+    "addSection": "إضافة قسم",
+    "addField": "إضافة حقل",
+    "addFeature": "إضافة ميزة",
+    "featureOptions": "خيارات المميزات",
+    "locationPolicy": "سياسة الموقع",
+    "locationExactMap": "خريطة دقيقة",
+    "locationCityOnly": "مدينة فقط",
+    "locationRegionOnly": "منطقة فقط",
+    "locationHidden": "مخفي",
     "products": "العروض",
     "offersAndRequests": "العروض والطلبات",
     "editListing": "تعديل الإعلان",
@@ -876,8 +1240,126 @@
     "regions": "المناطق والمدن",
     "roles": "الأدوار والصلاحيات",
     "rolesDescription": "إدارة صلاحيات الأدوار",
+    "staff": {
+      "create": "إنشاء مشرف",
+      "createTitle": "مشرف منصة جديد",
+      "created": "تم إنشاء المشرف",
+      "emailHint": "البريد يجب أن ينتهي بـ @arooth.com فقط"
+    },
+    "assistants": {
+      "nav": "المساعدون",
+      "title": "المساعدون",
+      "subtitle": "إنشاء فريق الدعم، تعيين الأدوار، وتحديد أنواع الأعضاء الذين يخدمهم كل مساعد.",
+      "listTitle": "أعضاء الفريق",
+      "create": "إنشاء مساعد",
+      "createTitle": "مساعد جديد",
+      "editTitle": "تعديل مساعد",
+      "fullName": "الاسم الكامل",
+      "jobRole": "الدور الوظيفي",
+      "assignedTypes": "أنواع المستخدمين المعيّنة",
+      "status": "الحالة",
+      "active": "نشط",
+      "inactive": "موقوف",
+      "createdAt": "تاريخ الإنشاء",
+      "suspend": "إيقاف",
+      "activate": "تفعيل",
+      "resetPassword": "إعادة تعيين كلمة المرور",
+      "deleteConfirm": "حذف هذا المساعد نهائياً؟",
+      "passwordOptional": "اتركه فارغاً للتوليد التلقائي",
+      "passwordHint": "انسخ كلمة المرور المؤقتة وشاركها مع المساعد بشكل آمن.",
+      "created": "تم إنشاء المساعد بنجاح",
+      "createdWithPassword": "تم الإنشاء — انسخ كلمة المرور المؤقتة أدناه",
+      "updated": "تم تحديث المساعد",
+      "deleted": "تم حذف المساعد",
+      "statusUpdated": "تم تحديث الحالة",
+      "passwordReset": "كلمة المرور الجديدة: {{password}}",
+      "noAccess": "ليس لديك صلاحية إدارة المساعدين.",
+      "roles": {
+        "support_agent": "وكيل دعم",
+        "order_manager": "مدير طلبات",
+        "content_moderator": "مشرف محتوى",
+        "financial_officer": "مسؤول مالي",
+        "team_lead": "قائد فريق",
+        "viewer_only": "عرض فقط"
+      },
+      "userTypes": {
+        "individual": "أفراد",
+        "company": "شركات",
+        "marketer": "مسوقون",
+        "admin": "طاقم المنصة"
+      }
+    },
     "securityTitle": "إعدادات الأمان",
     "securityDescription": "التحكم بسياسة كلمة المرور للتسجيل وتغيير كلمة المرور.",
+    "seo": {
+      "title": "تحسين محركات البحث",
+      "subtitle": "إدارة العناوين والوصف، خريطة الموقع، والبيانات المنظمة.",
+      "saved": "تم الحفظ",
+      "synced": "تمت مزامنة {{count}} قسم",
+      "syncCategories": "مزامنة أقسام الموقع",
+      "tabs": {
+        "dashboard": "لوحة التحكم",
+        "global": "عام",
+        "pages": "الصفحات",
+        "bulk": "تحرير جماعي",
+        "structured": "بيانات منظمة",
+        "sitemap": "خريطة الموقع",
+        "robots": "robots.txt",
+        "social": "معاينة اجتماعية",
+        "reports": "تقارير"
+      },
+      "stats": {
+        "pages": "صفحات ميتا",
+        "active": "{{count}} نشطة",
+        "audit": "مشاكل التدقيق",
+        "sitemap": "خريطة الموقع",
+        "lastRun": "آخر توليد",
+        "urlCount": "عدد الروابط"
+      },
+      "gsc": {
+        "title": "قائمة ما بعد النشر",
+        "step1": "أرسل https://www.arooth.com/sitemap_index.xml في Google Search Console",
+        "step2": "اطلب الفهرسة لـ / و /wholesale وأهم أقسام الموقع",
+        "step3": "انتظر 2–4 أسابيع لتحديث الروابط الفرعية (غير مضمون)"
+      },
+      "global": {
+        "siteName": "اسم الموقع",
+        "description": "الوصف الافتراضي",
+        "keywords": "كلمات مفتاحية",
+        "ogImage": "صورة OG الافتراضية"
+      },
+      "pages": {
+        "title": "عنوان SEO",
+        "description": "وصف الميتا"
+      },
+      "bulk": {
+        "hint": "الصق صفوف CSV أو عدّل الجدول ثم احفظ.",
+        "export": "تصدير CSV",
+        "import": "استيراد CSV",
+        "saved": "تم حفظ {{count}} صف"
+      },
+      "structured": {
+        "toggles": "أنواع Schema",
+        "organization": "المنظمة"
+      },
+      "sitemap": {
+        "flags": "تضمين في الخريطة",
+        "generate": "توليد الآن",
+        "generated": "تم التوليد — {{count}} رابط"
+      },
+      "robots": {
+        "hint": "محتوى robots.txt — يُكتب عند الحفظ."
+      },
+      "social": {
+        "url": "مسار الصفحة",
+        "preview": "معاينة البطاقة"
+      },
+      "reports": {
+        "run": "تشغيل التدقيق",
+        "empty": "لا توجد مشاكل معلقة",
+        "issue": "المشكلة"
+      }
+    },
     "settingsTitle": "إعدادات المنصة",
     "settingsDescription": "إدارة إعدادات الأمان والحساب والمصادقة والمحتوى من مكان واحد.",
     "passwordPolicyTitle": "سياسة كلمة المرور",
@@ -900,6 +1382,240 @@
     "defaultBidsVisibleHint": "الإعلانات الجديدة تُظهر السومات بشكل افتراضي.",
     "defaultCommentsVisible": "إظهار التعليقات افتراضياً",
     "defaultCommentsVisibleHint": "الإعلانات الجديدة تسمح بالتعليقات بشكل افتراضي.",
+    "wholesaleMarketPageTitle": "صفحة سوق الجملة",
+    "wholesaleMarketPageHint": "تحكم في أقسام صفحة /wholesale. النصوص المملوءة تستبدل الترجمة الافتراضية لهذه اللغة.",
+    "wholesaleShowHero": "كتلة المقدمة (Hero)",
+    "wholesaleShowQuickFilters": "مرشحات حالة المجموعة",
+    "wholesaleShowHow": "كيف تعمل",
+    "wholesaleShowTrust": "الثقة والأمان",
+    "wholesalePageAdvancedCopy": "نصوص متقدمة (اختياري)",
+    "wholesalePageCopyPlaceholder": "اتركه فارغاً لاستخدام الترجمة الافتراضية",
+    "wholesalePageTab": "صفحة الجملة",
+    "settingsPaymentsTab": "المدفوعات",
+    "settingsContactTab": "اتصل بنا",
+    "branding": {
+      "tab": "الهوية البصرية",
+      "title": "الهوية البصرية",
+      "description": "إدارة الشعارات وأحجام المواضع ونص حقوق النشر في التذييل.",
+      "guidance": "استخدم SVG أو PNG بدقة مضاعفة للشعار؛ وضع أيقونة منفصلة للفافيكون وشاشة التحميل (512×512 مع هامش ~12%).",
+      "assets": {
+        "logoLight": "الشعار (فاتح)",
+        "logoDark": "الشعار (داكن)",
+        "logoFooter": "شعار التذييل",
+        "preloaderMark": "أيقونة التحميل",
+        "favicon": "أيقونة الموقع",
+        "appIcon": "أيقونة التطبيق"
+      },
+      "placementsTitle": "أحجام المواضع",
+      "placements": {
+        "navbar": "الشريط العلوي",
+        "sidebar": "القائمة الجانبية",
+        "footer": "التذييل",
+        "preloader": "شاشة التحميل",
+        "auth": "رأس صفحة الدخول",
+        "mobile_nav": "القائمة على الجوال"
+      },
+      "placement": {
+        "width": "العرض (بكسل)",
+        "widthDesktop": "العرض على سطح المكتب (بكسل)",
+        "height": "الارتفاع (بكسل)",
+        "maxHeight": "أقصى ارتفاع (بكسل)",
+        "padding": "الحشو (بكسل)",
+        "objectFit": "ملاءمة الصورة"
+      },
+      "legalTitle": "النص القانوني",
+      "legalHint": "استخدم {year} للسنة الحالية.",
+      "copyrightAr": "حقوق النشر (عربي)",
+      "copyrightEn": "حقوق النشر (إنجليزي)",
+      "previewTitle": "معاينة مباشرة",
+      "previewNavbar": "الشريط العلوي",
+      "previewFooter": "التذييل",
+      "previewPreloader": "شاشة التحميل",
+      "previewAuth": "رأس الدخول",
+      "lightMode": "فاتح",
+      "darkMode": "داكن",
+      "resetDefaults": "إعادة الأحجام والنص القانوني للافتراضي",
+      "footerTitle": "التذييل وحقوق المطور",
+      "footerHint": "نص التعريف تحت الشعار وحقوق المطور في الشريط السفلي.",
+      "showDeveloperCredit": "إظهار حقوق المطور",
+      "developerNameAr": "اسم المطور (عربي)",
+      "developerNameEn": "اسم المطور (إنجليزي)",
+      "developerLinkedIn": "رابط LinkedIn",
+      "footerTaglineAr": "نص التعريف في التذييل (عربي)",
+      "footerTaglineEn": "نص التعريف في التذييل (إنجليزي)"
+    },
+    "settingsPaymentsQueues": "طوابير الموافقة",
+    "settingsPaymentsQueuesDesc": "عمليات مالية قيد الانتظار",
+    "settingsPaymentsMethods": "طرق الدفع",
+    "settingsPaymentsMethodsBankHint": "تفعيل أو إيقاف طرق الدفع على المنصة. تفاصيل الحساب البنكي لشحن المحفظة تُعدّ في مركز العمليات المالية.",
+    "settingsPaymentsBankOpsNote": "حساب المنصة البنكي لشحن المحفظة:",
+    "settingsPaymentsBankOpsLink": "مركز العمليات المالية ← شحن الرصيد",
+    "settingsPaymentsBank": "تعليمات التحويل البنكي",
+    "financeMethodInactiveBanner": "هذه الطريقة غير مفعّلة — لا يستطيع البائعون استخدامها. عالج الطلبات يدوياً من مركز المالية أو طلبات الشحن.",
+    "settingsPaymentsCod": "الدفع عند الاستلام (عام)",
+    "financeHub": "مركز المالية",
+    "financeOpsTitle": "العمليات المالية",
+    "financeOpsDesc": "إدارة شحن المحفظة والسحب ومحتوى المساعدة وسياسات تعديل الطلبات.",
+    "financeOpsRechargeMethods": "الشحن",
+    "financeOpsWithdrawMethods": "السحب",
+    "financeOpsHelp": "مركز المساعدة",
+    "financeOpsOrderEdit": "تعديل الطلبات",
+    "financeOpsQueues": "الطوابير",
+    "financeOpsPayoutForm": "نموذج الحساب البنكي",
+    "financeOpsOrderPaymentForm": "نموذج إثبات التحويل",
+    "orderPaymentFormHint": "هذه الحقول تظهر للمشتري عند اختيار التحويل البنكي المباشر (رقم التحويل، ملف السند، إلخ).",
+    "payoutFormHint": "هذه الحقول تظهر للبائع عند تفعيل التحويل البنكي المباشر من الحساب → المدفوعات. الطلبات تصل إلى طابور الموافقة.",
+    "reviewPayoutProfile": "مراجعة الحساب البنكي",
+    "managePayoutFormFields": "إدارة حقول النموذج",
+    "payoutProfileNoValues": "لم يُرسل البائع قيم الحقول.",
+    "fieldRequired": "إلزامي",
+    "payoutProfilesQueueTitle": "حسابات بنكية للبائعين (تحويل مباشر)",
+    "rejectPayoutProfile": "رفض الحساب البنكي",
+    "financeOpsNoMethods": "لا توجد طرق دفع مهيأة لهذا السياق.",
+    "bankInstructions": "تعليمات البنك",
+    "bankInstructionsDesc": "تُعرض للمستخدم قبل إرسال طلب الشحن.",
+    "instructionSteps": "خطوة واحدة في كل سطر",
+    "helpSupportSettings": "إعدادات الدعم",
+    "supportEmail": "بريد الدعم",
+    "hoursAr": "ساعات العمل (عربي)",
+    "helpCmsNote": "الأسئلة الشائعة وكتل المساعدة تُدار عبر واجهة المساعدة؛ حدّث البريد والساعات هنا.",
+    "orderEditPolicy": "سياسة تعديل الطلب",
+    "orderEditPolicyTitle": "سياسة تعديل الطلب",
+    "orderEditPolicyDesc": "تحكم بما يمكن للمشتري والبائع تغييره بعد الدفع.",
+    "maxTextEdits": "حد تعديلات النص",
+    "editWindowHours": "نافذة التعديل (ساعات)",
+    "maxLocationEdits": "حد تعديلات موقع التسليم",
+    "locationEditWindowHours": "نافذة تعديل الموقع (ساعات)",
+    "locationEditPolicyTitle": "تعديل موقع التسليم",
+    "locationEditActive": "السماح للمشتري بتعديل موقع التسليم",
+    "priceEditRequiresApproval": "تعديل السعر يتطلب موافقة",
+    "imageEditRequiresApproval": "تعديل الصور يتطلب موافقة",
+    "financeQueuesDesc": "الموافقة على الطلبات المالية وإيصالات التحويل (مراجعة امتثال — لا تحجب تأكيد المشتري).",
+    "financialRequests": "طلبات مالية",
+    "orderTransfers": "إيصالات تحويل",
+    "financeApproveChargeTitle": "الموافقة على شحن المحفظة",
+    "financeApproveWithdrawTitle": "الموافقة على السحب",
+    "financeApproveChargeDesc": "تأكد من استلام التحويل إلى حساب المنصة قبل إضافة الرصيد لمحفظة العضو.",
+    "financeApproveWithdrawDesc": "تأكد من إرسال المبلغ إلى حساب العضو البنكي قبل إتمام الطلب.",
+    "financeApprovalNote": "كيف تحققت من الطلب؟",
+    "financeApprovalNoteRequired": "صف كيف تحققت من هذا الطلب.",
+    "financeApprovalNoteChargePlaceholder": "مثال: مرجع حوالة 12345 تم التحقق منه في حساب المنصة",
+    "financeApprovalNoteWithdrawPlaceholder": "مثال: تم التحويل إلى الآيبان … بتاريخ …",
+    "reviewAndApprove": "مراجعة وموافقة",
+    "chargeApproveConfirmCheckbox": "اطّلعت على الإيصال والمبلغ واسم البنك ومرجع الحوالة — كلها صحيحة ومطابقة.",
+    "chargeApproveConfirmRequired": "يجب تأكيد أنك راجعت الإيصال وبيانات التحويل.",
+    "openReceiptFullScreen": "فتح الإيصال في تبويب جديد",
+    "chargeNoReceiptWarning": "لم يُرفق إيصال.",
+    "viewReceipt": "عرض الإيصال",
+    "paymentMethodLabel": "طريقة الدفع",
+    "pendingChargesTitle": "طلبات شحن معلقة",
+    "receiptPreview": "معاينة الإيصال",
+    "receiptPdfHint": "ملف PDF",
+    "requestStatus": {
+      "pending": "قيد الانتظار",
+      "approved": "تمت الموافقة",
+      "rejected": "مرفوض"
+    },
+    "rejectRequest": "رفض",
+    "approved": "تمت الموافقة",
+    "rejected": "تم الرفض",
+    "formFields": "حقول النموذج",
+    "labelEn": "التسمية (إنجليزي)",
+    "financeApprovalQueues": "طوابير الموافقة",
+    "noPendingItems": "لا توجد عناصر قيد الانتظار",
+    "approve": "موافقة",
+    "reject": "رفض",
+    "mailSettingsTab": "البريد",
+    "mailSettingsTitle": "إعدادات البريد",
+    "mailSettingsDesc": "SMTP والمرسل — للإنتاج عدّل أيضاً ملف .env على الخادم.",
+    "mailFromAddress": "بريد المرسل",
+    "mailFromName": "اسم المرسل",
+    "mailHost": "خادم SMTP",
+    "mailPort": "المنفذ",
+    "mailEncryption": "التشفير",
+    "mailUsername": "اسم المستخدم",
+    "mailPassword": "كلمة المرور",
+    "mailTestTo": "إرسال اختبار إلى",
+    "mailSendTest": "إرسال",
+    "mailTestSent": "تم إرسال رسالة الاختبار",
+    "financialRequestsPending": "طلبات مالية",
+    "orderTransfersPending": "إيصالات تحويل",
+    "chargeRequests": "طلبات الشحن",
+    "codGlobalEnabled": "تفعيل الدفع عند الاستلام على المنصة",
+    "codBuyerMustAccept": "يجب على المشتري قبول الشروط عند الدفع",
+    "codSellerCanToggle": "يمكن للبائعين تفعيل الدفع عند الاستلام",
+    "codSellerCanToggleDesc": "عند الإيقاف، لن يظهر خيار الدفع عند الاستلام في صفحة إعداد المدفوعات للبائع.",
+    "bankAccountName": "اسم الحساب",
+    "bankName": "البنك",
+    "contactSettingsIntro": "إعداد صفحة التواصل العامة والإشعارات.",
+    "previewContactPage": "معاينة الصفحة",
+    "contactInquiries": "استفسارات التواصل",
+    "contactHero": "العنوان الرئيسي",
+    "contactHeroTitleAr": "العنوان (عربي)",
+    "contactHeroTitleEn": "العنوان (إنجليزي)",
+    "contactHeroSubtitleAr": "الوصف (عربي)",
+    "contactHeroSubtitleEn": "الوصف (إنجليزي)",
+    "contactChannels": "قنوات الدعم",
+    "contactChannelsDesc": "تظهر كبطاقات في صفحة التواصل",
+    "labelAr": "التسمية بالعربية",
+    "contactForm": "نموذج التواصل",
+    "contactFormEnabled": "تفعيل النموذج",
+    "notifyEmails": "بريد الإشعار (مفصولة بفاصلة)",
+    "announcementType": {
+      "info": "معلومة",
+      "warning": "تحذير",
+      "alert": "تنبيه"
+    },
+    "announcementTarget": {
+      "all": "الجميع",
+      "individuals": "أفراد",
+      "companies": "شركات",
+      "team": "الفريق"
+    },
+    "announcementPreview": "معاينة الشريط",
+    "permissionGroup": {
+      "offers": "العروض",
+      "categories": "الأقسام",
+      "regions": "المناطق",
+      "users": "المستخدمون",
+      "roles": "الأدوار",
+      "audit": "التدقيق",
+      "settings": "الإعدادات",
+      "bids": "المزايدات",
+      "tasks": "المهام",
+      "orders": "الطلبات",
+      "finance": "المالية",
+      "compliance": "الامتثال"
+    },
+    "wholesalePageField": {
+      "hero_kicker": "المقدمة — السطر العلوي",
+      "hero_title": "المقدمة — العنوان",
+      "hero_subtitle": "المقدمة — الوصف",
+      "hero_cta_browse": "المقدمة — زر تصفح العروض",
+      "hero_cta_how": "المقدمة — زر كيف تعمل",
+      "quick_filters_label": "المرشحات — عنوان القسم",
+      "quick_filters_all": "شريحة — كل المجموعات",
+      "quick_filters_open": "شريحة — مفتوحة",
+      "quick_filters_almost_full": "شريحة — شبه مكتملة",
+      "how_title": "كيف تعمل — عنوان القسم",
+      "how_lead": "كيف تعمل — المقدمة",
+      "how_step1_label": "الخطوة 1 — التسمية",
+      "how_step1_title": "الخطوة 1 — العنوان",
+      "how_step1_body": "الخطوة 1 — النص",
+      "how_step2_label": "الخطوة 2 — التسمية",
+      "how_step2_title": "الخطوة 2 — العنوان",
+      "how_step2_body": "الخطوة 2 — النص",
+      "how_step3_label": "الخطوة 3 — التسمية",
+      "how_step3_title": "الخطوة 3 — العنوان",
+      "how_step3_body": "الخطوة 3 — النص",
+      "trust_title": "الثقة — عنوان القسم",
+      "trust_verified_title": "الثقة — عنوان البائعين الموثوقين",
+      "trust_verified_body": "الثقة — نص البائعين الموثوقين",
+      "trust_delivery_title": "الثقة — عنوان التسليم",
+      "trust_delivery_body": "الثقة — نص التسليم",
+      "trust_payment_title": "الثقة — عنوان الدفع",
+      "trust_payment_body": "الثقة — نص الدفع"
+    },
     "roleLabel": "الدور",
     "savePermissions": "حفظ الصلاحيات",
     "columns": "الأعمدة",
@@ -926,6 +1642,7 @@
       "admin": "مدير",
       "manager": "مشرف",
       "employee": "موظف",
+      "moderator": "مشرف",
       "marketer": "مسوق",
       "company": "شركة",
       "seller": "بائع",
@@ -1188,7 +1905,7 @@
     },
     "withdrawals": "طلبات السحب",
     "guaranteeRequestsTitle": "طلبات الضمان المالي",
-    "guaranteeRequestsIntro": "الموافقة أو الرفض لطلبات الإيداع والاسترداد.",
+    "guaranteeRequestsIntro": "عند الموافقة على الإيداع، اختر خصم المحفظة أو تأكيد دفع خارج المنصة بعد التواصل مع العميل.",
     "guaranteeRequestsPending": "قيد الانتظار",
     "guaranteeRequestsEmpty": "لا توجد طلبات ضمان معلّقة.",
     "guaranteeRequestTypeDeposit": "إيداع",
@@ -1199,6 +1916,21 @@
     "guaranteeRequestRejectNote": "ملاحظة داخلية (اختياري)",
     "guaranteeRequestApproved": "تمت الموافقة على الطلب.",
     "guaranteeRequestRejected": "تم رفض الطلب.",
+    "guaranteeMemberWallet": "محفظة المنصة",
+    "guaranteeApproveModalTitle": "تأكيد إيداع الضمان المالي",
+    "guaranteeApproveModalDesc": "اختر مصدر التمويل. استخدم «دفع خارج المنصة» عندما تؤكد استلام المبلغ بتحويل بنكي أو نقداً بعد التواصل مع العضو.",
+    "guaranteeApproveMember": "العضو",
+    "guaranteeApproveAmount": "المبلغ",
+    "guaranteeWalletInsufficient": "غير كافٍ لهذا الإيداع",
+    "guaranteeFundingPlatform": "محفظة المنصة",
+    "guaranteeFundingPlatformHint": "يُخصم من الرصيد المتاح للعضو على المنصة.",
+    "guaranteeFundingExternal": "دفع خارج المنصة",
+    "guaranteeFundingExternalHint": "دفع العضو خارج المحفظة (تحويل بنكي، نقداً، إلخ) — تم التحقق مع العميل.",
+    "guaranteeApprovalNote": "كيف استُلم المبلغ؟",
+    "guaranteeApprovalNotePlaceholder": "مثال: تحويل بنكي مرجع 12345، تأكيد هاتفي بتاريخ …",
+    "guaranteeApproveNoteRequired": "اذكر كيف استُلم المبلغ (تحويل، نقد، إلخ).",
+    "guaranteeApprovePickExternal": "اختر دفع خارج المنصة — رصيد محفظة العضو غير كافٍ.",
+    "guaranteeApproveInsufficientWallet": "رصيد المحفظة ({{available}}) أقل من المطلوب ({{amount}}). اختر دفع خارج المنصة إن استلمتم المبلغ خارج المنصة.",
     "openConversationSuccess": "تم فتح المحادثة. اخترها من القائمة إن لم تُعرض تلقائياً.",
     "openDirectConversation": "فتح محادثة داخل التطبيق",
     "openDirectConversationHint": "يفتح محادثة خاصة مع العضو داخل التطبيق. النظام يستخدم خانات مشتري/بائع تقنيًا؛ في لوحة الإدارة يظهر جانبك كدعم المنصة وليس كمشتري إعلان.",
@@ -1362,7 +2094,53 @@
     "orders_dispute_resolve": "حل النزاعات على الطلبات",
     "finance_approve_withdrawal": "الموافقة على طلبات السحب",
     "finance_approve_charge": "الموافقة على طلبات الشحن",
-    "users_assign_roles": "تعيين صلاحيات الأدوار"
+    "users_assign_roles": "تعيين صلاحيات الأدوار",
+    "settings_view": "عرض إعدادات المنصة",
+    "settings_update": "تحديث إعدادات المنصة",
+    "bids_place": "تقديم مزايدات",
+    "bids_withdraw": "سحب المزايدة المعلقة",
+    "bids_visibility": "إظهار/إخفاء المزايدة",
+    "bids_review_listing": "مراجعة مزايدات الإعلان",
+    "bids_create_order": "إنشاء طلب من مزايدة مقبولة",
+    "bids_admin_view": "عرض المزايدات (إدارة)",
+    "bids_admin_manage": "إخفاء/حذف المزايدات (إدارة)",
+    "bids_admin_audit": "سجل تدقيق المزايدات",
+    "tasks_view": "عرض المهام",
+    "tasks_create": "إنشاء مهام",
+    "tasks_assign": "تعيين المهام",
+    "tasks_update": "تحديث المهام",
+    "tasks_close": "إغلاق أو حذف المهام",
+    "compliance_review_guarantee_requests": "مراجعة طلبات الضمان المالي",
+    "compliance_review_document_verifications": "مراجعة وثائق التحقق"
+  },
+  "contactPage": {
+    "pageTitle": "تواصل معنا",
+    "reportHeroTitle": "الإبلاغ عن مشكلة",
+    "reportHeroSubtitle": "أبلغ عن إعلان مخالف أو مستخدم مخالف أو عملية احتيال. سنراجع البلاغ خلال 24 ساعة.",
+    "reportFormTitle": "نموذج الإبلاغ",
+    "reportTypesTitle": "أنواع البلاغات",
+    "reportTypeListing": "إعلان مخالف",
+    "reportTypeUser": "مستخدم مخالف",
+    "reportTypeFraud": "عملية احتيال أو نصب",
+    "reportTypeCounterfeit": "منتج مغشوش",
+    "reportTypeOther": "أخرى",
+    "reportPrivacy": "يتم التعامل مع جميع البلاغات بسرية. سنرد خلال 24 ساعة.",
+    "introEmailTitle": "البريد الإلكتروني",
+    "introHoursTitle": "ساعات العمل",
+    "introHours": "السبت – الخميس: 9 ص – 9 م",
+    "introReportTitle": "إبلاغ رسمي",
+    "goToReport": "نموذج الإبلاغ",
+    "formTitle": "أرسل رسالة",
+    "submit": "إرسال",
+    "success": "تم إرسال رسالتك. سنتواصل معك قريباً.",
+    "sendAnother": "إرسال رسالة أخرى",
+    "selectPlaceholder": "اختر...",
+    "validation": {
+      "required": "هذا الحقل مطلوب",
+      "messageMin": "الرسالة يجب أن تكون 10 أحرف على الأقل",
+      "tooManyFiles": "الحد الأقصى 3 ملفات"
+    },
+    "faqSidebarHint": "للأعضاء المسجّلين: إرشادات تفصيلية متوفرة في مركز المساعدة داخل لوحة التحكم."
   },
   "audit": {
     "title": "سجلات التدقيق",
@@ -1392,6 +2170,13 @@
     }
   },
   "help": {
+    "kicker": "مركز المساعدة",
+    "pageTitle": "المساعدة والدعم",
+    "pageSubtitle": "إرشادات للطلبات والمحفظة والإعلانات والضمان المالي. للاستفسارات الرسمية استخدم «تواصل معنا».",
+    "quickTopicsTitle": "تصفح حسب الموضوع",
+    "needMoreTitle": "ما زلت بحاجة لمساعدة؟",
+    "needMoreDesc": "أرسل رسالة عبر صفحة التواصل وسنرد خلال أوقات العمل.",
+    "contactFormLink": "تواصل معنا",
     "title": "المساعدة والدعم",
     "subtitle": "كيفية الحصول على المساعدة في المنصة.",
     "contactTitle": "التواصل",
@@ -1400,7 +2185,33 @@
     "faqTitle": "نصائح سريعة",
     "faqOrders": "تتبع مشترياتك ومبيعاتك من «تتبع الطلبات» في القائمة.",
     "faqWallet": "اشحن محفظتك من «الرصيد» للدفع عبر الضمان.",
-    "faqVerify": "أكمل التوثيق لزيادة الثقة بين الأعضاء."
+    "faqVerify": "أكمل التوثيق لزيادة الثقة بين الأعضاء.",
+    "topics": {
+      "orders": {
+        "title": "تتبع الطلبات",
+        "desc": "عرض حالة المشتريات والمبيعات وتحديثات الشحن."
+      },
+      "wallet": {
+        "title": "المحفظة والرصيد",
+        "desc": "شحن الرصيد والسحب ومراجعة سجل المعاملات."
+      },
+      "listings": {
+        "title": "إعلاناتي",
+        "desc": "إنشاء وتعديل وإدارة عروضك وإعلاناتك."
+      },
+      "guarantee": {
+        "title": "الضمان المالي",
+        "desc": "كيف يعمل حجز المبلغ عند الدفع عبر المنصة."
+      },
+      "contact": {
+        "title": "الدعم الرسمي",
+        "desc": "استفسارات رسمية وشكاوى ومسائل الحساب."
+      },
+      "map": {
+        "title": "الخريطة والموقع",
+        "desc": "تصفح الإعلانات والشركات على الخريطة."
+      }
+    }
   },
   "notifications": {
     "title": "الإشعارات",
@@ -1418,6 +2229,8 @@
     "detailTitle": "إشعار",
     "notFound": "تعذّر العثور على هذا الإشعار.",
     "loadError": "تعذّر تحميل هذا الإشعار.",
+    "viewRequestActionHint": "استخدم «طلبات على إعلاناتي» للموافقة أو الرفض. «فتح الإعلان» يعرض الإعلان فقط.",
+    "viewRequestScheduledHint": "موعد المعاينة المطلوب: {{date}}. استخدم «طلبات على إعلاناتي» للموافقة أو الرفض.",
     "adminNotice": {
       "general": "رسالة من فريق المنصة",
       "accountWarning": "تنبيه على الحساب",
@@ -1431,6 +2244,30 @@
         "body": "رقم البلاغ {{reportId}} — الحساب: {{username}}. راجع بلاغات الملفات الشخصية في لوحة الإدارة.",
         "title_fallback": "بلاغ جديد عن حساب",
         "body_fallback": "هناك بلاغ جديد يحتاج المراجعة."
+      },
+      "listing_pending_activation": {
+        "title": "إعلان بانتظار التفعيل",
+        "body": "أكمل إعدادات استلام المدفوعات لتفعيل «{{productTitle}}».",
+        "title_fallback": "إعلان بانتظار التفعيل",
+        "body_fallback": "أكمل إعدادات استلام المدفوعات لتفعيل الإعلان."
+      },
+      "payout_profile_verified": {
+        "title": "تم التحقق من حسابك البنكي",
+        "body": "يمكنك الآن تفعيل إعلاناتك واستقبال التحويلات.",
+        "title_fallback": "تم التحقق من استلام المدفوعات",
+        "body_fallback": "يمكنك الآن تفعيل إعلاناتك."
+      },
+      "payout_profile_pending": {
+        "title": "حساب بنكي بائع بانتظار المراجعة",
+        "body": "قدّم {{seller}} بيانات حساب بنكي للتحويل المباشر.",
+        "title_fallback": "مراجعة حساب بنكي",
+        "body_fallback": "بائع قدّم بيانات حساب بنكي للمراجعة."
+      },
+      "payout_profile_rejected": {
+        "title": "لم تتم الموافقة على الحساب البنكي",
+        "body": "{{reason}}",
+        "title_fallback": "لم تتم الموافقة على الحساب البنكي",
+        "body_fallback": "حدّث بياناتك البنكية من إعدادات الحساب."
       },
       "bid_new": {
         "title": "عرض جديد: {{amount}} ر.س — {{productTitle}}",
@@ -1483,6 +2320,42 @@
       "order_pending": {
         "title": "تم تأكيد الطلب — {{productTitle}}",
         "body": "طلبك {{orderNumber}} مؤكد الآن وبانتظار الشحن."
+      },
+      "order_payment_approved": {
+        "title": "تم قبول سند التحويل — {{productTitle}}",
+        "body": "طلبك {{orderNumber}}: تم التحقق من سند التحويل."
+      },
+      "purchase_new_direct": {
+        "title": "طلب جديد (تحويل بنكي) — {{productTitle}}",
+        "body": "طلب {{buyer}} ×{{qty}} على «{{productTitle}}» مع سند تحويل. راجع السند وأكّد استلام المبلغ."
+      },
+      "purchase_new_cod": {
+        "title": "طلب جديد (دفع عند الاستلام) — {{productTitle}}",
+        "body": "طلب {{buyer}} ×{{qty}} على «{{productTitle}}» بالدفع عند الاستلام."
+      },
+      "purchase_new": {
+        "title": "طلب جديد — {{productTitle}}",
+        "body": "طلب {{buyer}} ×{{qty}} على «{{productTitle}}»."
+      },
+      "order_transfer_receipt_approved": {
+        "title": "تم قبول سند التحويل — {{productTitle}}",
+        "body": "طلبك {{orderNumber}}: تم التحقق من سند التحويل. بانتظار تأكيد البائع لاستلام المبلغ."
+      },
+      "order_transfer_confirm_payment": {
+        "title": "أكّد استلام التحويل — {{productTitle}}",
+        "body": "طلب {{orderNumber}}: راجع سند التحويل وأكّد أنك استلمت المبلغ قبل الشحن."
+      },
+      "order_transfer_payment_confirmed": {
+        "title": "البائع أكّد استلام التحويل — {{productTitle}}",
+        "body": "طلبك {{orderNumber}}: أكّد البائع استلام التحويل. سيتم الشحن قريبًا."
+      },
+      "order_transfer_sent_confirmed": {
+        "title": "تم تأكيد إرسال الحوالة — {{productTitle}}",
+        "body": "طلبك {{orderNumber}}: سجّلنا تأكيدك لإرسال الحوالة. بانتظار تأكيد البائع."
+      },
+      "order_transfer_awaiting_seller_confirm": {
+        "title": "المشتري أكّد الحوالة — {{productTitle}}",
+        "body": "طلب {{orderNumber}}: أكّد استلام المبلغ قبل الشحن."
       },
       "order_shipped": {
         "title": "تم شحن الطلب — {{productTitle}}",
@@ -1616,11 +2489,15 @@
       },
       "wholesale_campaign_completed": {
         "title": "اكتمل عدد المشترين للجملة — {{productTitle}}",
-        "body": "تم الوصول للحد الأدنى للمشترين. أكمل الدفع قبل انتهاء المهلة."
+        "body": "تم الوصول للحد الأدنى للمشترين ومهلة الدفع مفتوحة. استخدم الإجراء أدناه للدفع الآن. لا نقوم بالخصم التلقائي؛ أكمل الدفع قبل انتهاء المهلة."
       },
       "wholesale_reservation_created": {
         "title": "تم تأكيد الحجز — {{productTitle}}",
-        "body": "تم تفعيل حجزك (الكمية: {{quantity}}). سنشعرك عند فتح الدفع."
+        "body": "تم تفعيل حجزك (الكمية: {{quantity}}). عند اكتمال المجموعة سنُعلِمك داخل التطبيق لإكمال الدفع بنفسك دون خصم تلقائي."
+      },
+      "wholesale_new_participant_seller": {
+        "title": "حجز جديد على منتجك — {{productTitle}}",
+        "body": "{{buyerName}} حجز (الكمية: {{quantity}}). تم تحديث تقدم المجموعة."
       }
     },
     "actions": {
@@ -1628,6 +2505,8 @@
       "openBids": "عرض السومات",
       "manageMyBids": "إدارة سومي",
       "openOrder": "فتح الطلب",
+      "confirmTransferReceived": "تأكيد استلام التحويل",
+      "confirmTransferSent": "تأكيد إرسال الحوالة",
       "manageViewRequests": "طلبات على إعلاناتي",
       "myViewRequests": "طلباتي",
       "openMessages": "الرسائل",
@@ -1645,11 +2524,16 @@
       "openVerification": "إعدادات التحقق",
       "openGuaranteePage": "الضمان المالي",
       "openAdminTasks": "فتح المهام",
-      "openWholesaleCheckout": "فتح دفع الجملة"
+      "openWholesaleCheckout": "فتح دفع الجملة",
+      "openWholesaleReservations": "حجوزاتي",
+      "openWholesaleProduct": "عرض منتج الجملة"
     }
   },
   "share": {
     "title": "مشاركة",
+    "copyLink": "نسخ الرابط",
+    "copied": "تم النسخ إلى الحافظة",
+    "moreOptions": "المزيد",
     "modalTitle": "مشاركة الإعلان",
     "whatsapp": "واتساب",
     "twitter": "تويتر / X",
@@ -1676,11 +2560,18 @@
     "customize": "تخصيص الملف",
     "overview": "نظرة عامة",
     "aboutMe": "نبذة عني",
+    "wholesaleStorefront": {
+      "title": "متجر الجملة",
+      "subtitle": "تعرض هذه الشركة عروض جملة جماعية على عروض.",
+      "cta": "عرض متجر الجملة"
+    },
     "noAbout": "لم تضف نبذة عنك بعد.",
     "backgroundCover": "صورة الخلفية",
     "logoImage": "صورة اللوقو",
     "bio": "نبذة",
     "bioPlaceholder": "نبذة عني...",
+    "locationVisitorPreview": "معاينة كما يظهر في ملفك العام",
+    "mapAutoFillHint": "سيتم تعبئة المدينة والعنوان تلقائياً عند اختيار موقع على الخريطة (إذا لم تكن المدينة محددة مسبقاً).",
     "avatarUrl": "رابط الصورة",
     "city": "المدينة",
     "selectCity": "اختر المدينة",
@@ -1738,9 +2629,89 @@
     "forProduct": "لـ"
   },
   "wholesale": {
+    "common": {
+      "supplierFieldHelp": "نفس تصنيف الشركة في دليل الموردين — اختر مجال المورد الذي تبحث عنه.",
+      "supplierCategoryLabel": "مجال المورد (نفس تصنيف الشركة في الدليل)"
+    },
+    "listingBannerTitle": "عرض جملة جماعي",
+    "listingBannerDescription": "هذا الإعلان يتبع مسار سوق الجملة (الحد الأدنى للمشترين، سعر الوحدة، ومهلة الدفع). افتح صفحة منتج الجملة للحجز أو الدفع.",
+    "listingBannerCta": "فتح صفحة منتج الجملة",
     "title": "سعر الجملة",
+    "categories": {
+      "empty": "لا توجد أقسام متاحة.",
+      "products_count": "{{count}} في الجملة",
+      "sectionLabel": "أقسام المنتجات",
+      "selectCategory": "تصفية حسب القسم {{name}}"
+    },
+    "filters": {
+      "searchPlaceholder": "ابحث في منتجات الجملة",
+      "searchAria": "بحث",
+      "priceRange": "سعر الجملة (ر.س)",
+      "priceRangeValue": "{{min}} – {{max}}",
+      "priceMaxOpen": "50,000+",
+      "clearAll": "مسح المرشحات",
+      "resultsCount": "{{count}} نتيجة",
+      "openSheet": "المرشحات",
+      "sheetTitle": "مرشحات الجملة",
+      "applyClose": "تم",
+      "condition": "الحالة",
+      "conditionAny": "أي حالة",
+      "conditionNew": "جديد فقط",
+      "conditionUsed": "مستعمل",
+      "minDiscount": "الحد الأدنى للخصم",
+      "minDiscountAny": "أي خصم",
+      "minDiscountValue": "خصم {{percent}}٪ فأكثر",
+      "minBuyers": "حجم المجموعة (مقاعد)",
+      "minBuyersAny": "أي حجم",
+      "minBuyersValue": "{{n}} مقعد فأكثر (هدف المجموعة)",
+      "groupStatus": "حالة المجموعة",
+      "groupStatusAny": "أي حالة",
+      "groupStatus.open": "مجموعات مفتوحة",
+      "groupStatus.almost_full": "شبه مكتملة",
+      "viewToggle": "طريقة العرض",
+      "viewFeed": "قائمة",
+      "viewHorizontal": "أفقي",
+      "viewVertical": "شبكة",
+      "viewCompact": "مضغوط",
+      "clearFiltersCta": "مسح المرشحات",
+      "loadError": "تعذر تحميل المنتجات. حاول مرة أخرى."
+    },
+    "confirmReserve": {
+      "title": "تأكيد الحجز",
+      "description": "سيتم حجز {{quantity}} مقعد/مقاعد لـ «{{title}}» بسعر الوحدة للجملة. يبقى مقعدك محجوزاً حتى تلغي أو تكتمل المجموعة وتُغلق مهلة الدفع.",
+      "priceLine": "سعر الوحدة: {{price}}",
+      "confirm": "تأكيد الحجز",
+      "cancel": "ليس الآن"
+    },
+    "confirmCancel": {
+      "title": "إلغاء الحجز؟",
+      "description": "سيتم إلغاء حجزك لـ «{{title}}». يمكن للآخرين أخذ المقعد إذا كانت المجموعة لا تزال مفتوحة.",
+      "confirm": "نعم، إلغاء",
+      "cancel": "الإبقاء على الحجز"
+    },
+    "detail": {
+      "heroWholesaleCaption": "سعر الوحدة للجملة",
+      "actionsTitle": "حجز الجملة",
+      "quantityLabel": "الكمية",
+      "ownerManageHint": "هذا عرض الجملة الخاص بك. يحجز المشترون من السوق؛ يمكنك إدارته من لوحة جملة الشركة.",
+      "ownerDashboardCta": "فتح لوحة جملة الشركة",
+      "beforeReserveHint": "الحجز يثبت مقاعدك حتى اكتمال العدد المطلوب. عندها يُفتح الدفع في التطبيق — لا نقوم بالخصم التلقائي.",
+      "postReserveHint": "عند اكتمال مجموع المقاعد المطلوب سنُعلِمك داخل التطبيق. لا نقوم بالخصم التلقائي؛ تُكمل الدفع بنفسك خلال {{checkoutHours}} ساعات من فتح مهلة الدفع. يمكنك متابعة حجزك في أي وقت عبر <link>حجوزاتي</link>.",
+      "reservationsLink": "حجوزاتي",
+      "checkoutWindowHint": "أكمل الدفع قبل انتهاء المهلة لتثبيت طلبك.",
+      "groupCompleteHint": "اكتمل العدد الأدنى للمجموعة. إن كان لديك دفع معلّق، انتقل للدفع من <link>حجوزاتي</link>.",
+      "purchasedReservationHint": "أكملتَ الدفع لهذا الحجز مسبقاً. افتح الطلب لعرض التفاصيل.",
+      "lineTotal": "{{qty}} × {{unit}} = {{total}}",
+      "yourReservationTitle": "حجزك",
+      "yourReservationLine": "{{qty}} مقعد/مقاعد · {{status}}",
+      "statusAwaitingGroup": "بانتظار اكتمال المجموعة",
+      "statusCheckoutOpen": "مهلة الدفع مفتوحة — أكمل الدفع قبل الانتهاء",
+      "stepperMax": "الحد الأقصى",
+      "stepperMaxAria": "تعيين الكمية إلى الحد الأقصى: {{max}}",
+      "campaignEndsHint": "ينتهي العرض في {{date}} (قد يُغلق الحجز مبكراً إذا اكتملت المجموعة)."
+    },
     "price": "سعر الجملة",
-    "minQuantity": "الحد الأدنى للكمية",
+    "minQuantity": "هدف المجموعة (إجمالي المقاعد)",
     "empty": "لا توجد عروض جملة بعد.",
     "fields": {
       "title": "العنوان",
@@ -1748,7 +2719,7 @@
       "originalPrice": "السعر الأصلي",
       "discountPercent": "نسبة الخصم",
       "wholesalePrice": "سعر الجملة",
-      "minBuyers": "الحد الأدنى للمشترين",
+      "minBuyers": "هدف المجموعة (إجمالي المقاعد)",
       "category": "القسم",
       "subcategory": "القسم الفرعي",
       "region": "المنطقة",
@@ -1772,9 +2743,21 @@
       "verificationRequired": "إدارة الجملة متاحة فقط للشركات الموثقة.",
       "singleTab": "منتج واحد",
       "bulkTab": "عرض مجمّع",
+      "bulkProductsTab": "رفع مجمّع",
+      "bulkProductsTitle": "رفع منتجات متعددة",
+      "bulkProductsDesc": "ارفع عدة صور — كل صورة تصبح منتج جملة بإعدادات خصم ومجموعة مشتركة.",
+      "bulkProductsRows": "تفاصيل كل منتج",
+      "bulkProductsSuccess": "تم إنشاء المنتجات المجمّعة.",
+      "bulkProductsError": "تعذر إنشاء المنتجات المجمّعة.",
+      "bulkProductsValidation": "اختر التصنيف والموقع لجميع المنتجات.",
+      "bulkProductsNeedImages": "أضف صورة منتج واحدة على الأقل.",
+      "bulkProductsRowInvalid": "كل منتج يحتاج عنواناً وسعراً.",
+      "bulkProductDefaultTitle": "منتج جملة {{n}}",
       "newProduct": "منتج جملة جديد",
       "editProduct": "تعديل منتج جملة",
-      "newProductDesc": "انشر منتج الجملة مع نسبة خصم وحد أدنى للمشترين.",
+      "newProductDesc": "انشر منتج الجملة مع نسبة خصم وهدف مجموعة (إجمالي المقاعد).",
+      "newProductGalleryHint": "عدة صور = منتج واحد (معرض صور)، وليست منتجات منفصلة.",
+      "bulkOfferDesc": "تطبيق خصم وهدف مجموعة مشترك على منتجات الجملة المنشورة مسبقاً. لا ينشئ نسخاً ولا إعلانات جديدة.",
       "publish": "نشر المنتج",
       "myProducts": "منتجات الجملة الخاصة بي",
       "empty": "لا توجد منتجات جملة بعد.",
@@ -1791,13 +2774,48 @@
       "bulkSuccess": "تم إنشاء العرض المجمع.",
       "bulkError": "تعذر إنشاء العرض المجمع.",
       "minProductsError": "اختر منتجين على الأقل لإنشاء العرض المجمع.",
-      "minBuyersRequired": "الحد الأدنى للمشترين يجب أن يكون 2 على الأقل.",
+      "minBuyersRequired": "هدف المجموعة يجب أن يكون مقعدين على الأقل.",
       "discountRangeError": "نسبة الخصم يجب أن تكون بين 1% و90%.",
       "noCategories": "لا توجد أقسام متاحة",
       "noSubcategories": "لا توجد أقسام فرعية متاحة",
       "noRegions": "لا توجد مناطق متاحة",
       "noCities": "لا توجد مدن متاحة",
-      "lookupLoadError": "تعذر تحميل بيانات الأقسام/المناطق. حدّث الصفحة ثم جرّب مرة أخرى."
+      "lookupLoadError": "تعذر تحميل بيانات الأقسام/المناطق. حدّث الصفحة ثم جرّب مرة أخرى.",
+      "groupSizeHint": "يُفتح الدفع عندما يصل مجموع المقاعد المحجوزة إلى هذا الرقم. يمكن لمشتري واحد حجز أكثر من مقعد، أو لعدة مشترين تقسيم المقاعد.",
+      "saveDraft": "حفظ مسودة",
+      "openPreview": "معاينة الإعلان",
+      "livePreview": "معاينة البطاقة",
+      "previewPlaceholderTitle": "عنوان منتج الجملة",
+      "table": {
+        "image": "الصورة",
+        "title": "المنتج",
+        "category": "القسم",
+        "originalPrice": "السعر الأصلي",
+        "wholesalePrice": "سعر الجملة",
+        "discount": "الخصم",
+        "groupTarget": "هدف المجموعة",
+        "progress": "تقدم المجموعة",
+        "progressSeats": "{{reserved}} / {{min}} مقعد",
+        "status": "الحالة",
+        "expires": "ينتهي",
+        "actions": "إجراءات",
+        "searchPlaceholder": "ابحث في منتجات الجملة…",
+        "statusFilter": "الحالة",
+        "refresh": "تحديث",
+        "edit": "تعديل",
+        "viewDeal": "عرض الصفقة",
+        "delete": "حذف",
+        "deleteTitle": "حذف منتج الجملة؟",
+        "deleteDescription": "حذف «{{title}}»؟ لا يمكن التراجع عن هذا الإجراء.",
+        "deleteConfirm": "حذف",
+        "emptyHint": "جرّب تعديل البحث أو التصفية، أو انشر منتجاً جديداً أعلاه."
+      }
+    },
+    "card": {
+      "viewOffer": "عرض الصفقة",
+      "statusExpired": "منتهٍ",
+      "statusCompleted": "اكتملت المجموعة",
+      "statusAlmostFull": "شبه مكتملة"
     },
     "market": {
       "title": "سوق الجملة",
@@ -1815,8 +2833,9 @@
       "productsCount": "{{count}} منتج",
       "myReservations": "حجوزاتي",
       "discountBadge": "خصم {{percent}}%",
-      "currentBuyers": "عدد المشترين الحالي: {{count}}",
-      "remainingBuyers": "المتبقي: {{count}} مشترٍ",
+      "currentBuyers": "المقاعد المحجوزة: {{count}}",
+      "remainingBuyers": "المتبقي من المقاعد: {{count}}",
+      "remainingSeats": "المتبقي من المقاعد: {{count}}",
       "reservedBadge": "محجوز",
       "details": "التفاصيل",
       "reserve": "حجز",
@@ -1831,6 +2850,61 @@
       "cancelSuccess": "تم إلغاء الحجز.",
       "cancelError": "تعذر إلغاء الحجز.",
       "loginRequired": "يرجى تسجيل الدخول للحجز في سوق الجملة.",
+      "ownerListing": "عرضك",
+      "hero": {
+        "kicker": "جملة جماعية",
+        "title": "سعر أقل عندما يكتمل العدد",
+        "subtitle": "احجز مقعدك، ادعُ الآخرين، وأكمل الشراء عند تحقيق الحد الأدنى للمشترين. تقدم واضح، تسعير عادل، وبائعون موثوقون.",
+        "ctaBrowse": "تصفح العروض",
+        "ctaHow": "كيف تعمل"
+      },
+      "how": {
+        "title": "كيف تعمل جملة المجموعات",
+        "lead": "ثلاث خطوات بسيطة من الحجز حتى الدفع.",
+        "step1Label": "الخطوة 1",
+        "step1Title": "احجز",
+        "step1Body": "احتفظ بمقعدك بسعر الجملة بينما يكتمل العدد.",
+        "step2Label": "الخطوة 2",
+        "step2Title": "شارك",
+        "step2Body": "ادعُ الأصدقاء أو الزملاء لإكمال المجموعة بسرعة.",
+        "step3Label": "الخطوة 3",
+        "step3Title": "الدفع",
+        "step3Body": "عند تحقيق الحد الأدنى، أكمل الشراء ضمن مهلة الدفع."
+      },
+      "trust": {
+        "title": "الثقة والأمان",
+        "verifiedTitle": "بائعون موثوقون",
+        "verifiedBody": "تمر الشركات بتوثيق المنصة قبل عرض الجملة.",
+        "deliveryTitle": "تسليم واضح",
+        "deliveryBody": "التسليم يتبع شروط البائع وسجل طلبك.",
+        "paymentTitle": "سجل الطلب",
+        "paymentBody": "حالة الدفع والشراء تظهر في حسابك والإشعارات."
+      },
+      "quickFilters": {
+        "label": "حالة المجموعة",
+        "all": "كل المجموعات",
+        "open": "مجموعات مفتوحة",
+        "almostFull": "شبه مكتملة"
+      },
+      "urgentSection": "قاربت على الانتهاء",
+      "card": {
+        "reserveAll": "ملء المقاعد المتبقية",
+        "share": "مشاركة",
+        "shareDevice": "مشاركة عبر الجهاز",
+        "shareTitle": "عرض جملة",
+        "linkCopied": "تم نسخ الرابط",
+        "shareWhatsapp": "واتساب",
+        "endsIn": "ينتهي {{time}}",
+        "wholesalePriceLabel": "سعر الجملة",
+        "buyersJoinedLine": "{{count}} مقعد محجوز",
+        "seatsReservedLine": "{{count}} مقعد محجوز",
+        "groupDiscountActivated": "سعر الجملة يُطبَّق عند اكتمال المجموعة.",
+        "progressCount": "{{current}} / {{min}}"
+      },
+      "dashboardTips": {
+        "title": "نصائح لزيادة التحويل",
+        "body": "حدد عدداً واقعياً للمشترين، وتاريخ انتهاء واضحاً، وصورة قوية للمنتج. المشترون يرون التقدم المباشر — تحديث المخزون والمواعيد يعزز الثقة."
+      },
       "sort": {
         "newest": "الأحدث",
         "price_asc": "السعر: من الأقل",
@@ -1842,16 +2916,105 @@
     "companies": {
       "title": "شركات سوق الجملة",
       "subtitle": "استعرض الشركات الموثقة النشطة في سوق الجملة.",
+      "kicker": "دليل الموردين",
+      "supplierCount": "{{count}} مورد يطابق عوامل التصفية",
+      "supplierCountTotal": "{{count}} مورد في سوق الجملة",
+      "supplierCountFiltered": "{{count}} مورد يطابق عوامل التصفية",
+      "supplierCountZeroFiltered": "لا يوجد مورد يطابق عوامل التصفية",
+      "supplierFieldHelp": "مجال المورد (نفس تصنيف الشركة في الدليل)",
+      "sheetFiltersTitle": "تصفية الموردين",
       "search": "ابحث عن شركة أو نوع منتجات",
       "productsCount": "{{count}} منتج",
+      "viewProductsCta": "عرض منتجات الجملة",
+      "prevPage": "السابق",
+      "nextPage": "التالي",
+      "pageIndicator": "صفحة {{current}} من {{last}}",
       "empty": "لا توجد شركات جملة مطابقة حالياً.",
-      "backToMarket": "العودة إلى سوق الجملة"
+      "backToMarket": "العودة إلى سوق الجملة",
+      "cardActiveLabel": "حملات مفتوحة",
+      "cardCompletedLabel": "مجموعات مكتملة",
+      "cardBuyersLabel": "المشترون",
+      "viewCompanyCta": "زيارة الشركة",
+      "activeWholesaleBadge": "يوجد عروض جملة",
+      "trust": {
+        "sectionTitle": "الثقة والأمان",
+        "verifiedTitle": "بائعون موثوقون",
+        "verifiedBody": "تمر الشركات بتوثيق المنصة قبل عرض الجملة.",
+        "deliveryTitle": "تسليم واضح",
+        "deliveryBody": "التسليم يتبع شروط البائع وسجل طلبك.",
+        "recordTitle": "سجل الطلب",
+        "recordBody": "حالة الدفع والشراء تظهر في حسابك والإشعارات."
+      }
     },
     "companyProfile": {
       "title": "ملف الشركة",
       "search": "ابحث داخل منتجات الشركة",
       "empty": "لا توجد منتجات جملة لهذه الشركة حالياً.",
-      "backToCompanies": "العودة إلى قائمة الشركات"
+      "backToCompanies": "العودة إلى قائمة الشركات",
+      "verifiedBadge": "مورد موثّق",
+      "businessBadge": "نشاط تجاري",
+      "statListings": "عروض الجملة",
+      "statRating": "التقييم",
+      "browseSuppliers": "تصفح الموردين",
+      "statActiveCampaigns": "حملات مفتوحة",
+      "statCompletedCampaigns": "مجموعات مكتملة",
+      "statSeatsReserved": "مقاعد محجوزة",
+      "statBuyers": "مشترون مختلفون",
+      "tabProducts": "المنتجات",
+      "tabAbout": "نبذة",
+      "tabStats": "إحصائيات",
+      "noDescription": "لا توجد نبذة عن الشركة بعد.",
+      "categoryLabel": "التصنيف",
+      "locationLabel": "الموقع",
+      "share": "مشاركة",
+      "linkCopied": "تم نسخ الرابط",
+      "viewMemberProfile": "الملف الشخصي"
+    },
+    "retailBridge": {
+      "title": "الجملة على عروض",
+      "body": "لدى هذه الشركة أيضاً عروض جملة جماعية — نفس المورد، وتسعير الجملة، ومسار الدفع الخاص بالجملة.",
+      "cta": "فتح ملف الجملة للشركة"
+    },
+    "pdp": {
+      "extrasTitle": "معلومات الجملة",
+      "shippingTitle": "الشحن والتسليم",
+      "shippingBody": "تُحدَّد مواعيد التوصيل والناقل مع المورد بعد اكتمال المجموعة وفتح الدفع. للاستعجال، راسل الشركة قبل الحجز.",
+      "termsTitle": "شروط الجملة",
+      "termsBody": "الأسعار المعروضة هي سعر الوحدة للجملة ضمن حجم المجموعة المذكور. قد تُضاف ضرائب أو رسوم توصيل عند الدفع إذا قدّمها المورد.",
+      "rulesTitle": "آلية الشراء الجماعي",
+      "rulesBody": "تحجز مقاعدك بسعر الوحدة للجملة. عند اكتمال العدد المطلوب يُفتح الدفع لفترة محدودة. لا يتم السحب تلقائياً — تؤكد الدفع بنفسك قبل انتهاء المهلة.",
+      "faqTitle": "أسئلة شائعة",
+      "faqBody": "س: هل يمكن الإلغاء قبل الدفع؟\nج: نعم، ما دام الحجز في انتظار المجموعة يمكنك تحرير المقاعد من «حجوزاتي».\n\nس: ماذا لو لم تكتمل المجموعة؟\nج: قد تنتهي الحملة دون تحويل الحجز إلى طلب.",
+      "mobileDealBarLabel": "إجراءات صفقة الجملة",
+      "mobileReservationCta": "حجزي",
+      "galleryThumbnails": "صور المعرض",
+      "openGalleryLightbox": "فتح الصورة ملء الشاشة",
+      "galleryCounter": "{{current}} / {{total}}",
+      "galleryPrev": "الصورة السابقة",
+      "galleryNext": "الصورة التالية",
+      "lightboxTitle": "صورة المنتج",
+      "countdownLabel": "ينتهي العرض",
+      "countdownEnded": "انتهى الموعد النهائي للحملة",
+      "countdownDaysHours": "متبقي {{days}} يوم {{hours}} ساعة",
+      "countdownHoursMins": "متبقي {{hours}} س {{mins}} د",
+      "countdownMins": "متبقي {{mins}} دقيقة",
+      "momentumJoined": "{{current}} / {{min}} مقعد محجوز",
+      "momentumRemaining": "{{count}} مقاعد متبقية",
+      "momentumProgress": "{{pct}}% مكتمل",
+      "participantsJoined": "انضم {{count}} مشترين مؤخراً",
+      "momentumVerifiedSupplier": "مورد موثّق",
+      "momentumBusinessSupplier": "مورد تجاري",
+      "savingsLine": "توفر {{amount}} مقارنة بالتجزئة",
+      "reserveAllSpots": "احجز كل المقاعد المتبقية ({{count}})",
+      "viewCompany": "عرض الشركة",
+      "activityTitle": "انضمام حديث",
+      "activityLine": "{{qty}} مقعد/مقاعد · {{time}}",
+      "relatedTitle": "المزيد من الجملة في هذا التصنيف",
+      "relatedSubtitle": "نفس آلية المجموعة وبطاقات الجملة كالسوق الرئيسي.",
+      "relatedBrowseMarket": "تصفح سوق الجملة",
+      "stats": {
+        "activeBuyers": "مشترون في المجموعة"
+      }
     },
     "product": {
       "title": "منتج الجملة",
@@ -1868,10 +3031,15 @@
       "openProduct": "فتح صفحة المنتج",
       "openOrder": "فتح الطلب",
       "qty": "الكمية:",
-      "emptySection": "لا توجد بيانات في هذا القسم."
+      "emptySection": "لا توجد بيانات في هذا القسم.",
+      "cancelReservation": "إلغاء الحجز",
+      "cancelHintNotActive": "لا يمكن إلغاء الحجوزات المكتملة أو المغلقة. يمكنك إلغاء المقعد فقط قبل إتمام الشراء."
     },
     "checkout": {
       "title": "دفع طلب الجملة",
+      "backToReservations": "حجوزاتي",
+      "invoiceDescription": "طلب جملة جماعية — ادفع سعر الوحدة المثبت للكمية التي حجزتها.",
+      "payBefore": "أكمل الدفع قبل",
       "notFound": "الحجز غير موجود أو لم يعد مؤهلاً للدفع.",
       "notEligible": "هذا الحجز غير مؤهل لإتمام الشراء حالياً.",
       "goReservations": "الذهاب إلى حجوزاتي",
@@ -1881,7 +3049,9 @@
       "paymentMethod": "طريقة الدفع",
       "submit": "إنشاء الطلب",
       "success": "تم إنشاء طلب الجملة بنجاح.",
-      "error": "تعذر إنشاء طلب الجملة."
+      "error": "تعذر إنشاء طلب الجملة.",
+      "mapSelectLabel": "موقع التسليم على الخريطة",
+      "mapHint": "اضغط على الخريطة أو حرّك الدبوس لتحديد مكان تسليم الطلب."
     },
     "reservationStatus": {
       "pending": "قيد الانتظار",
@@ -1942,6 +3112,7 @@
     "cancel": "إلغاء الطلب",
     "messageSeller": "تواصل مع البائع",
     "messageBuyer": "مراسلة المشتري",
+    "openMap": "فتح على الخريطة",
     "cancelled": "تم إلغاء الطلب",
     "updated": "تم التحديث",
     "status": {
@@ -2040,6 +3211,13 @@
     "escrowDescription": "يتم شحن الرصيد واحتفاظ المبلغ حتى استلام المنتج",
     "cod": "الدفع عند الاستلام",
     "codDescription": "ادفع عند وصول المنتج — مثل أمازون أو مستقل",
+    "directTransfer": "تحويل بنكي مباشر للبائع",
+    "directTransferDescription": "حوّل المبلغ إلى حساب البائع ثم أرفق إيصال التحويل",
+    "sellerBankDetails": "بيانات حساب البائع",
+    "directTransferSteps": "حوّل المبلغ إلى الحساب أدناه، ثم أدخل رقم التحويل وارفع سند التحويل في الحقول التالية.",
+    "transferAmount": "المبلغ المطلوب تحويله: {{amount}}",
+    "copyIban": "نسخ الآيبان",
+    "ibanCopied": "تم نسخ رقم الآيبان",
     "buyerName": "الاسم",
     "buyerPhone": "رقم الجوال",
     "shippingAddress": "عنوان الشحن",
@@ -2079,6 +3257,13 @@
     "selectedPayment": "طريقة الدفع المختارة",
     "invoiceTotal": "إجمالي الفاتورة",
     "invoiceIssued": "تم إصدار الفاتورة",
+    "confirmOrderIntro": "سيتم إصدار الفاتورة",
+    "successToast": {
+      "escrow": "تم إصدار الفاتورة — الدفع عبر المنصة",
+      "cod": "تم إصدار الفاتورة — الدفع عند الاستلام",
+      "direct_transfer": "تم إصدار الطلب — تحويل بنكي مباشر للبائع",
+      "default": "تم إصدار الطلب بنجاح"
+    },
     "availableBalance": "رصيدك المتاح",
     "requiredForOrder": "المطلوب لهذا الطلب",
     "insufficientBalance": "الرصيد غير كافٍ. شحن الرصيد من المحفظة ثم أعد المحاولة.",
@@ -2089,6 +3274,7 @@
     "errorValidation": "تعذّر إتمام الشراء. تحقق من الرصيد والبيانات.",
     "errorNoProduct": "تعذّر تحميل المنتج. أعد تحميل الصفحة.",
     "confirmDialogEscrowNote": "يبقى المبلغ لدى المنصة حتى يشحن البائع وتؤكد الاستلام؛ عندها يُضاف للبائع.",
+    "confirmDialogDirectTransferNote": "بعد التأكيد حوّل المبلغ إلى حساب البائع وارفع السند في نموذج الشراء. سيراجع البائع السند ويؤكد الاستلام.",
     "quantity": "الكمية",
     "buyerNote": "ملاحظات الطلب (اختياري)",
     "buyerNotePlaceholder": "تعليمات التوصيل، الوقت المناسب، إلخ.",
@@ -2183,6 +3369,11 @@
     "progressConfirmed": "تم التأكيد",
     "progressConfirmedEscrowSub": "المبلغ محجوز لدى المنصة",
     "progressConfirmedCodSub": "البائع قبل الدفع عند الاستلام",
+    "progressConfirmedDirectSub": "بانتظار تأكيد البائع لاستلام التحويل",
+    "progressAwaitingSellerConfirmSub": "بانتظار تأكيد البائع لاستلام التحويل",
+    "progressConfirmedDirectSellerSub": "البائع أكّد استلام التحويل",
+    "progressAwaitingReceiptSub": "بانتظار التحقق من سند التحويل",
+    "timelineDirectExplain": "مع التحويل البنكي المباشر يرفع المشتري السند عند الشراء، ويؤكد البائع استلام المبلغ قبل الشحن.",
     "progressShipped": "خرج للتسليم",
     "progressShippedSub": "البائع يؤكد خروجه للتسليم وموقع التسليم",
     "progressDelivered": "تم التسليم",
@@ -2194,7 +3385,20 @@
     "confirmReceiptDescCod": "سيتم إكمال الطلب. تأكد أنك استلمت المنتج ودفعت عند الاستلام إن وُجدت مستحقات.",
     "outForDelivery": "خروج للتسليم",
     "outForDeliverySuccess": "تم تأكيد خروج الطلب للتسليم.",
-    "confirmedDeliveryLocation": "موقع التسليم المؤكد"
+    "confirmedDeliveryLocation": "موقع التسليم المؤكد",
+    "deliveryMapTitle": "موقع التسليم",
+    "locationEditHint": "يمكنك تعديل موقع التسليم {{remaining}} مرة/مرات قبل {{deadline}}.",
+    "locationEditSave": "حفظ موقع التسليم",
+    "locationEditSaved": "تم تحديث موقع التسليم.",
+    "directTransferAwaitingSellerBuyer": "تم إرسال بيانات التحويل والسند. بانتظار تأكيد البائع لاستلام المبلغ.",
+    "directTransferAwaitingSellerAction": "راجع سند التحويل وأكّد استلام المبلغ قبل الشحن. يمكنك التواصل مع المشتري عند الحاجة.",
+    "directTransferConfirmedBuyer": "أكّد البائع استلام التحويل. سيتم الشحن قريبًا.",
+    "directTransferReceiptTitle": "سند التحويل",
+    "directTransferReceiptView": "عرض السند",
+    "confirmDirectTransfer": "تأكيد استلام التحويل",
+    "directTransferConfirmed": "تم تأكيد استلام التحويل.",
+    "contactBuyer": "تواصل مع المشتري",
+    "contactBuyerPhone": "اتصال"
   },
   "verification": {
     "title": "التوثيق",
@@ -2221,7 +3425,51 @@
     "idVerified": "الهوية موثقة",
     "companyVerified": "شركة موثقة"
   },
+  "listingSchema": {
+    "sections": {
+      "property_specs": "مواصفات العقار",
+      "features": "المميزات",
+      "device_details": "تفاصيل الجهاز",
+      "vehicle_details": "تفاصيل المركبة",
+      "default": "تفاصيل الإعلان"
+    },
+    "fields": {
+      "purpose": "الغرض",
+      "property_type": "نوع العقار",
+      "area_sqm": "المساحة (م²)",
+      "bedrooms": "غرف النوم",
+      "bathrooms": "دورات المياه",
+      "land_width_m": "عرض الأرض (م)",
+      "land_length_m": "طول الأرض (م)",
+      "street_width_m": "عرض الشارع (م)",
+      "property_age_years": "عمر العقار (سنة)",
+      "furnished": "مفروش",
+      "floor_number": "رقم الطابق",
+      "total_floors": "عدد الطوابق",
+      "property_direction": "اتجاه العقار",
+      "parking": "موقف سيارة",
+      "elevator": "مصعد",
+      "pool": "مسبح",
+      "garden": "حديقة",
+      "internet": "إنترنت",
+      "electricity": "كهرباء",
+      "water": "ماء",
+      "kitchen": "مطبخ راكب",
+      "air_conditioning": "تكييف",
+      "security": "أمن",
+      "brand": "الماركة",
+      "model": "الموديل",
+      "year": "سنة الصنع",
+      "mileage": "الممشى (كم)",
+      "transmission": "ناقل الحركة",
+      "condition": "الحالة",
+      "warranty": "ضمان",
+      "storage": "السعة/التخزين"
+    }
+  },
   "listingDetail": {
+    "attributesTitle": "تفاصيل الإعلان",
+    "sellerTrustBadges": "ثقة البائع",
     "priceEmpty": "خالي",
     "priceNotSet": "السعر غير محدد",
     "viewCount": "عدد المشاهدات",
@@ -2276,6 +3524,7 @@
     "sellerReviewsCount": "{{count}} تقييم",
     "sellerReviewsEmpty": "لا توجد تقييمات لهذا البائع بعد",
     "youArePublisher": "أنت صاحب هذا العرض",
+    "viewProfile": "عرض الملف",
     "freeReturnShort": "ولاسترجاع الفوري مجانا",
     "trustBuy1": "توثيق حسابات البائعين والتأكد من صحة بياناتهم لمنع أي احتيال أو تلاعب.",
     "trustBuy2": "ضمان مطابقة المنتج للوصف المعروض.",
@@ -2312,6 +3561,20 @@
       "wrong_description": "وصف مضلل",
       "prohibited_item": "منتج محظور",
       "other": "سبب آخر"
+    },
+    "re": {
+      "adDetailsTitle": "تفاصيل الإعلان",
+      "featuresTitle": "المميزات",
+      "streetWidth": "عرض الشارع",
+      "category": "الفئة",
+      "bathrooms": "دورات المياه",
+      "floor": "الدور",
+      "groundFloor": "أرضي",
+      "propertyAge": "عمر العقار",
+      "newProperty": "جديد",
+      "yearsOld": "{{count}} سنة",
+      "meter": "م",
+      "sqm": "م²"
     }
   },
   "guarantee": {
@@ -2383,12 +3646,18 @@
     "errorLoading": "تعذر تحميل بيانات الحساب.",
     "retry": "إعادة المحاولة",
     "verified": "موثق",
+    "accountKind": {
+      "company": "شركة",
+      "individual_seller": "فرد بائع",
+      "individual_buyer": "فرد مشتري"
+    },
     "financialGuaranteeBadge": "ضمان مالي",
     "memberSince": "عضو منذ {{year}}",
     "about": "نبذة",
     "bioSectionTitle": "نبذة عني",
     "mapSubtitle": "موقع المستخدم على الخريطة",
     "ownerNoBioHint": "لم تضف نبذة قصيرة بعد. افتح «إدارة الحساب» أدناه لتعديل الملف والغلاف.",
+    "ownerNoLocationHint": "أضف موقعك من تبويب البيانات الشخصية لعرض خريطة هنا.",
     "accountManagement": "إدارة الحساب",
     "listingsTitle": "الإعلانات",
     "reviewsTitle": "التقييمات",
@@ -2442,5 +3711,91 @@
     "confirmRemoveCoverBody": "سيُعرض غلاف افتراضي حتى ترفع صورة جديدة.",
     "confirmRemoveAvatarTitle": "حذف الصورة الشخصية؟",
     "confirmRemoveAvatarBody": "سيُعرض اختصار الاسم حتى ترفع صورة جديدة."
+  },
+  "services": {
+    "market": {
+      "title": "الخدمات",
+      "subtitle": "اعثر على مقدمي خدمات موثوقين بالقرب منك.",
+      "search": "ابحث عن خدمة أو مقدم",
+      "category": "التصنيف",
+      "allCategories": "كل التصنيفات",
+      "sortRating": "الأعلى تقييماً",
+      "sortNewest": "الأحدث",
+      "sortPriceAsc": "السعر: من الأقل",
+      "empty": "لا يوجد مقدمو خدمات مطابقون للفلاتر.",
+      "providerDashboard": "لوحة مقدم الخدمة"
+    },
+    "card": {
+      "viewProfile": "عرض الملف"
+    },
+    "provider": {
+      "backToMarket": "العودة للخدمات",
+      "requestService": "طلب خدمة",
+      "requestNote": "صف احتياجك",
+      "coverageMap": "نطاق التغطية",
+      "requestSent": "تم إرسال الطلب للمقدم.",
+      "requestError": "تعذر إرسال الطلب.",
+      "notFound": "مقدم الخدمة غير موجود."
+    },
+    "dashboard": {
+      "title": "لوحة الخدمات",
+      "subtitle": "أدر ملف مقدم الخدمة والطلبات الواردة.",
+      "profileForm": "ملف مقدم الخدمة",
+      "profileFormDesc": "عرّف خدمتك والمدن التي تغطيها.",
+      "titleLabel": "عنوان الخدمة",
+      "descriptionLabel": "الوصف",
+      "citiesLabel": "المدن",
+      "citiesPlaceholder": "الرياض، جدة",
+      "saveProfile": "حفظ الملف",
+      "saved": "تم حفظ الملف.",
+      "saveError": "تعذر حفظ الملف.",
+      "requestsTitle": "الطلبات الواردة",
+      "requestsStats": "{{open}} مفتوحة · {{completed}} مكتملة",
+      "noRequests": "لا توجد طلبات بعد.",
+      "anonymous": "مشتري"
+    },
+    "status": {
+      "new": "جديد",
+      "in_progress": "قيد التنفيذ",
+      "en_route": "في الطريق",
+      "completed": "مكتمل",
+      "cancelled": "ملغى"
+    }
+  },
+  "realEstate": {
+    "sectionTitle": "تفاصيل العقار",
+    "purposeLabel": "الغرض",
+    "purposeSale": "للبيع",
+    "purposeRent": "للإيجار",
+    "typeLabel": "نوع العقار",
+    "typeApartment": "شقة",
+    "typeVilla": "فيلا",
+    "typeLand": "أرض",
+    "typeBuilding": "عمارة",
+    "typeFloor": "دور",
+    "typeShop": "محل",
+    "typeFarm": "مزرعة",
+    "areaLabel": "المساحة (م²)",
+    "areaSqm": "{{value}} م²",
+    "rooms": "{{count}} غرف",
+    "bedrooms": "غرف النوم",
+    "bathrooms": "دورات المياه",
+    "landWidth": "عرض الأرض (م)",
+    "landLength": "طول الأرض (م)",
+    "streetWidth": "عرض الشارع (م)",
+    "floorNumber": "رقم الطابق",
+    "totalFloors": "عدد الطوابق",
+    "furnished": "مفروش",
+    "minArea": "مساحة من",
+    "maxArea": "إلى",
+    "bedroomsMin": "غرف +",
+    "mapBrowse": "خريطة العقارات",
+    "mapCount": "{{count}} إعلان على الخريطة",
+    "errors": {
+      "purposeRequired": "اختر للبيع أو للإيجار",
+      "typeRequired": "اختر نوع العقار",
+      "areaRequired": "أدخل المساحة",
+      "landDimensionsRequired": "أدخل أبعاد الأرض"
+    }
   }
 }

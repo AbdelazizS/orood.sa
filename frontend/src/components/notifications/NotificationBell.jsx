@@ -4,7 +4,13 @@ import { useNavigate } from "react-router-dom"
 import { Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAccountSectionBasePath } from "@/lib/accountSectionPaths"
-import { getNotificationBody, getNotificationTitle } from "@/lib/notificationDisplay"
+import {
+  getNotificationActionButtonVariant,
+  getNotificationActions,
+  getNotificationBody,
+  getNotificationTitle,
+} from "@/lib/notificationDisplay"
+import { Link } from "react-router-dom"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +40,14 @@ function NotificationBell() {
 
   const notifications = Array.isArray(data?.items) ? data.items : []
   const unreadCount = Number(data?.meta?.unread_count ?? 0)
+
+  const openNotification = (id) => {
+    if (basePath === "/dashboard") {
+      navigate(`/dashboard/messages?hub=notifications&nid=${encodeURIComponent(String(id))}`)
+    } else {
+      navigate(`${basePath}/notifications/${id}`)
+    }
+  }
 
   return (
     <DropdownMenu>
@@ -73,7 +87,10 @@ function NotificationBell() {
             </div>
           ) : (
             <div className="space-y-0">
-              {notifications.map((n) => (
+              {notifications.map((n) => {
+                const actions = getNotificationActions(n)
+                const primary = actions[0]
+                return (
                 <div
                   key={n.id}
                   className={`flex items-start justify-between gap-2 border-b px-3 py-2.5 last:border-b-0 ${!n.read_at ? "bg-muted/50" : ""}`}
@@ -81,12 +98,26 @@ function NotificationBell() {
                   <button
                     type="button"
                     className="min-w-0 flex-1 rounded-md text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    onClick={() => navigate(`${basePath}/notifications/${n.id}`)}
+                    onClick={() => openNotification(n.id)}
                   >
                     <span className="block text-sm font-medium hover:underline">{getNotificationTitle(n, t)}</span>
                     {(getNotificationBody(n, t) || n.body) && (
                       <p className="mt-0.5 text-xs text-muted-foreground">{getNotificationBody(n, t) || n.body}</p>
                     )}
+                    {primary?.href ? (
+                      <span className="mt-1.5 inline-block" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant={getNotificationActionButtonVariant(primary, 0)}
+                          size="sm"
+                          className="h-7 text-xs"
+                          asChild
+                        >
+                          <Link to={primary.href.startsWith("/") ? primary.href : `/${primary.href}`}>
+                            {t(primary.i18n_label_key)}
+                          </Link>
+                        </Button>
+                      </span>
+                    ) : null}
                     <span className="mt-0.5 block text-[10px] text-muted-foreground">
                       {n.created_at ? new Date(n.created_at).toLocaleString() : ""}
                     </span>
@@ -106,7 +137,7 @@ function NotificationBell() {
                     </Button>
                   )}
                 </div>
-              ))}
+              )})}
             </div>
           )}
         </ScrollArea>

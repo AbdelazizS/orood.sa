@@ -6,13 +6,13 @@ import { Separator } from "@/components/ui/separator"
  * Section 11 — Trust Banner.
  * Numbered circles 1,2,3,4. No card border.
  */
-export function TrustBanner() {
+export function TrustBanner({ omitShippingTrustBlock = false }) {
   const { t } = useTranslation()
   const { direction } = useAppDirection()
 
-  const rows = [
+  const segments = [
     {
-      num: 1,
+      key: "buy",
       title: t("listingDetail.trustBuy", "اشتر وكن مطمئن"),
       items: [
         t("listingDetail.trustBuy1", "توثيق حسابات البائعين والتأكد من صحة بياناتهم لمنع أي احتيال أو تلاعب."),
@@ -20,32 +20,33 @@ export function TrustBanner() {
         t("listingDetail.trustBuy3", "استرجاع كامل لمبلغك إذا لم يصلك المنتج أو كان مختلفاً عن الوصف."),
       ],
     },
+    omitShippingTrustBlock
+      ? null
+      : {
+          key: "ship",
+          title: t("listingDetail.trustShip", "اشحن وكن مطمئن"),
+          items: [
+            t("listingDetail.trustShipDamage", "استرجاع المبلغ في حال تعرض المنتج للتلف أثناء الشحن أو التنزيل."),
+            t("listingDetail.trustShipFast", "سرعة في التوصيل: خلال 30 دقيقة أو أقل من 24 ساعة داخل المدينة."),
+            t("listingDetail.trustViewAtLocation", "إمكانية طلب مشاهدة المنتج عند موقعك قبل الشراء للتأكد منه."),
+          ],
+        },
     {
-      num: 2,
-      title: t("listingDetail.trustShip", "اشحن وكن مطمئن"),
-      items: [
-        t("listingDetail.trustShipDamage", "استرجاع المبلغ في حال تعرض المنتج للتلف أثناء الشحن أو التنزيل."),
-        t("listingDetail.trustShipFast", "سرعة في التوصيل: خلال 30 دقيقة أو أقل من 24 ساعة داخل المدينة."),
-        t("listingDetail.trustViewAtLocation", "إمكانية طلب مشاهدة المنتج عند موقعك قبل الشراء للتأكد منه."),
-      ],
-    },
-    {
-      num: 3,
+      key: "pay",
       title: t("listingDetail.trustPay", "ادفع وكن مطمئن"),
       items: [
         t("listingDetail.trustPay1", "قنوات دفع آمنة"),
         t("listingDetail.trustEscrow", "خاصية الطرف الثالث لاحتفاظ المبلغ"),
-        t("listingDetail.trustCOD", "خيار الدفع عند الاستلام"),
       ],
     },
     {
-      num: 4,
+      key: "contact",
       title: t("listingDetail.trustContact", "تواصل معنا وكن مطمئن"),
-      items: [
-        t("listingDetail.trustSupport", "سرعة في الرد وحل أي مشكلة"),
-      ],
+      items: [t("listingDetail.trustSupport", "سرعة في الرد وحل أي مشكلة")],
     },
-  ]
+  ].filter(Boolean)
+
+  const rows = segments.map((row, i) => ({ ...row, num: i + 1 }))
 
   return (
     <>
@@ -55,7 +56,7 @@ export function TrustBanner() {
         </h3>
         <div className="grid grid-cols-1 gap-4">
           {rows.map((row) => (
-            <div key={row.num} className="flex items-start gap-3">
+            <div key={row.key} className="flex items-start gap-3">
               <div className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
                 {row.num}
               </div>

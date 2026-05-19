@@ -25,3 +25,18 @@ export async function updateContentSettings(payload) {
   return data?.data ?? {}
 }
 
+export async function updateWholesaleMarketPageSettings(payload) {
+  const { data } = await apiClient.put("/admin/settings/wholesale-market-page", payload)
+  return data?.data ?? {}
+}
+
+export async function updatePaymentSettings(payload) {
+  const { data } = await apiClient.put("/admin/settings/payments", payload)
+  return data?.data ?? {}
+}
+
+export async function updateContactSettings(payload) {
+  const { data } = await apiClient.put("/admin/settings/contact", payload)
+  return data?.data ?? {}
+}
+

@@ -11,8 +11,10 @@ class CategoryResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'slug' => $this->slug,
             'name' => $this->getLocalizedName($request->header('Accept-Language')),
             'icon' => $this->icon,
+            'dynamic_schema_enabled' => (bool) ($this->dynamic_schema_enabled ?? false),
             'show_company_directory' => (bool) ($this->show_company_directory ?? false),
             'subcategories' => SubcategoryResource::collection($this->whenLoaded('subcategories')),
         ];

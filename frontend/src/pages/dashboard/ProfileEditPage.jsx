@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { LocationCitySelect } from "@/components/location/LocationCitySelect"
 import { PasswordInput } from "@/components/ui/password-input"
 import { ProfileImageUpload } from "@/components/ProfileImageUpload"
 import apiClient from "@/lib/apiClient"
@@ -37,6 +37,8 @@ export function ProfileEditPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["auth", "user"] })
       await queryClient.invalidateQueries({ queryKey: ["profile"] })
+      await queryClient.invalidateQueries({ queryKey: ["wholesale", "companies"] })
+      await queryClient.invalidateQueries({ queryKey: ["wholesale", "company"] })
       navigate(publicProfilePath(user) ?? "/dashboard")
     },
   })
@@ -163,6 +165,7 @@ function ProfileEditForm({ profile, onSubmit, isPending }) {
           onChange={setCityId}
           initialRegionId={profile.city?.region?.id}
           placeholder={t("profile.selectCity", "Select city")}
+          showClearOption
         />
       </div>
       <Button type="submit" disabled={isPending}>
@@ -244,58 +247,5 @@ function PasswordChangeForm() {
         {mutation.isPending ? <Loader2 className="size-4 animate-spin" /> : t("profile.changePassword", "Change Password")}
       </Button>
     </form>
-  )
-}
-
-function LocationCitySelect({ regions, value, onChange, initialRegionId, placeholder }) {
-  const { t } = useTranslation()
-  const [regionId, setRegionId] = useState(initialRegionId ?? null)
-
-  useEffect(() => {
-    if (initialRegionId) setRegionId(initialRegionId)
-  }, [initialRegionId])
-
-  useEffect(() => {
-    if (value && regions.length && !regionId) {
-      const r = regions.find((r) => r.cities?.some((c) => c.id === value))
-      if (r) setRegionId(r.id)
-    }
-  }, [value, regions, regionId])
-
-  const cities = regionId ? (regions.find((r) => r.id === regionId)?.cities ?? []) : []
-
-  return (
-    <div className="mt-1 flex flex-col gap-2 sm:flex-row">
-      <Select
-        value={regionId ? String(regionId) : ""}
-        onValueChange={(v) => {
-          setRegionId(v ? Number(v) : null)
-          onChange(null)
-        }}
-      >
-        <SelectTrigger className="flex-1">
-          <SelectValue placeholder={t("profile.selectRegion", "Select region")} />
-        </SelectTrigger>
-        <SelectContent>
-          {regions.map((r) => (
-            <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Select
-        value={value ? String(value) : ""}
-        onValueChange={(v) => onChange(v ? Number(v) : null)}
-        disabled={!regionId}
-      >
-        <SelectTrigger className="flex-1">
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent>
-          {cities.map((c) => (
-            <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
   )
 }

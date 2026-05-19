@@ -11,7 +11,7 @@ class HomepageSectionsController extends Controller
 {
     public function __invoke(): JsonResponse
     {
-        $base = Product::query()->published()->approved();
+        $base = Product::query()->published()->approved()->where('is_wholesale', false);
 
         $latestOffers = (clone $base)->where('type', 'offer')->orderByDesc('published_at')->limit(8)->get();
         $latestRequests = (clone $base)->where('type', 'request')->orderByDesc('published_at')->limit(8)->get();

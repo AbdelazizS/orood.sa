@@ -2,6 +2,8 @@ import { useTranslation } from "react-i18next"
 import { useAppDirection } from "@/providers/DirectionProvider"
 import { Separator } from "@/components/ui/separator"
 
+import { isRealEstateListing } from "@/lib/listings/isRealEstateListing"
+
 /**
  * Section 10 — Shipping Info.
  * Label: value pairs. Shipping, Returns, Payments.
@@ -13,6 +15,8 @@ export function ShippingInfo({ product }) {
   const freeReturn = product?.free_return ?? product?.shipping_details?.free_return ?? false
   const returnDays = product?.return_days ?? product?.shipping_details?.return_days ?? 30
   const locationCity = product?.location_city ?? product?.city?.name ?? ""
+
+  if (isRealEstateListing(product)) return null
 
   if (!freeShipping && !freeReturn) return null
 

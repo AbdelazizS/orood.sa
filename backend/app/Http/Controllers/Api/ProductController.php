@@ -7,13 +7,26 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Models\Category;
 use App\Services\AdminSettingsService;
+use App\Services\Listings\ListingAttributeSchemaService;
+use App\Services\Listings\ListingSchemaService;
+use App\Services\Listings\ListingSchemaValidator;
+use App\Services\Listings\RealEstateAttributeAdapter;
+use App\Services\ProductRealEstateService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    public function __construct(private readonly AdminSettingsService $settings) {}
+    public function __construct(
+        private readonly AdminSettingsService $settings,
+        private readonly ProductRealEstateService $realEstateService,
+        private readonly ListingSchemaService $listingSchemas,
+        private readonly ListingSchemaValidator $schemaValidator,
+        private readonly ListingAttributeSchemaService $attributeSchema,
+        private readonly RealEstateAttributeAdapter $reAdapter,
+    ) {}
 
     /**
      * Create an offer or request (authenticated sellers/buyers).
@@ -40,6 +53,8 @@ class ProductController extends Controller
             AdminSettingsService::KEY_LISTINGS_AUTO_PUBLISH,
             (bool) config('listings.auto_publish_on_create', true)
         );
+        $payoutActivation = app(\App\Services\Finance\PaymentEligibilityEngine::class)
+            ->resolveListingActivationStatus($user, $autoPublish);
         $defaultBidsVisible = $this->settings->getBool(AdminSettingsService::KEY_DEFAULT_BIDS_VISIBLE, true);
         $defaultCommentsVisible = $this->settings->getBool(AdminSettingsService::KEY_DEFAULT_COMMENTS_VISIBLE, true);
         $now = now();
@@ -85,17 +100,28 @@ class ProductController extends Controller
             'view_at_location' => (bool) ($validated['view_at_client'] ?? false),
             'free_shipping' => (bool) ($validated['free_shipping'] ?? false),
             'free_return' => (bool) ($validated['free_return'] ?? false),
-            'status' => $autoPublish ? 'published' : 'pending_review',
+            'location_lat' => $validated['location_lat'] ?? null,
+            'location_lng' => $validated['location_lng'] ?? null,
+            'location_address' => $validated['location_address'] ?? null,
+            'status' => ($autoPublish && $payoutActivation === 'active') ? 'published' : 'pending_review',
             'moderation_status' => $autoPublish ? 'approved' : 'pending',
-            'published_at' => $autoPublish ? $now : null,
-            'bumped_at' => $autoPublish ? $now : null,
+            'payout_activation_status' => $payoutActivation,
+            'published_at' => ($autoPublish && $payoutActivation === 'active') ? $now : null,
+            'bumped_at' => ($autoPublish && $payoutActivation === 'active') ? $now : null,
         ]);
+
+        $this->syncListingAttributes($request, $product, $validated);
+
+        if ($payoutActivation !== 'active') {
+            app(\App\Services\Finance\FinancialNotificationDispatcher::class)
+                ->listingPendingActivation($user, $product);
+        }
 
         return response()->json([
             'message' => $autoPublish
                 ? 'تم نشر إعلانك بنجاح'
                 : 'تم إضافة إعلانك وسيتم مراجعته قريباً',
-            'data' => new ProductResource($product->load(['category', 'subcategory', 'region', 'city', 'seller'])),
+            'data' => new ProductResource($product->load(['category', 'subcategory.category', 'region', 'city', 'seller', 'realEstateDetail'])),
         ], 201);
     }
 
@@ -150,11 +176,53 @@ class ProductController extends Controller
             'view_at_location' => (bool) ($validated['view_at_client'] ?? ($product->view_at_location ?? false)),
             'free_shipping' => (bool) ($validated['free_shipping'] ?? ($product->free_shipping ?? false)),
             'free_return' => (bool) ($validated['free_return'] ?? ($product->free_return ?? false)),
+            'location_lat' => array_key_exists('location_lat', $validated) ? $validated['location_lat'] : $product->location_lat,
+            'location_lng' => array_key_exists('location_lng', $validated) ? $validated['location_lng'] : $product->location_lng,
+            'location_address' => array_key_exists('location_address', $validated) ? $validated['location_address'] : $product->location_address,
         ]);
 
+        $this->syncListingAttributes($request, $product, $validated);
+
         return response()->json([
-            'data' => new ProductResource($product->fresh()->load(['category', 'subcategory', 'region', 'city', 'seller'])),
+            'data' => new ProductResource($product->fresh()->load(['category', 'subcategory.category', 'region', 'city', 'seller', 'realEstateDetail'])),
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function syncListingAttributes(StoreProductRequest $request, Product $product, array $validated): void
+    {
+        $category = Category::query()->find($product->category_id);
+        $usesSchema = $category && $this->listingSchemas->isDynamicSchemaEnabled($category);
+        $attrs = is_array($validated['listing_attributes'] ?? null) ? $validated['listing_attributes'] : [];
+
+        if ($usesSchema && $attrs !== []) {
+            $schema = $this->listingSchemas->resolvePublishedSchema(
+                (int) $product->category_id,
+                $product->subcategory_id ? (int) $product->subcategory_id : null,
+                $product->type ?? 'offer'
+            );
+            if ($schema) {
+                $this->attributeSchema->sync($product, $attrs, $schema->id);
+            }
+            if ($request->isRealEstateListingSelection()) {
+                $rePayload = $this->reAdapter->toRealEstatePayload($attrs);
+                if ($rePayload !== []) {
+                    $this->realEstateService->sync($product, $rePayload);
+                }
+            }
+
+            return;
+        }
+
+        if ($request->isRealEstateListingSelection() && is_array($validated['real_estate'] ?? null)) {
+            $this->realEstateService->sync($product, $validated['real_estate']);
+        }
+
+        if ($attrs !== []) {
+            app(\App\Services\Finance\ListingAttributeService::class)->sync($product, $attrs);
+        }
     }
 
     /**

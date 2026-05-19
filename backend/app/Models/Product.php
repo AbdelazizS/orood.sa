@@ -55,11 +55,13 @@ class Product extends Model
         'location_city',
         'location_lat',
         'location_lng',
+        'location_address',
         'stats',
         'media',
         'image_url',
         'tags',
         'status',
+        'payout_activation_status',
         'moderation_status',
         'published_at',
         'bumped_at',
@@ -298,6 +300,11 @@ class Product extends Model
         return $this->hasOne(GroupBuy::class);
     }
 
+    public function realEstateDetail()
+    {
+        return $this->hasOne(ProductRealEstateDetail::class);
+    }
+
     public function scopeFilterByRequest($query, array $filters = [])
     {
         return $query
@@ -328,6 +335,21 @@ class Product extends Model
             })
             ->when(data_get($filters, 'price_min'), fn ($q, $v) => $q->where('price', '>=', $v))
             ->when(data_get($filters, 'price_max'), fn ($q, $v) => $q->where('price', '<=', $v))
+            ->when(data_get($filters, 'purpose'), function ($q, $purpose) {
+                $q->whereHas('realEstateDetail', fn ($d) => $d->where('purpose', $purpose));
+            })
+            ->when(data_get($filters, 'property_type'), function ($q, $type) {
+                $q->whereHas('realEstateDetail', fn ($d) => $d->where('property_type', $type));
+            })
+            ->when(data_get($filters, 'min_area'), function ($q, $min) {
+                $q->whereHas('realEstateDetail', fn ($d) => $d->where('area_sqm', '>=', $min));
+            })
+            ->when(data_get($filters, 'max_area'), function ($q, $max) {
+                $q->whereHas('realEstateDetail', fn ($d) => $d->where('area_sqm', '<=', $max));
+            })
+            ->when(data_get($filters, 'bedrooms_min'), function ($q, $min) {
+                $q->whereHas('realEstateDetail', fn ($d) => $d->where('bedrooms', '>=', $min));
+            })
             ->when(data_get($filters, 'filter') === 'wholesale', function ($q) use ($filters) {
                 $q->where('is_wholesale', true)->whereNotNull('wholesale_price');
                 $q->where(function ($q2) use ($filters) {

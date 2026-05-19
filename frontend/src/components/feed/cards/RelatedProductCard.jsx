@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { MapPin, Package, MessageSquare, Eye, ShoppingBag } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { resolveImageUrl } from "@/lib/imageUrl"
+import { ProductImage } from "@/components/ui/ProductImage"
 import { VerificationBadge } from "@/components/auth/VerificationBadge"
 import { ContactDialog } from "@/components/chat/ContactDialog"
 
@@ -19,11 +19,16 @@ const formatPrice = (price, t) => {
 }
 
 /**
- * RelatedProductCard — for similar products section.
- * Image, title, price or "اسأل السعر", location, seller badge, stats, CTA buttons.
+ * RelatedProductCard â€” for similar products section.
+ * Image, title, price or "Ø§Ø³Ø£Ù„ Ø§Ù„Ø³Ø¹Ø±", location, seller badge, stats, CTA buttons.
  */
 export function RelatedProductCard({ product, className }) {
   const { t } = useTranslation()
+  const location = useLocation()
+  const from = `${location.pathname}${location.search}`
+  const detailTo = product?.is_wholesale
+    ? `/wholesale/product/${product.id}`
+    : `/products/${product.id}`
   const isUsed = product?.condition === "used"
   const isRequest = product?.type === "request"
   const imageUrl = product?.media?.image_url ?? product?.media?.gallery?.[0]
@@ -42,20 +47,14 @@ export function RelatedProductCard({ product, className }) {
         className
       )}
     >
-      <Link to={`/products/${product.id}`} state={{ from }} className="block">
+      <Link to={detailTo} state={{ from }} className="block">
         <div className="relative aspect-[4/3] overflow-hidden bg-muted/50">
-          {imageUrl ? (
-            <img
-              src={resolveImageUrl(imageUrl)}
-              alt={product?.title}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-              loading="lazy"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-muted text-muted-foreground">
-              <Package className="size-12 opacity-40" />
-            </div>
-          )}
+          <ProductImage
+            src={imageUrl}
+            alt={product?.title ?? ""}
+            categorySlug={product?.category?.slug}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+          />
           <div className="absolute start-2 top-2 flex flex-wrap gap-1">
             <Badge
               className={cn(
@@ -80,7 +79,7 @@ export function RelatedProductCard({ product, className }) {
         </div>
       </Link>
       <div className="space-y-2 p-3">
-        <Link to={`/products/${product.id}`} state={{ from }}>
+        <Link to={detailTo} state={{ from }}>
           <h3 className="line-clamp-2 text-sm font-semibold leading-tight hover:underline">
             {product?.title}
           </h3>
@@ -108,8 +107,8 @@ export function RelatedProductCard({ product, className }) {
         </div>
         <div className="flex gap-2 pt-2">
           <Button asChild size="sm" variant="default" className="flex-1">
-            <Link to={`/products/${product.id}`} state={{ from }}>
-              {t("productDetails.viewDetails", "عرض التفاصيل")}
+            <Link to={detailTo} state={{ from }}>
+              {t("productDetails.viewDetails", "Ø¹Ø±Ø¶ Ø§Ù„ØªÙØ§ØµÙŠÙ„")}
             </Link>
           </Button>
           <ContactDialog

@@ -39,9 +39,9 @@ export function WholesaleSection() {
         </Link>
       </div>
       {hasProducts ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {products.slice(0, 4).map((p) => (
-            <Link key={p.id} to={`/products/${p.id}`} className="block" state={{ from }}>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {products.slice(0, 6).map((p) => (
+            <Link key={p.id} to={`/wholesale/product/${p.id}`} className="block" state={{ from }}>
               <div className="rounded-2xl border bg-background/60 overflow-hidden transition-colors hover:bg-muted/50">
                 <div className="aspect-video bg-muted">
                   {p.media?.image_url ? (

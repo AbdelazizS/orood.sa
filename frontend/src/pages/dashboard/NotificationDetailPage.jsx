@@ -9,16 +9,19 @@ import { ChevronRight, Loader2 } from "lucide-react"
 import apiClient from "@/lib/apiClient"
 import {
   formatNotificationTimestamp,
+  getNotificationActionButtonVariant,
   getNotificationActions,
   getNotificationBody,
   getNotificationTitle,
+  getViewRequestNotificationHint,
 } from "@/lib/notificationDisplay"
 
-export function NotificationDetailPage() {
-  const { notificationId } = useParams()
+/**
+ * @param {{ notificationId: string | undefined, backHref: string }} props
+ */
+export function NotificationDetailInner({ notificationId, backHref }) {
   const { t, i18n } = useTranslation()
   const queryClient = useQueryClient()
-  const basePath = useAccountSectionBasePath()
 
   const {
     data: notification,
@@ -53,7 +56,7 @@ export function NotificationDetailPage() {
   return (
     <div className="space-y-6">
       <Button variant="ghost" size="sm" asChild className="gap-1">
-        <Link to={`${basePath}/notifications`}>
+        <Link to={backHref}>
           <ChevronRight className="size-4 rtl:rotate-180" />
           {t("notifications.backToNotifications", "Back to notifications")}
         </Link>
@@ -86,13 +89,21 @@ export function NotificationDetailPage() {
             {(getNotificationBody(notification, t) || notification.body) && (
               <p className="text-muted-foreground">{getNotificationBody(notification, t) || notification.body}</p>
             )}
+            {getViewRequestNotificationHint(notification, t, i18n.language) ? (
+              <p className="text-sm text-foreground/90">{getViewRequestNotificationHint(notification, t, i18n.language)}</p>
+            ) : null}
             <p className="text-xs text-muted-foreground">
               {formatNotificationTimestamp(notification.created_at, i18n.language)}
             </p>
             {notificationActions.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {notificationActions.map((a, idx) => (
-                  <Button key={`action-${idx}`} asChild variant="default" className="w-full sm:w-auto">
+                  <Button
+                    key={`action-${idx}`}
+                    asChild
+                    variant={getNotificationActionButtonVariant(a, idx)}
+                    className="w-full sm:w-auto"
+                  >
                     <Link to={a.href.startsWith("/") ? a.href : `/${a.href}`}>{t(a.i18n_label_key)}</Link>
                   </Button>
                 ))}
@@ -109,5 +120,16 @@ export function NotificationDetailPage() {
         </Card>
       )}
     </div>
+  )
+}
+
+export function NotificationDetailPage() {
+  const { notificationId } = useParams()
+  const basePath = useAccountSectionBasePath()
+  return (
+    <NotificationDetailInner
+      notificationId={notificationId}
+      backHref={`${basePath}/notifications`}
+    />
   )
 }

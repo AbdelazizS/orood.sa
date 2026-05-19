@@ -1,7 +1,7 @@
 import { createElement } from "react"
 import { useTranslation } from "react-i18next"
 import { useAppDirection } from "@/providers/DirectionProvider"
-import { ShoppingBag, Eye, MessageCircle, Check } from "lucide-react"
+import { ShoppingBag, Eye, MessageCircle, Users, Check } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 
@@ -16,6 +16,8 @@ export function ListingStatsRow({ product }) {
   const todayViews =
     stats.today_view_count ?? stats.today_views ?? product?.today_view_count ?? product?.view_count ?? stats.views ?? 0
   const messageCount = product?.message_count ?? stats.messages ?? 0
+  const isWholesale = Boolean(product?.is_wholesale)
+  const activeBuyerCount = Number(product?.active_buyer_count ?? 0)
   const freeShipping = product?.free_shipping ?? product?.shipping_details?.free_shipping ?? false
   const freeReturn = product?.free_return ?? product?.shipping_details?.free_return ?? false
 
@@ -34,13 +36,21 @@ export function ListingStatsRow({ product }) {
       icon: Eye,
       iconClass: "text-muted-foreground",
     },
-    {
-      id: "messages",
-      label: t("listingDetail.messagedCount", "عدد الذين تواصلوا عبر رسائل"),
-      value: messageCount,
-      icon: MessageCircle,
-      iconClass: "text-muted-foreground",
-    },
+    isWholesale
+      ? {
+          id: "activeBuyers",
+          label: t("wholesale.pdp.stats.activeBuyers", "مشترون في المجموعة"),
+          value: activeBuyerCount,
+          icon: Users,
+          iconClass: "text-muted-foreground",
+        }
+      : {
+          id: "messages",
+          label: t("listingDetail.messagedCount", "عدد الذين تواصلوا عبر رسائل"),
+          value: messageCount,
+          icon: MessageCircle,
+          iconClass: "text-muted-foreground",
+        },
   ]
 
   return (

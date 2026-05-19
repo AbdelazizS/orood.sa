@@ -30,6 +30,14 @@ const MESSAGE_MAP = {
   "The image urls.0 field must be a valid URL.": "addListing.errors.imageUrlInvalid",
 }
 
+function resolveErrorFieldKey(key) {
+  if (FIELD_MAP[key]) return FIELD_MAP[key]
+  if (key.startsWith("listing_attributes.")) {
+    return key.slice("listing_attributes.".length)
+  }
+  return key
+}
+
 export function parseAddListingErrors(apiError, t) {
   const errors = apiError?.response?.data?.errors
   if (!errors || typeof errors !== "object") return {}
@@ -37,7 +45,7 @@ export function parseAddListingErrors(apiError, t) {
   const fieldErrors = {}
   for (const [key, messages] of Object.entries(errors)) {
     const msg = Array.isArray(messages) ? messages[0] : messages
-    const field = FIELD_MAP[key] ?? key
+    const field = resolveErrorFieldKey(key)
     const tKey = MESSAGE_MAP[msg] ?? null
     fieldErrors[field] = tKey ? t(tKey) : msg
   }

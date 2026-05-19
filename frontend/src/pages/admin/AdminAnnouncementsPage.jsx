@@ -28,6 +28,18 @@ import { Plus, Pencil, Trash2, Loader2, Megaphone } from "lucide-react"
 const TYPES = ["info", "warning", "alert"]
 const TARGETS = ["all", "individuals", "companies", "team"]
 
+const TYPE_BADGE_CLASS = {
+  info: "border-sky-300 bg-sky-50 text-sky-900",
+  warning: "border-amber-300 bg-amber-50 text-amber-950",
+  alert: "border-red-300 bg-red-50 text-red-950",
+}
+
+const PREVIEW_BAR_CLASS = {
+  info: "border-sky-200 bg-sky-50 text-sky-900",
+  warning: "border-amber-200 bg-amber-50 text-amber-950",
+  alert: "border-red-200 bg-red-50 text-red-950",
+}
+
 export function AdminAnnouncementsPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
@@ -105,8 +117,10 @@ export function AdminAnnouncementsPage() {
                     <p className="font-medium">{a.title}</p>
                     <p className="text-muted-foreground text-sm line-clamp-1">{a.message}</p>
                     <div className="mt-1 flex gap-2">
-                      <Badge variant="outline">{a.type}</Badge>
-                      <Badge variant="secondary">{a.target}</Badge>
+                      <Badge variant="outline" className={TYPE_BADGE_CLASS[a.type] ?? ""}>
+                        {t(`admin.announcementType.${a.type}`, a.type)}
+                      </Badge>
+                      <Badge variant="secondary">{t(`admin.announcementTarget.${a.target}`, a.target)}</Badge>
                       {!a.active && <Badge variant="destructive">{t("admin.inactive", "Inactive")}</Badge>}
                     </div>
                   </div>
@@ -190,7 +204,9 @@ function AnnouncementForm({ announcement, onClose, onSubmit, isPending, t }) {
                 </SelectTrigger>
                 <SelectContent>
                   {TYPES.map((ty) => (
-                    <SelectItem key={ty} value={ty}>{ty}</SelectItem>
+                    <SelectItem key={ty} value={ty}>
+                      {t(`admin.announcementType.${ty}`, ty)}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -203,11 +219,20 @@ function AnnouncementForm({ announcement, onClose, onSubmit, isPending, t }) {
                 </SelectTrigger>
                 <SelectContent>
                   {TARGETS.map((tg) => (
-                    <SelectItem key={tg} value={tg}>{tg}</SelectItem>
+                    <SelectItem key={tg} value={tg}>
+                      {t(`admin.announcementTarget.${tg}`, tg)}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <div
+            className={`rounded-md border px-3 py-2 text-xs ${PREVIEW_BAR_CLASS[type] ?? PREVIEW_BAR_CLASS.info}`}
+          >
+            <span className="font-medium">{t("admin.announcementPreview", "Ticker preview")}: </span>
+            {title || t("admin.taskTitle", "Title")}
+            {message ? ` — ${message}` : ""}
           </div>
           <div className="flex items-center gap-2">
             <input type="checkbox" id="active" checked={active} onChange={(e) => setActive(e.target.checked)} />

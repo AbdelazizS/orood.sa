@@ -35,4 +35,8 @@ return [
     'notify_document_verification_approved_member_body' => 'Your document verification was approved.',
     'notify_document_verification_rejected_member_title' => 'Verification request not accepted',
     'notify_document_verification_rejected_member_body' => 'Your document verification request was not accepted.',
+
+    'insufficient_balance_for_guarantee' => 'Member wallet balance is insufficient. Choose external payment if you received funds via bank transfer or cash.',
+    'guarantee_deposit_from_wallet' => 'Financial guarantee deposit from platform wallet',
+    'guarantee_deposit_external' => 'Financial guarantee deposit — external payment (admin confirmed)',
 ];

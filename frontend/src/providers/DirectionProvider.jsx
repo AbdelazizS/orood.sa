@@ -19,6 +19,18 @@ export function AppDirectionProvider({ children }) {
     return () => i18n.off("languageChanged", handleChange)
   }, [])
 
+  // Portaled sheets/dialogs inherit <html dir>; keep it aligned with app language/direction.
+  useEffect(() => {
+    document.documentElement.dir = direction
+    const lang =
+      typeof i18n.language === "string" && i18n.language.length > 0
+        ? i18n.language.split("-")[0]
+        : direction === "rtl"
+          ? "ar"
+          : "en"
+    document.documentElement.lang = lang
+  }, [direction])
+
   const value = useMemo(() => ({ direction }), [direction])
 
   return (

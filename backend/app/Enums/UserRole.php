@@ -12,6 +12,7 @@ enum UserRole: string
     case SUPERADMIN = 'super_admin';
     case MANAGER = 'manager';
     case EMPLOYEE = 'employee';
+    case ASSISTANT = 'assistant';
     case MARKETER = 'marketer';
     case COMPANY = 'company';
 
@@ -48,6 +49,7 @@ enum UserRole: string
             self::SUPERADMIN => 'مدير أعلى',
             self::MANAGER => 'مدير منصة',
             self::EMPLOYEE => 'موظف',
+            self::ASSISTANT => 'مساعد',
             self::MARKETER => 'مسوق',
             self::COMPANY => 'شركة',
         };

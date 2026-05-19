@@ -1,0 +1,23 @@
+{
+  "cloneUrl": "git@github.com:bbccbbcc2010-alt/manfith.git",
+  "vendorPath": "vendor/manfith",
+  "discoveredAt": "2026-05-17T17:46:48.359Z",
+  "cloned": true,
+  "mapboxGlVersion": "^3.14.0",
+  "mapEnvKeys": [],
+  "tokenEnvKeys": [],
+  "styleEnvKeys": [],
+  "apiBaseEnvKeys": [],
+  "styleUrlsFound": [],
+  "mapSourceFiles": [
+    "dashboard/src/components/MapPicker.vue",
+    "dashboard/src/components/MapPreview.vue"
+  ],
+  "oroodEnv": {
+    "engine": "VITE_MAP_ENGINE=manfith",
+    "token": "VITE_MANFITH_MAP_PUBLIC_TOKEN",
+    "style": "VITE_MANFITH_MAP_STYLE_ID",
+    "apiBase": "VITE_MANFITH_MAP_API_BASE",
+    "locale": "VITE_MANFITH_LOCALE"
+  }
+}

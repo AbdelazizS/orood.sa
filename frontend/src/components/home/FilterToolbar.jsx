@@ -11,14 +11,27 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { useFiltersStore } from "@/store/useFiltersStore"
+import { cn } from "@/lib/utils"
 import { FEATURED_FILTERS } from "@/config/navigation"
 import { PackageSearch, Search } from "lucide-react"
+import { ResetFiltersButton } from "@/components/filters/ResetFiltersButton"
 
 /**
- * Filter toolbar — Search on button click. No reset (per product spec).
+ * Filter toolbar — Search on button click.
+ * @param {{ regions?: unknown[], hideWholesaleLink?: boolean, hideFeaturedFilter?: boolean, showReset?: boolean, clearSearchOnEmpty?: boolean, inputDir?: "rtl" | "ltr", searchPlaceholder?: string }} [props]
  */
-export function FilterToolbar({ regions = [] }) {
+export function FilterToolbar({
+  regions = [],
+  hideWholesaleLink = false,
+  hideFeaturedFilter = false,
+  showReset = false,
+  clearSearchOnEmpty = false,
+  inputDir,
+  searchPlaceholder,
+} = {}) {
   const { t } = useTranslation()
+  const resolvedPlaceholder =
+    searchPlaceholder ?? t("filters.searchPlaceholder", "ابحث في العروض والطلبات والشركات...")
   const {
     activeFilter,
     setActiveFilter,
@@ -42,12 +55,37 @@ export function FilterToolbar({ regions = [] }) {
   const cities = selectedRegion?.cities ?? []
 
   const handleSearchClick = () => {
-    setSearchQuery(localSearch || "")
+    setSearchQuery(localSearch.trim())
   }
+
+  const commitSearchIfEmpty = () => {
+    if (clearSearchOnEmpty && !localSearch.trim()) {
+      setSearchQuery("")
+    }
+  }
+
+  const gridCols = cn(
+    "md:grid-cols-2",
+    hideFeaturedFilter
+      ? hideWholesaleLink
+        ? showReset
+          ? "xl:grid-cols-[190px_190px_minmax(280px,1fr)_auto_auto]"
+          : "xl:grid-cols-[190px_190px_minmax(320px,1fr)_auto]"
+        : showReset
+          ? "xl:grid-cols-[190px_190px_minmax(280px,1fr)_auto_auto_auto]"
+          : "xl:grid-cols-[190px_190px_minmax(320px,1fr)_auto_auto]"
+      : hideWholesaleLink
+        ? showReset
+          ? "xl:grid-cols-[190px_190px_190px_minmax(260px,1fr)_auto_auto]"
+          : "xl:grid-cols-[190px_190px_190px_minmax(320px,1fr)_auto]"
+        : showReset
+          ? "xl:grid-cols-[190px_190px_190px_minmax(260px,1fr)_auto_auto_auto]"
+          : "xl:grid-cols-[190px_190px_190px_minmax(320px,1fr)_auto_auto]"
+  )
 
   return (
     <div className="border-b border-border bg-background px-4 py-3 sm:px-6">
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-[190px_190px_190px_minmax(320px,1fr)_auto_auto]">
+      <div className={cn("grid grid-cols-1 gap-2", gridCols)}>
         <div>
           <Select
             value={regionId ? String(regionId) : "all"}
@@ -93,30 +131,44 @@ export function FilterToolbar({ regions = [] }) {
           </Select>
         </div>
 
-        <div>
-          <Select value={activeFilter ?? "all"} onValueChange={setActiveFilter}>
-            <SelectTrigger className="h-12 w-full rounded-md border-border">
-              <SelectValue
-                className="truncate text-sm"
-                placeholder={t("filters.allFilters", "المميزات")}
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {FEATURED_FILTERS.filter((f) => f.id !== "wholesale").map((f) => (
-                <SelectItem key={f.id} value={f.id}>
-                  {t(f.label)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {hideFeaturedFilter ? null : (
+          <div>
+            <Select value={activeFilter ?? "all"} onValueChange={setActiveFilter}>
+              <SelectTrigger className="h-12 w-full rounded-md border-border">
+                <SelectValue
+                  className="truncate text-sm"
+                  placeholder={t("filters.allFilters", "المميزات")}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {FEATURED_FILTERS.filter((f) => f.id !== "wholesale").map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {t(f.label)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div className="flex min-w-0 w-full rounded-md border border-input overflow-hidden">
           <Input
             type="search"
-            placeholder="ابحث في العروض والطلبات والشركات..."
+            placeholder={resolvedPlaceholder}
             value={localSearch}
             onChange={(e) => setLocalSearch(e.target.value)}
+            onBlur={commitSearchIfEmpty}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault()
+                if (localSearch.trim()) {
+                  handleSearchClick()
+                } else {
+                  commitSearchIfEmpty()
+                }
+              }
+            }}
+            dir={inputDir}
             className="h-12 flex-1 min-w-0 rounded-none border-0 px-3 text-sm focus-visible:ring-0"
           />
           <Button
@@ -130,16 +182,24 @@ export function FilterToolbar({ regions = [] }) {
           </Button>
         </div>
 
-        <Button
-          variant="outline"
-          asChild
-          className="h-12 w-full rounded-md px-4 text-sm md:w-auto"
-        >
-          <Link to="/wholesale" className="flex h-full items-center gap-2">
-            <PackageSearch className="size-4" />
-            {t("nav.wholesaleMarket", "سوق الجملة")}
-          </Link>
-        </Button>
+        {showReset ? (
+          <div className="flex items-center">
+            <ResetFiltersButton />
+          </div>
+        ) : null}
+
+        {hideWholesaleLink ? null : (
+          <Button
+            variant="outline"
+            asChild
+            className="h-12 w-full rounded-md px-4 text-sm md:w-auto"
+          >
+            <Link to="/wholesale" className="flex h-full items-center gap-2">
+              <PackageSearch className="size-4" />
+              {t("nav.wholesaleMarket", "سوق الجملة")}
+            </Link>
+          </Button>
+        )}
         <Button
           asChild
           className="h-12 w-full rounded-md bg-primary px-4 text-sm font-bold text-primary-foreground hover:bg-primary/90 md:w-auto"

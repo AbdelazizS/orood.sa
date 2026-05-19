@@ -16,11 +16,17 @@ const buildFeedParams = (filters, pageParam) => {
     page: pageParam,
     per_page: PER_PAGE,
     filter: filters.activeFilter,
+    type: filters.listingType,
     category_id: filters.categoryId,
     subcategory_id: filters.subcategoryId,
     region_id: filters.regionId,
     city_id: filters.cityId,
     search: filters.searchQuery,
+    purpose: filters.rePurpose,
+    property_type: filters.rePropertyType,
+    min_area: filters.reMinArea || undefined,
+    max_area: filters.reMaxArea || undefined,
+    bedrooms_min: filters.reBedroomsMin || undefined,
   }
 
   Object.keys(params).forEach((key) => {
@@ -41,7 +47,13 @@ export const useHomepageFeed = () => {
     regionId: filters.regionId,
     cityId: filters.cityId,
     activeFilter: filters.activeFilter,
+    listingType: filters.listingType,
     searchQuery: filters.searchQuery,
+    rePurpose: filters.rePurpose,
+    rePropertyType: filters.rePropertyType,
+    reMinArea: filters.reMinArea,
+    reMaxArea: filters.reMaxArea,
+    reBedroomsMin: filters.reBedroomsMin,
   })
 
   const feedQuery = useInfiniteQuery({

@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { PasswordInput } from "@/components/ui/password-input"
 import * as authService from "@/services/authService"
+import { SeoHead } from "@/components/seo/SeoHead"
+import { useResolvedSeo } from "@/hooks/useResolvedSeo"
 import { Loader2, ArrowRight } from "lucide-react"
 
 const FORM_MAX_WIDTH = "max-w-md sm:max-w-lg"
@@ -39,6 +41,9 @@ export function LoginPage() {
   const redirectTo =
     typeof rawRedirect === "string" && rawRedirect.startsWith("/") ? rawRedirect : "/"
 
+  const seoQuery = useResolvedSeo("/login")
+  const seo = seoQuery.data
+
   const loginMutation = useMutation({
     mutationFn: () => authService.login(email, password),
     onSuccess: () => navigate(redirectTo, { replace: true }),
@@ -53,6 +58,14 @@ export function LoginPage() {
     <div
       className={`w-full ${FORM_MAX_WIDTH} rounded-xl border border-border bg-card p-4 shadow-sm sm:p-8`}
     >
+      <SeoHead
+        path="/login"
+        title={seo?.seo_title}
+        description={seo?.description}
+        hreflang={seo?.hreflang}
+        robots={seo?.robots ?? "index,follow"}
+        useTitleAsFull={Boolean(seo?.seo_title)}
+      />
       <h1 className="mb-6 text-end text-xl font-semibold text-foreground sm:mb-8">
         {t("auth.loginTitle")}
       </h1>

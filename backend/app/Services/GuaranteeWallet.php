@@ -11,30 +11,80 @@ use Illuminate\Support\Facades\DB;
 
 class GuaranteeWallet
 {
-    public static function applyDeposit(User $user, float $amount): void
+    public static function memberAvailableBalance(User $user): float
+    {
+        return (float) Balance::getOrCreateForUser($user->id)->available;
+    }
+
+    /**
+     * Credit guarantee from the member's platform wallet (deducts available balance).
+     *
+     * @throws \InvalidArgumentException when wallet balance is insufficient
+     */
+    public static function applyDepositFromPlatformWallet(User $user, float $amount): void
     {
         $balance = Balance::getOrCreateForUser($user->id);
         if ((float) $balance->available < $amount) {
-            throw new \InvalidArgumentException(__('Insufficient balance.'));
+            throw new \InvalidArgumentException(__('wallet.insufficient_balance_for_guarantee'));
         }
 
         DB::transaction(function () use ($user, $balance, $amount) {
-            Guarantee::create([
-                'user_id' => $user->id,
-                'amount' => $amount,
-                'status' => Guarantee::STATUS_ACTIVE,
-            ]);
-            $user->increment('financial_guarantee', $amount);
+            self::createGuaranteeRecord($user, $amount);
             $balance->decrement('available', $amount);
             Transaction::create([
                 'user_id' => $user->id,
                 'type' => Transaction::TYPE_GUARANTEE_DEPOSIT,
                 'amount' => -$amount,
-                'description' => __('Deposit to financial guarantee'),
+                'description' => __('wallet.guarantee_deposit_from_wallet'),
                 'status' => Transaction::STATUS_COMPLETED,
                 'completed_at' => now(),
+                'metadata' => ['funding_source' => 'platform_wallet'],
             ]);
         });
+    }
+
+    /**
+     * Credit guarantee when admin confirmed payment outside the platform wallet
+     * (bank transfer, cash, etc. after contacting the member).
+     */
+    public static function applyDepositFromExternal(
+        User $user,
+        float $amount,
+        ?string $approvalNote = null,
+        ?int $processedBy = null,
+    ): void {
+        DB::transaction(function () use ($user, $amount, $approvalNote, $processedBy) {
+            self::createGuaranteeRecord($user, $amount);
+            Transaction::create([
+                'user_id' => $user->id,
+                'type' => Transaction::TYPE_GUARANTEE_DEPOSIT,
+                'amount' => $amount,
+                'description' => __('wallet.guarantee_deposit_external'),
+                'status' => Transaction::STATUS_COMPLETED,
+                'completed_at' => now(),
+                'metadata' => array_filter([
+                    'funding_source' => 'external',
+                    'approval_note' => $approvalNote,
+                    'processed_by' => $processedBy,
+                ]),
+            ]);
+        });
+    }
+
+    /** @deprecated Use applyDepositFromPlatformWallet */
+    public static function applyDeposit(User $user, float $amount): void
+    {
+        self::applyDepositFromPlatformWallet($user, $amount);
+    }
+
+    private static function createGuaranteeRecord(User $user, float $amount): void
+    {
+        Guarantee::create([
+            'user_id' => $user->id,
+            'amount' => $amount,
+            'status' => Guarantee::STATUS_ACTIVE,
+        ]);
+        $user->increment('financial_guarantee', $amount);
     }
 
     /**

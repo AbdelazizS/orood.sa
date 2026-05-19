@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -55,3 +56,5 @@ Artisan::command('products:backfill-sold-count', function () {
 
     $this->info("Backfill complete. Updated {$updated} products with completed purchases; others set to 0.");
 })->purpose('Set products.sold_count from SUM(quantity) of completed purchases per product; others set to 0');
+
+Schedule::command('seo:generate-sitemap')->dailyAt('02:00');

@@ -168,9 +168,24 @@ class User extends Authenticatable
         return $this->hasOne(Balance::class, 'user_id');
     }
 
+    public function sellerPayoutProfile()
+    {
+        return $this->hasOne(SellerPayoutProfile::class, 'user_id');
+    }
+
     public function company()
     {
         return $this->hasOne(Company::class, 'user_id');
+    }
+
+    public function assistantProfile()
+    {
+        return $this->hasOne(Assistant::class, 'user_id');
+    }
+
+    public function isAssistant(): bool
+    {
+        return (string) $this->role === 'assistant';
     }
 
     public function isCompany(): bool
@@ -186,6 +201,16 @@ class User extends Authenticatable
     public function canSellWholesale(): bool
     {
         return $this->isCompany() && (string) $this->company_verification_status === 'approved';
+    }
+
+    public function bids()
+    {
+        return $this->hasMany(Bid::class);
+    }
+
+    public function viewRequestsAsRequester()
+    {
+        return $this->hasMany(ViewRequest::class, 'requester_id');
     }
 
     public function purchasesAsBuyer()

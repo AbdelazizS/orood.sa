@@ -8,6 +8,8 @@ use App\Models\Notification;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\WithdrawalRequest;
+use App\Models\FinancialRequest;
+use App\Services\Finance\FinancialRequestService;
 use App\Support\InAppNotificationPayload;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,6 +18,8 @@ use RuntimeException;
 
 class AdminWithdrawalController extends Controller
 {
+    public function __construct(private readonly FinancialRequestService $financialRequestService) {}
+
     public function index(Request $request): JsonResponse
     {
         $status = $request->query('status', WithdrawalRequest::STATUS_PENDING);
@@ -46,38 +50,47 @@ class AdminWithdrawalController extends Controller
         }
 
         $admin = $request->user();
-        $amount = (float) $withdrawalRequest->amount;
 
         try {
-            DB::transaction(function () use ($withdrawalRequest, $admin, $amount) {
-                $balance = Balance::getOrCreateForUser($withdrawalRequest->user_id);
-                $withdrawable = (float) ($balance->withdrawable ?? 0);
-                if ($withdrawable < $amount) {
-                    throw new RuntimeException(__('wallet.withdrawal_insufficient_for_approval'));
-                }
+            $linked = FinancialRequest::query()
+                ->where('legacy_withdrawal_request_id', $withdrawalRequest->id)
+                ->first();
 
-                $balance->decrement('withdrawable', $amount);
+            if ($linked) {
+                $this->financialRequestService->approveFromLegacyWithdrawal($withdrawalRequest, $admin);
+            } else {
+                $amount = (float) $withdrawalRequest->amount;
+                DB::transaction(function () use ($withdrawalRequest, $admin, $amount) {
+                    $balance = Balance::getOrCreateForUser($withdrawalRequest->user_id);
+                    $withdrawable = (float) ($balance->withdrawable ?? 0);
+                    if ($withdrawable < $amount) {
+                        throw new RuntimeException(__('wallet.withdrawal_insufficient_for_approval'));
+                    }
 
-                Transaction::create([
-                    'user_id' => $withdrawalRequest->user_id,
-                    'type' => Transaction::TYPE_WITHDRAWAL,
-                    'amount' => -$amount,
-                    'description' => __('wallet.withdrawal_approved_description', ['iban' => $withdrawalRequest->bank_iban]),
-                    'status' => Transaction::STATUS_COMPLETED,
-                    'completed_at' => now(),
-                    'withdrawal_request_id' => $withdrawalRequest->id,
-                    'metadata' => [
-                        'bank_name' => $withdrawalRequest->bank_name,
-                        'bank_iban' => $withdrawalRequest->bank_iban,
-                    ],
-                ]);
+                    $balance->decrement('withdrawable', $amount);
+                    $balance->decrement('available', $amount);
 
-                $withdrawalRequest->update([
-                    'status' => WithdrawalRequest::STATUS_APPROVED,
-                    'reviewed_by' => $admin->id,
-                    'reviewed_at' => now(),
-                ]);
-            });
+                    Transaction::create([
+                        'user_id' => $withdrawalRequest->user_id,
+                        'type' => Transaction::TYPE_WITHDRAWAL,
+                        'amount' => -$amount,
+                        'description' => __('wallet.withdrawal_approved_description', ['iban' => $withdrawalRequest->bank_iban]),
+                        'status' => Transaction::STATUS_COMPLETED,
+                        'completed_at' => now(),
+                        'withdrawal_request_id' => $withdrawalRequest->id,
+                        'metadata' => [
+                            'bank_name' => $withdrawalRequest->bank_name,
+                            'bank_iban' => $withdrawalRequest->bank_iban,
+                        ],
+                    ]);
+
+                    $withdrawalRequest->update([
+                        'status' => WithdrawalRequest::STATUS_APPROVED,
+                        'reviewed_by' => $admin->id,
+                        'reviewed_at' => now(),
+                    ]);
+                });
+            }
         } catch (RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }

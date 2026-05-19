@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams, useNavigate, Link } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
@@ -20,8 +20,11 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import apiClient from "@/lib/apiClient"
 import { resolveImageUrl } from "@/lib/imageUrl"
-import { Package, Truck, CheckCircle2, Loader2, ExternalLink, ChevronRight, PackageCheck, Handshake, Star, Info } from "lucide-react"
+import { Package, Truck, CheckCircle2, Loader2, ExternalLink, ChevronRight, PackageCheck, Handshake, Star, Info, Phone, Banknote } from "lucide-react"
 import { LeaveReviewModal } from "@/components/reviews/LeaveReviewModal"
+import { LocationMapPreview } from "@/components/maps/LocationMapPreview"
+import { StandardLocationMapField } from "@/components/maps/StandardLocationMapField"
+import { normalizeLatLng } from "@/lib/maps/urls"
 import { toast } from "sonner"
 
 function orderMutationErrorMessage(error, t) {
@@ -69,9 +72,31 @@ function orderProgressCompletedCount(order) {
     if (status === "awaiting_payment" || status === "paid") return 2
     if (status === "shipped") return 3
     if (status === "delivered" || status === "completed") return 4
-    return 0
+    return 1
+  }
+  if (pm === "direct_transfer") {
+    if (status === "awaiting_payment") return 1
+    if (status === "pending" && !order.seller_transfer_confirmed_at) return 1
+    if (status === "pending") return 2
+    if (status === "shipped") return 3
+    if (status === "delivered" || status === "completed") return 4
+    return 1
   }
   return 0
+}
+
+function step2Subtitle(order, t) {
+  const isEscrowLike = order.payment_method === "escrow" || order.payment_method === "balance"
+  if (isEscrowLike) {
+    return t("orders.progressConfirmedEscrowSub", "المبلغ محجوز لدى المنصة")
+  }
+  if (order.payment_method === "direct_transfer") {
+    if (order.seller_transfer_confirmed_at) {
+      return t("orders.progressConfirmedDirectSellerSub", "البائع أكّد استلام التحويل")
+    }
+    return t("orders.progressAwaitingSellerConfirmSub", "بانتظار تأكيد البائع لاستلام التحويل")
+  }
+  return t("orders.progressConfirmedCodSub", "البائع قبل الدفع عند الاستلام")
 }
 
 function OrderStatusTimeline({ order, t }) {
@@ -85,6 +110,7 @@ function OrderStatusTimeline({ order, t }) {
   }
 
   const isEscrowLike = order.payment_method === "escrow" || order.payment_method === "balance"
+  const isDirectTransfer = order.payment_method === "direct_transfer"
   const steps = [
     {
       id: 1,
@@ -93,10 +119,10 @@ function OrderStatusTimeline({ order, t }) {
     },
     {
       id: 2,
-      label: t("orders.progressConfirmed", "تم التأكيد"),
-      subtitle: isEscrowLike
-        ? t("orders.progressConfirmedEscrowSub", "المبلغ محجوز لدى المنصة")
-        : t("orders.progressConfirmedCodSub", "البائع قبل الدفع عند الاستلام"),
+      label: isDirectTransfer
+        ? t("orders.progressConfirmed", "تم التحقق / التأكيد")
+        : t("orders.progressConfirmed", "تم التأكيد"),
+      subtitle: step2Subtitle(order, t),
     },
     {
       id: 3,
@@ -117,21 +143,21 @@ function OrderStatusTimeline({ order, t }) {
     <div className="rounded-lg border bg-muted/30 p-4">
       <p className="text-sm font-medium mb-3">{t("orders.timelineTitle", "مسار الطلب")}</p>
       <p className="text-xs text-muted-foreground mb-4">
-        {order.payment_method === "escrow" || order.payment_method === "balance"
+        {isEscrowLike
           ? t(
               "orders.timelineEscrowExplain",
               "مع الدفع عبر المنصة يبقى المبلغ محجوزًا حتى تؤكد الاستلام؛ عندها يُضاف للبائع في رصيده القابل للسحب.",
             )
-          : t(
-              "orders.timelineCodExplain",
-              "مع الدفع عند الاستلام تدفع للبائع عند الاستلام؛ تأكيد الاستلام يحدّث حالة الطلب.",
-            )}
+          : isDirectTransfer
+            ? t(
+                "orders.timelineDirectExplain",
+                "مع التحويل البنكي المباشر يرفع المشتري السند عند الشراء، ويؤكد البائع استلام المبلغ قبل الشحن.",
+              )
+            : t(
+                "orders.timelineCodExplain",
+                "مع الدفع عند الاستلام تدفع للبائع عند الاستلام؛ تأكيد الاستلام يحدّث حالة الطلب.",
+              )}
       </p>
-      {order.shipping_address ? (
-        <p className="text-xs text-muted-foreground mb-3">
-          {t("orders.confirmedDeliveryLocation", "موقع التسليم المؤكد")}: {order.shipping_address}
-        </p>
-      ) : null}
       <ol className="flex flex-wrap gap-3 sm:gap-4">
         {steps.map((step, i) => {
           const done = completed >= step.id
@@ -167,6 +193,7 @@ export function OrderDetailPage() {
   const queryClient = useQueryClient()
   const [confirmOrder, setConfirmOrder] = useState(null)
   const [reviewOpen, setReviewOpen] = useState(false)
+  const [locationDraft, setLocationDraft] = useState(null)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["account", "orders", id],
@@ -178,6 +205,16 @@ export function OrderDetailPage() {
   })
 
   const order = data
+
+  useEffect(() => {
+    if (!order) return
+    const coords = normalizeLatLng(order.shipping_lat, order.shipping_lng)
+    setLocationDraft({
+      lat: coords.lat,
+      lng: coords.lng,
+      address: order.shipping_address ?? "",
+    })
+  }, [order?.id, order?.shipping_lat, order?.shipping_lng, order?.shipping_address])
 
   const updateMutation = useMutation({
     mutationFn: (payload) => apiClient.put(`/account/orders/${id}`, payload),
@@ -214,6 +251,30 @@ export function OrderDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["account", "balance"] })
       setConfirmOrder(null)
       toast.success(t("orders.receiptConfirmed", "تم تأكيد الاستلام"))
+    },
+    onError: (err) => {
+      toast.error(orderMutationErrorMessage(err, t))
+    },
+  })
+
+  const confirmTransferMutation = useMutation({
+    mutationFn: () => apiClient.put(`/account/orders/${id}`, { confirm_direct_transfer: true }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["account", "orders"] })
+      queryClient.invalidateQueries({ queryKey: ["account", "orders", id] })
+      toast.success(t("orders.directTransferConfirmed", "تم تأكيد استلام التحويل."))
+    },
+    onError: (err) => {
+      toast.error(orderMutationErrorMessage(err, t))
+    },
+  })
+
+  const locationMutation = useMutation({
+    mutationFn: (payload) => apiClient.put(`/account/orders/${id}`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["account", "orders"] })
+      queryClient.invalidateQueries({ queryKey: ["account", "orders", id] })
+      toast.success(t("orders.locationEditSaved", "تم تحديث موقع التسليم."))
     },
     onError: (err) => {
       toast.error(orderMutationErrorMessage(err, t))
@@ -289,6 +350,54 @@ export function OrderDetailPage() {
         </Alert>
       ) : null}
 
+      {order.payment_method === "direct_transfer"
+        && !["cancelled", "disputed", "completed", "shipped", "delivered"].includes(order.status)
+        && (() => {
+          let message = null
+          if (
+            (order.status === "pending" || order.status === "awaiting_payment")
+            && !order.seller_transfer_confirmed_at
+          ) {
+            message = order.is_buyer
+              ? t(
+                  "orders.directTransferAwaitingSellerBuyer",
+                  "تم إرسال بيانات التحويل والسند. بانتظار تأكيد البائع لاستلام المبلغ.",
+                )
+              : t(
+                  "orders.directTransferAwaitingSellerAction",
+                  "راجع سند التحويل وأكّد استلام المبلغ قبل الشحن. يمكنك التواصل مع المشتري عند الحاجة.",
+                )
+          } else if (order.is_buyer && order.seller_transfer_confirmed_at && order.status === "pending") {
+            message = t("orders.directTransferConfirmedBuyer", "أكّد البائع استلام التحويل. سيتم الشحن قريبًا.")
+          }
+          if (!message) return null
+          return (
+            <div
+              className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-950 dark:text-sky-100"
+              role="status"
+            >
+              {message}
+            </div>
+          )
+        })()}
+
+      {order.order_payment?.receipt_url ? (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Banknote className="size-4 text-primary" />
+              {t("orders.directTransferReceiptTitle", "سند التحويل")}
+            </div>
+            <Button variant="outline" size="sm" asChild>
+              <a href={resolveImageUrl(order.order_payment.receipt_url)} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="size-4 me-1" />
+                {t("orders.directTransferReceiptView", "عرض السند")}
+              </a>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+
       {order.payment_method === "cod"
         && !order.cod_seller_accepted_at
         && (order.status === "cod_requested" || order.status === "pending") && (
@@ -303,6 +412,79 @@ export function OrderDetailPage() {
       )}
 
       <OrderStatusTimeline order={order} t={t} />
+
+      {(order.shipping_lat != null && order.shipping_lng != null) ||
+      order.shipping_address ||
+      order.can_edit_location ? (
+        <Card>
+          <CardContent className="space-y-3 p-4">
+            <p className="text-sm font-medium">{t("orders.deliveryMapTitle", "موقع التسليم")}</p>
+            {order.can_edit_location && order.location_edits_remaining != null ? (
+              <p className="text-xs text-muted-foreground">
+                {t("orders.locationEditHint", {
+                  remaining: order.location_edits_remaining,
+                  deadline: order.location_edit_deadline_at
+                    ? new Date(order.location_edit_deadline_at).toLocaleString()
+                    : "—",
+                  defaultValue: `يمكنك تعديل الموقع ${order.location_edits_remaining} مرة قبل الموعد النهائي.`,
+                })}
+              </p>
+            ) : null}
+            {(locationDraft?.address || order.shipping_address) ? (
+              <p className="text-sm text-muted-foreground">
+                {locationDraft?.address || order.shipping_address}
+              </p>
+            ) : null}
+            {order.can_edit_location && locationDraft ? (
+              <>
+                <StandardLocationMapField
+                  lat={locationDraft.lat}
+                  lng={locationDraft.lng}
+                  address={locationDraft.address}
+                  onChange={({ lat, lng }) => setLocationDraft((d) => ({ ...d, lat, lng }))}
+                  onAddressResolved={(addr) => setLocationDraft((d) => ({ ...d, address: addr }))}
+                />
+                <Button
+                  size="sm"
+                  disabled={locationMutation.isPending || locationDraft.lat == null || locationDraft.lng == null}
+                  onClick={() =>
+                    locationMutation.mutate({
+                      shipping_lat: locationDraft.lat,
+                      shipping_lng: locationDraft.lng,
+                      shipping_address: locationDraft.address || null,
+                    })
+                  }
+                >
+                  {locationMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : null}
+                  {t("orders.locationEditSave", "حفظ موقع التسليم")}
+                </Button>
+              </>
+            ) : (
+              (() => {
+                const coords = normalizeLatLng(
+                  locationDraft?.lat ?? order.shipping_lat,
+                  locationDraft?.lng ?? order.shipping_lng,
+                )
+                if (coords.lat == null || coords.lng == null) return null
+                return (
+                  <LocationMapPreview
+                    lat={coords.lat}
+                    lng={coords.lng}
+                    subtitle=""
+                    label={order.shipping_address ?? t("orders.deliveryMapTitle", "موقع التسليم")}
+                    dir={direction}
+                    markerId={`order-${order.id}`}
+                    showAttribution={false}
+                    mapHeightClass="min-h-[220px] h-[260px] w-full sm:min-h-[280px] sm:h-[320px]"
+                  />
+                )
+              })()
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
 
       {order.payment_method === "cod"
         && order.status !== "completed"
@@ -439,6 +621,30 @@ export function OrderDetailPage() {
                     {t("orders.acceptCod", "قبول الدفع عند الاستلام")}
                   </Button>
                 )}
+                {order.can_confirm_direct_transfer && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="gap-1"
+                    disabled={confirmTransferMutation.isPending}
+                    onClick={() => confirmTransferMutation.mutate()}
+                  >
+                    {confirmTransferMutation.isPending ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Banknote className="size-4" />
+                    )}
+                    {t("orders.confirmDirectTransfer", "تأكيد استلام التحويل")}
+                  </Button>
+                )}
+                {order.can_contact_buyer && order.buyer?.phone ? (
+                  <Button size="sm" variant="outline" className="gap-1" asChild>
+                    <a href={`tel:${order.buyer.phone}`}>
+                      <Phone className="size-4" />
+                      {t("orders.contactBuyerPhone", "اتصال")}
+                    </a>
+                  </Button>
+                ) : null}
                 {order.can_review_seller && order.seller?.id ? (
                   <Button size="sm" variant="outline" className="gap-1" onClick={() => setReviewOpen(true)}>
                     <Star className="size-4" />

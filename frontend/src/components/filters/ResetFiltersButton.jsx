@@ -5,8 +5,20 @@ import { RotateCcw } from "lucide-react"
 
 export function ResetFiltersButton() {
   const { t } = useTranslation()
-  const { categoryId, subcategoryId, regionId, cityId, activeFilter, searchQuery, resetFilters } =
-    useFiltersStore()
+  const {
+    categoryId,
+    subcategoryId,
+    regionId,
+    cityId,
+    activeFilter,
+    searchQuery,
+    rePurpose,
+    rePropertyType,
+    reMinArea,
+    reMaxArea,
+    reBedroomsMin,
+    resetFilters,
+  } = useFiltersStore()
 
   const hasActiveFilters =
     categoryId ||
@@ -14,7 +26,12 @@ export function ResetFiltersButton() {
     regionId ||
     cityId ||
     (activeFilter && activeFilter !== "all") ||
-    searchQuery
+    searchQuery ||
+    rePurpose ||
+    rePropertyType ||
+    reMinArea ||
+    reMaxArea ||
+    reBedroomsMin
 
   if (!hasActiveFilters) return null
 

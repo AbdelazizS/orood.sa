@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <sitemap><loc>http://localhost/sitemap_main.xml</loc><lastmod>2026-05-19T18:39:44+00:00</lastmod></sitemap>
+  <sitemap><loc>http://localhost/sitemap_categories.xml</loc><lastmod>2026-05-19T18:39:44+00:00</lastmod></sitemap>
+  <sitemap><loc>http://localhost/sitemap_listings_1.xml</loc><lastmod>2026-05-19T18:39:44+00:00</lastmod></sitemap>
+  <sitemap><loc>http://localhost/sitemap_wholesale.xml</loc><lastmod>2026-05-19T18:39:44+00:00</lastmod></sitemap>
+  <sitemap><loc>http://localhost/sitemap_companies.xml</loc><lastmod>2026-05-19T18:39:44+00:00</lastmod></sitemap>
+</sitemapindex>

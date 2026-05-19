@@ -51,12 +51,12 @@ export function RegisterForm() {
     termsAccepted: false,
     registerAsCompany: false,
     companyName: "",
+    companyCategoryId: null,
     regionId: null,
     companyCityId: "",
     companyProductTypes: "",
     companyLicense: null,
   })
-  const [oathExpanded, setOathExpanded] = useState(false)
   const [fieldErrors, setFieldErrors] = useState({})
   const [serverNotice, setServerNotice] = useState("")
   const { data: passwordPolicy } = useQuery({
@@ -88,6 +88,7 @@ export function RegisterForm() {
       const companyRes = await authService.registerCompany({
         company_name: formData.companyName.trim(),
         city_id: String(formData.companyCityId),
+        category_id: String(formData.companyCategoryId),
         product_types: formData.companyProductTypes?.trim() || undefined,
         license: formData.companyLicense || undefined,
       })
@@ -109,7 +110,13 @@ export function RegisterForm() {
       if (data?.errors) {
         const flat = {}
         for (const [k, v] of Object.entries(data.errors)) {
-          const normalizedKey = k === "name" ? "username" : k
+          const keyMap = {
+            name: "username",
+            category_id: "companyCategoryId",
+            city_id: "companyCityId",
+            company_name: "companyName",
+          }
+          const normalizedKey = keyMap[k] ?? k
           flat[normalizedKey] = Array.isArray(v) ? v[0] : v
         }
         if (!flat.username && data?.errors?.name) {
@@ -136,10 +143,10 @@ export function RegisterForm() {
     if (formData.password !== formData.confirmPassword) {
       errs.password_confirmation = t("auth.passwordMismatch")
     }
-    if (!oathExpanded) errs.oathExpanded = t("auth.oathSectionRequired", "يرجى الاطلاع على قسم التعهدات قبل المتابعة")
     if (!formData.termsAccepted) errs.termsAccepted = t("auth.oathCheckboxRequired", "يجب الإقرار والتعهد قبل إنشاء الحساب")
     if (formData.registerAsCompany) {
       if (!formData.companyName?.trim()) errs.companyName = t("auth.companyNameRequired")
+      if (!formData.companyCategoryId) errs.companyCategoryId = t("auth.companyMainCategoryRequired")
       if (!formData.companyCityId) errs.companyCityId = t("auth.companyCityRequired")
       if (!formData.companyLicense) errs.companyLicense = t("auth.companyLicenseRequired")
     }
@@ -252,13 +259,7 @@ export function RegisterForm() {
           </Select>
         </div>
 
-        <TermsBox expanded={oathExpanded} onExpandedChange={(next) => {
-          setOathExpanded(next)
-          if (next) setFieldErrors((prev) => ({ ...prev, oathExpanded: undefined }))
-        }} />
-        {fieldErrors.oathExpanded && (
-          <p className="text-xs text-destructive">{fieldErrors.oathExpanded}</p>
-        )}
+        <TermsBox />
 
         <div className="flex items-start gap-3">
           <Checkbox
@@ -292,6 +293,7 @@ export function RegisterForm() {
           <CompanyFields
             value={{
               companyName: formData.companyName,
+              companyCategoryId: formData.companyCategoryId,
               regionId: formData.regionId,
               companyCityId: formData.companyCityId,
               companyProductTypes: formData.companyProductTypes,
@@ -301,6 +303,7 @@ export function RegisterForm() {
               setFormData((prev) => ({
                 ...prev,
                 companyName: v.companyName ?? prev.companyName,
+                companyCategoryId: v.companyCategoryId ?? prev.companyCategoryId,
                 regionId: v.regionId ?? prev.regionId,
                 companyCityId: v.companyCityId ?? prev.companyCityId,
                 companyProductTypes: v.companyProductTypes ?? prev.companyProductTypes,
@@ -310,9 +313,15 @@ export function RegisterForm() {
             disabled={registerMutation.isPending}
           />
         )}
-        {(fieldErrors.companyName || fieldErrors.companyCityId || fieldErrors.companyLicense) && (
+        {(fieldErrors.companyName ||
+          fieldErrors.companyCategoryId ||
+          fieldErrors.companyCityId ||
+          fieldErrors.companyLicense) && (
           <p className="text-xs text-destructive">
-            {fieldErrors.companyName || fieldErrors.companyCityId || fieldErrors.companyLicense}
+            {fieldErrors.companyName ||
+              fieldErrors.companyCategoryId ||
+              fieldErrors.companyCityId ||
+              fieldErrors.companyLicense}
           </p>
         )}
 

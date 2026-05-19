@@ -20,8 +20,8 @@ export function ListingDetailsForm({
   description,
   imageUrls,
   priceEnabled = false,
+  showPriceToggle = true,
   price,
-  includeTax,
   onChange,
   errors = {},
   type = "offer",
@@ -33,6 +33,7 @@ export function ListingDetailsForm({
     typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/"))
   const validUrls = (imageUrls || []).filter(isValidUrl)
   const minImages = type === "offer" ? 1 : 0
+  const showPriceFields = showPriceToggle ? priceEnabled : true
 
   return (
     <TooltipProvider>
@@ -111,28 +112,39 @@ export function ListingDetailsForm({
           )}
         </div>
 
-        {/* Price — optional: checkbox first, then amount (per spec) */}
+        {/* Price — optional toggle on retail; amount only on wholesale */}
         <div className={BOX_STYLE}>
-          <label className="flex cursor-pointer items-start gap-3 py-1">
-            <Checkbox
-              checked={priceEnabled}
-              onCheckedChange={(v) => onChange({ priceEnabled: !!v })}
-              className="mt-0.5 size-[18px] rounded-[3px]"
-            />
-            <span className="flex flex-col gap-0.5">
-              <span className="text-[14px] font-bold text-foreground">
-                {t("addListing.priceEnabledCheckbox")}
+          {showPriceToggle ? (
+            <label className="flex cursor-pointer items-start gap-3 py-1">
+              <Checkbox
+                checked={priceEnabled}
+                onCheckedChange={(v) => onChange({ priceEnabled: !!v })}
+                className="mt-0.5 size-[18px] rounded-[3px]"
+              />
+              <span className="flex flex-col gap-0.5">
+                <span className="text-[14px] font-bold text-foreground">
+                  {t("addListing.priceEnabledCheckbox")}
+                </span>
+                <span className="text-[12px] text-muted-foreground">
+                  {t("addListing.priceEnabledHint")}
+                </span>
               </span>
-              <span className="text-[12px] text-muted-foreground">
-                {t("addListing.priceEnabledHint")}
-              </span>
-            </span>
-          </label>
-          {priceEnabled && (
-            <div className="mt-4 flex flex-wrap items-center gap-3 gap-y-2 border-t border-border pt-4">
-              <span className="text-[14px] font-bold text-foreground">
-                {t("addListing.priceAmountLabel")}
-              </span>
+            </label>
+          ) : (
+            <span className="text-[14px] font-bold text-foreground">{t("addListing.priceAmountLabel")}</span>
+          )}
+          {showPriceFields && (
+            <div
+              className={cn(
+                "flex flex-wrap items-center gap-3 gap-y-2",
+                showPriceToggle && "mt-4 border-t border-border pt-4"
+              )}
+            >
+              {showPriceToggle ? (
+                <span className="text-[14px] font-bold text-foreground">
+                  {t("addListing.priceAmountLabel")}
+                </span>
+              ) : null}
               <Input
                 type="number"
                 min="0"
@@ -147,14 +159,6 @@ export function ListingDetailsForm({
               <span className="text-[13px] leading-tight text-muted-foreground">
                 {t("addListing.priceCurrency")}
               </span>
-              <label className="flex cursor-pointer items-center gap-2">
-                <Checkbox
-                  checked={includeTax}
-                  onCheckedChange={(v) => onChange({ includeTax: !!v })}
-                  className="size-[18px] rounded-[3px]"
-                />
-                <span className="text-[14px] text-foreground">{t("addListing.priceIncludeTax")}</span>
-              </label>
             </div>
           )}
           {errors.price && (

@@ -1,6 +1,5 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,12 +13,9 @@ import { formatRelativeTime } from "@/lib/dashboardUtils"
 import { useAppDirection } from "@/providers/DirectionProvider"
 import {
   Eye,
-  EyeOff,
   MessageCircle,
   ShoppingBag,
   Gavel,
-  Pencil,
-  ArrowUp,
   Trash2,
   MoreHorizontal,
   ExternalLink,
@@ -29,49 +25,39 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react"
-import { Loader2 } from "lucide-react"
 import { useTranslation } from "react-i18next"
+import { Link } from "react-router-dom"
+import { ListingStateBanner } from "@/components/listing-state/ListingStateBanner"
+import { getPrimaryListingAction } from "@/components/listing-state"
+import { Badge } from "@/components/ui/badge"
 
-const statusStyle = {
-  ACTIVE: { variant: "default", dot: "bg-green-500" },
-  SOLD: { variant: "secondary", dot: "bg-muted-foreground" },
-  HIDDEN: { variant: "outline", dot: "bg-yellow-500" },
-  PENDING_REVIEW: { variant: "secondary", dot: "bg-amber-500" },
-  SUSPENDED: { variant: "destructive", dot: "bg-red-500" },
-  ARCHIVED: { variant: "outline", dot: "bg-muted-foreground" },
-  DRAFT: { variant: "outline", dot: "bg-slate-400" },
-  DELETED: { variant: "destructive", dot: "bg-red-600" },
-  OTHER: { variant: "outline", dot: "bg-muted-foreground" },
+const STATUS_CHIP_KEYS = {
+  awaiting_payment_setup: "listingState.status.awaiting_payment_setup",
+  pending_moderation: "listingState.status.pending_moderation",
+  moderation_rejected: "listingState.status.moderation_rejected",
+  payout_profile_pending_review: "listingState.status.payout_profile_pending_review",
+  pending_publish: "listingState.status.pending_publish",
+  PENDING_REVIEW: "listingState.status.pending_moderation",
 }
 
-export function ListingCard({
-  listing,
-  onToggleStatus,
-  onBump,
-  onDelete,
-  onMarkSold,
-  onDuplicate,
-  onEdit,
-  onView,
-}) {
+export function ListingCard({ listing, onDelete, onMarkSold, onDuplicate, onView, onHideListing }) {
   const { t, i18n } = useTranslation()
   const { direction } = useAppDirection()
   const [menuOpen, setMenuOpen] = useState(false)
-  const isBumping = onBump.isPending
-  const isToggling = onToggleStatus.isPending
-  const style = statusStyle[listing.status] ?? statusStyle.OTHER
-  const statusLabel = t(`dashboard.listingStatus.${listing.status}`, listing.status)
   const stats = listing.stats ?? {}
-  const sellerCanToggleVisibility = ["ACTIVE", "HIDDEN", "PENDING_REVIEW", "DRAFT"].includes(listing.status)
-  const canBumpOrMarkActive = listing.status === "ACTIVE"
+  const canMarkSold = listing.status === "ACTIVE"
+  const sellerState = listing.seller_state
+  const primaryAction = getPrimaryListingAction(sellerState)
+  const statusKey =
+    sellerState?.status ?? listing.status
+  const chipKey = STATUS_CHIP_KEYS[statusKey] ?? STATUS_CHIP_KEYS[listing.status]
   const dateLocale = i18n.language?.startsWith("ar") ? "ar" : "en"
   const priceLocale = i18n.language?.startsWith("ar") ? "ar-SA" : "en-US"
 
   return (
     <div
       className={cn(
-        "border border-border rounded-xl overflow-hidden",
-        "bg-card transition-all duration-200",
+        "overflow-hidden rounded-xl border border-border bg-card transition-all duration-200",
         "hover:border-primary/30 hover:shadow-sm",
         (listing.status === "HIDDEN" || listing.status === "SUSPENDED" || listing.status === "ARCHIVED") &&
           "opacity-75"
@@ -79,7 +65,7 @@ export function ListingCard({
       dir={direction}
     >
       <div className="flex gap-3 p-3">
-        <div className="relative h-20 w-24 shrink-0 rounded-lg overflow-hidden border border-border bg-muted">
+        <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
           {listing.thumbnail ? (
             <img
               src={resolveImageUrl(listing.thumbnail)}
@@ -87,13 +73,13 @@ export function ListingCard({
               className="h-full w-full object-cover"
             />
           ) : (
-            <div className="h-full w-full flex items-center justify-center">
+            <div className="flex h-full w-full items-center justify-center">
               <ImageIcon size={20} className="text-muted-foreground" />
             </div>
           )}
           <div
             className={cn(
-              "absolute top-1 end-1 text-xs px-1.5 py-0.5 rounded-full font-medium",
+              "absolute end-1 top-1 rounded-full px-1.5 py-0.5 text-xs font-medium",
               listing.type === "OFFER"
                 ? "bg-primary text-primary-foreground"
                 : "bg-secondary text-secondary-foreground"
@@ -105,26 +91,32 @@ export function ListingCard({
           </div>
         </div>
 
-        <div className="flex-1 min-w-0 text-start">
-          <div className="flex items-start gap-2">
-            <div className="flex items-center gap-1 shrink-0 mt-0.5">
-              <Badge variant={style.variant} className="text-xs h-4 px-1.5 gap-1">
-                <span className={cn("h-1.5 w-1.5 rounded-full", style.dot)} />
-                {statusLabel}
-              </Badge>
-            </div>
+        <div className="min-w-0 flex-1 text-start">
+          <div className="flex flex-wrap items-start justify-between gap-2">
             <button
               type="button"
               onClick={() => onView(listing.id)}
-              className="flex-1 min-w-0 text-start hover:text-primary transition-colors line-clamp-2"
+              className="line-clamp-2 min-w-0 flex-1 text-start transition-colors hover:text-primary"
             >
               <span className="text-sm font-semibold text-foreground hover:text-primary">
                 {listing.title}
               </span>
             </button>
+            {chipKey && sellerState?.status !== "active" ? (
+              <Badge
+                variant="outline"
+                className={
+                  sellerState?.blocking
+                    ? "shrink-0 border-amber-600/50 text-amber-800 dark:text-amber-300"
+                    : "shrink-0"
+                }
+              >
+                {t(chipKey, sellerState?.title ?? listing.status)}
+              </Badge>
+            ) : null}
           </div>
 
-          <div className="flex flex-wrap items-center justify-start gap-x-2 gap-y-0.5 mt-1">
+          <div className="mt-1 flex flex-wrap items-center justify-start gap-x-2 gap-y-0.5">
             <span className="text-xs text-muted-foreground">
               {listing.main_category?.icon}
               {listing.main_category?.name}
@@ -146,7 +138,7 @@ export function ListingCard({
             )}
           </div>
 
-          <div className="flex flex-wrap items-center justify-start gap-3 mt-2">
+          <div className="mt-2 flex flex-wrap items-center justify-start gap-3">
             <span className="flex items-center gap-1 text-xs text-muted-foreground">
               {(stats.view_count ?? 0).toLocaleString(priceLocale)}
               <Eye size={11} className="shrink-0" />
@@ -160,86 +152,61 @@ export function ListingCard({
               <ShoppingBag size={11} className="shrink-0" />
             </span>
             {(stats.pending_bids ?? 0) > 0 && (
-              <span className="flex items-center gap-1 text-xs text-orange-600 font-medium">
+              <span className="flex items-center gap-1 text-xs font-medium text-orange-600">
                 {t("dashboard.listingCard.pendingBidsInline", { count: stats.pending_bids })}
                 <Gavel size={11} className="shrink-0" />
               </span>
             )}
           </div>
 
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="mt-1 text-xs text-muted-foreground">
             {formatRelativeTime(listing.created_at, dateLocale)}
           </p>
         </div>
       </div>
 
-      <div className="flex items-center gap-1 px-3 py-2 border-t border-border bg-muted/30">
+      {sellerState?.blocking || (sellerState?.available_actions?.length > 0 && sellerState?.status !== "active") ? (
+        <div className="border-t border-border px-3 py-2">
+          <ListingStateBanner
+            sellerState={sellerState}
+            compact
+            onHideListing={onHideListing ? () => onHideListing(listing.id) : undefined}
+          />
+        </div>
+      ) : null}
+
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-muted/30 px-3 py-2">
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 px-2 text-xs gap-1 flex-1"
-          onClick={() => onEdit(listing.id)}
+          className="h-7 gap-1 px-2 text-xs"
+          onClick={() => onView(listing.id)}
         >
-          <Pencil size={12} className="shrink-0" /> {t("dashboard.listingCard.edit")}
+          <ExternalLink size={12} className="shrink-0" />
+          {t("dashboard.listingCard.viewListing")}
         </Button>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 px-2 text-xs gap-1 flex-1"
-          disabled={!canBumpOrMarkActive || isBumping}
-          onClick={() => onBump.mutate(listing.id)}
-        >
-          {isBumping ? (
-            <Loader2 size={12} className="animate-spin shrink-0" />
-          ) : (
-            <ArrowUp size={12} className="shrink-0" />
-          )}
-          {t("dashboard.listingCard.bump")}
-        </Button>
-
-        {listing.status !== "SOLD" && sellerCanToggleVisibility && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-xs gap-1 flex-1"
-            disabled={isToggling}
-            onClick={() =>
-              onToggleStatus.mutate({
-                id: listing.id,
-                newStatus: listing.status === "ACTIVE" ? "HIDDEN" : "ACTIVE",
-              })
-            }
-          >
-            {listing.status === "ACTIVE" ? (
-              <>
-                <EyeOff size={12} className="shrink-0" /> {t("dashboard.listingHide")}
-              </>
-            ) : (
-              <>
-                <Eye size={12} className="shrink-0" /> {t("dashboard.listingShow")}
-              </>
-            )}
+        {primaryAction?.href ? (
+          <Button variant="default" size="sm" className="h-7 px-2 text-xs" asChild>
+            <Link to={primaryAction.href.startsWith("/") ? primaryAction.href : `/${primaryAction.href}`}>
+              {primaryAction.label || t(primaryAction.i18n_label_key, primaryAction.i18n_label_key)}
+            </Link>
           </Button>
-        )}
+        ) : null}
 
         <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 shrink-0" aria-label={t("dashboard.listingCard.moreActions")}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1 px-2 text-xs"
+              aria-label={t("dashboard.listingCard.moreActions")}
+            >
               <MoreHorizontal size={14} />
+              {t("dashboard.listingCard.moreActions")}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44" dir={direction}>
-            <DropdownMenuItem
-              onClick={() => {
-                onView(listing.id)
-                setMenuOpen(false)
-              }}
-              className="gap-2"
-            >
-              <ExternalLink size={13} className="shrink-0" />
-              <span className="flex-1 text-start">{t("dashboard.listingCard.viewListing")}</span>
-            </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
                 onDuplicate(listing)
@@ -250,7 +217,7 @@ export function ListingCard({
               <Copy size={13} className="shrink-0" />
               <span className="flex-1 text-start">{t("dashboard.listingCard.duplicateListing")}</span>
             </DropdownMenuItem>
-            {canBumpOrMarkActive && (
+            {canMarkSold && (
               <DropdownMenuItem
                 onClick={() => {
                   onMarkSold.mutate(listing.id)
@@ -288,10 +255,10 @@ export function ListingCard({
               onView(listing.id)
             }
           }}
-          className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 dark:bg-orange-950/30 border-t border-orange-100 dark:border-orange-900/30 cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-950/50 transition-colors"
+          className="flex cursor-pointer items-center gap-2 border-t border-orange-100 bg-orange-50 px-3 py-1.5 transition-colors hover:bg-orange-100 dark:border-orange-900/30 dark:bg-orange-950/30 dark:hover:bg-orange-950/50"
         >
           <ChevronRight className="size-3.5 shrink-0 text-orange-600 rtl:rotate-180" />
-          <p className="flex-1 text-xs text-orange-700 dark:text-orange-400 font-medium text-start">
+          <p className="flex-1 text-start text-xs font-medium text-orange-700 dark:text-orange-400">
             {t("dashboard.listingCard.pendingBidsBanner", { count: stats.pending_bids })}
           </p>
           <ChevronLeft className="size-3.5 shrink-0 text-orange-600 rtl:rotate-180" />

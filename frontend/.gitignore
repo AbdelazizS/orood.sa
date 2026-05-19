@@ -9,6 +9,9 @@ dist/
 .env.local
 .env.*.local
 
+# Manfith reference clone (use npm run setup:manfith)
+/vendor/manfith/
+
 # IDE
 .idea/
 .vscode/

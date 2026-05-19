@@ -2,21 +2,16 @@ import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { cn } from "@/lib/utils"
 
-/**
- * Enterprise preloader: smooth sliding title animation.
- * Used on initial app load for a polished, big-company feel.
- */
-export function Preloader({ onComplete, minDuration = 1200 }) {
+const LOGO_SRC = "/logo.png"
+
+/** Full-screen splash: main wordmark + spinner (static logo, not from admin branding). */
+export function Preloader({ onComplete, minDuration = 1400 }) {
   const { t } = useTranslation()
   const [phase, setPhase] = useState("visible")
   const [done, setDone] = useState(false)
 
   useEffect(() => {
-    const start = Date.now()
-    const timer = setTimeout(() => {
-      setPhase("slide-out")
-    }, minDuration * 0.6)
-
+    const timer = setTimeout(() => setPhase("slide-out"), minDuration * 0.6)
     const doneTimer = setTimeout(() => {
       setDone(true)
       onComplete?.()
@@ -37,36 +32,23 @@ export function Preloader({ onComplete, minDuration = 1200 }) {
         phase === "slide-out" && "opacity-0",
       )}
     >
-      <div className="flex flex-col items-center gap-6">
-        {/* Logo mark */}
+      <div
+        className={cn(
+          "flex flex-col items-center gap-8 px-6 transition-all duration-700 ease-out",
+          phase === "slide-out" && "-translate-y-4 opacity-0",
+        )}
+      >
+        <img
+          src={LOGO_SRC}
+          alt={t("common.brandName")}
+          className="block h-auto w-[min(260px,82vw)] max-h-28 shrink-0 object-contain sm:max-h-32"
+          decoding="async"
+          fetchPriority="high"
+        />
         <div
-          className={cn(
-            "flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground text-2xl font-bold shadow-lg transition-all duration-700",
-            phase === "slide-out" && "scale-90 opacity-0 -translate-y-4",
-          )}
-        >
-          {t("common.brandName").charAt(0)}
-        </div>
-        {/* Title — smooth slide up */}
-        <div
-          className={cn(
-            "flex flex-col items-center gap-1 transition-all duration-700 ease-out",
-            phase === "slide-out" && "opacity-0 -translate-y-6",
-          )}
-        >
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            {t("common.brandName")}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {t("auth.tagline")}
-          </p>
-        </div>
-        {/* Spinner */}
-        <div
-          className={cn(
-            "size-8 rounded-full border-2 border-primary border-t-transparent animate-spin transition-opacity duration-500",
-            phase === "slide-out" && "opacity-0",
-          )}
+          className="size-10 rounded-full border-2 border-primary border-t-transparent animate-spin sm:size-11"
+          role="status"
+          aria-label={t("common.loading", "Loading")}
         />
       </div>
     </div>

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import { useTranslation } from "react-i18next"
@@ -11,7 +12,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import apiClient from "@/lib/apiClient"
 import { useAccountSectionBasePath } from "@/lib/accountSectionPaths"
 import { toast } from "sonner"
-import { MapPin } from "lucide-react"
+import { ExternalLink, MapPin } from "lucide-react"
+import { googleMapsPlaceUrl } from "@/lib/maps/urls"
+import { cn } from "@/lib/utils"
 
 function statusVariant(status) {
   if (status === "APPROVED") return "default"
@@ -24,7 +27,7 @@ const viewReqKeys = {
   incoming: ["account", "view-requests", "incoming"],
 }
 
-export function ViewRequestsPage() {
+export function ViewRequestsPage({ embedded = false } = {}) {
   const { t, i18n } = useTranslation()
   const { direction } = useAppDirection()
   const queryClient = useQueryClient()
@@ -32,16 +35,34 @@ export function ViewRequestsPage() {
   const basePath = useAccountSectionBasePath()
   const locale = i18n.language === "ar" ? ar : enUS
   const [searchParams, setSearchParams] = useSearchParams()
-  const tab = searchParams.get("tab") === "incoming" ? "incoming" : "outgoing"
+  const focusParam = searchParams.get("focus")
+  const focusId = focusParam ? Number(focusParam) : null
+  const tab =
+    searchParams.get("tab") === "incoming" || (Number.isFinite(focusId) && focusId > 0)
+      ? "incoming"
+      : "outgoing"
+  const scrolledFocusRef = useRef(null)
 
   const setTab = (value) => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev)
       if (value === "incoming") next.set("tab", "incoming")
-      else next.delete("tab")
+      else {
+        next.delete("tab")
+        next.delete("focus")
+      }
       return next
     })
   }
+
+  useEffect(() => {
+    if (!focusParam || tab === "incoming") return
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set("tab", "incoming")
+      return next
+    })
+  }, [focusParam, tab, setSearchParams])
 
   const { data: outgoingData, isLoading: loadingOut } = useQuery({
     queryKey: viewReqKeys.outgoing,
@@ -61,6 +82,16 @@ export function ViewRequestsPage() {
 
   const outgoingRows = outgoingData?.data ?? []
   const incomingRows = incomingData?.data ?? []
+
+  useEffect(() => {
+    if (!focusId || loadingIn) return
+    if (scrolledFocusRef.current === focusId) return
+    const row = incomingRows.find((r) => r.id === focusId)
+    if (!row) return
+    scrolledFocusRef.current = focusId
+    const el = document.getElementById(`view-request-${focusId}`)
+    el?.scrollIntoView({ behavior: "smooth", block: "center" })
+  }, [focusId, loadingIn, incomingRows])
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ["account", "view-requests"] })
@@ -151,9 +182,21 @@ export function ViewRequestsPage() {
     const pid = row.product_id ?? row.product?.id
     const pending = row.status === "PENDING"
     const requesterId = row.requester_id ?? row.requester?.id
+    const lat = row.location_lat != null ? Number(row.location_lat) : null
+    const lng = row.location_lng != null ? Number(row.location_lng) : null
+    const mapUrl =
+      Number.isFinite(lat) && Number.isFinite(lng) ? googleMapsPlaceUrl(lat, lng, row.location_address ?? "") : null
+    const highlighted = focusId === row.id
 
     return (
-      <li key={row.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <li
+        id={`view-request-${row.id}`}
+        key={row.id}
+        className={cn(
+          "flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between",
+          highlighted && "bg-primary/5 ring-2 ring-primary/30 ring-inset"
+        )}
+      >
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={statusVariant(row.status)}>{t(`viewRequests.status.${row.status}`, row.status)}</Badge>
@@ -169,6 +212,17 @@ export function ViewRequestsPage() {
             </p>
           ) : null}
           {row.location_address ? <p className="truncate text-xs text-muted-foreground">{row.location_address}</p> : null}
+          {mapUrl ? (
+            <a
+              href={mapUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+            >
+              <ExternalLink className="size-3" />
+              {t("viewRequests.openMap", "Open on map")}
+            </a>
+          ) : null}
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           {requesterId ? (
@@ -209,13 +263,15 @@ export function ViewRequestsPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6" dir={direction}>
-      <div>
-        <h1 className="flex items-center gap-2 text-xl font-semibold text-foreground">
-          <MapPin className="size-6" />
-          {t("viewRequests.pageTitle")}
-        </h1>
-      </div>
+    <div className={embedded ? "space-y-4" : "space-y-6 p-4 md:p-6"} dir={direction}>
+      {!embedded && (
+        <div>
+          <h1 className="flex items-center gap-2 text-xl font-semibold text-foreground">
+            <MapPin className="size-6" />
+            {t("viewRequests.pageTitle")}
+          </h1>
+        </div>
+      )}
 
       <Tabs value={tab} onValueChange={setTab} className="w-full max-w-3xl">
         <TabsList className="w-full max-w-md">
@@ -240,9 +296,11 @@ export function ViewRequestsPage() {
           <p className="text-sm text-muted-foreground">{t("viewRequests.sellerSubtitle")}</p>
           {loadingIn ? (
             <Skeleton className="h-48 w-full" />
-          ) : incomingRows.length > 0 ? (
+          ) : incomingRows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t("viewRequests.sellerEmpty")}</p>
+          ) : (
             <ul className="divide-y divide-border rounded-xl border border-border bg-card">{incomingRows.map(renderIncomingRow)}</ul>
-          ) : null}
+          )}
         </TabsContent>
       </Tabs>
     </div>

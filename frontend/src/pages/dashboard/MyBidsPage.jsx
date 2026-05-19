@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useRef, useState } from "react"
+import { Suspense, useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link, useSearchParams } from "react-router-dom"
 import { useTranslation } from "react-i18next"
@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { LocationMapPicker } from "@/components/maps/LocationMapPicker"
+import { StandardLocationMapField } from "@/components/maps/StandardLocationMapField"
+import { normalizeSaudiPhone, saudiPhoneFieldError, SAUDI_PHONE_INPUT_PROPS } from "@/lib/phone/saudiPhone"
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -30,23 +31,13 @@ function statusVariant(status) {
   return "secondary"
 }
 
-function normalizeSaudiPhone(raw) {
-  let s = String(raw ?? "")
-    .trim()
-    .replace(/[\s-]/g, "")
-  if (!s) return ""
-  if (s.startsWith("+966")) s = `0${s.slice(4)}`
-  else if (s.startsWith("966")) s = `0${s.slice(3)}`
-  return s
-}
-
 function formatBidAmount(value, language, currencyLabel) {
   const amount = Math.round(Number(value ?? 0))
   const locale = language === "ar" ? "ar-SA" : "en-US"
   return `${new Intl.NumberFormat(locale).format(amount)} ${currencyLabel}`
 }
 
-export function MyBidsPage() {
+export function MyBidsPage({ embedded = false } = {}) {
   const { t, i18n } = useTranslation()
   const { user, token } = useAuthStore()
   const queryClient = useQueryClient()
@@ -59,7 +50,6 @@ export function MyBidsPage() {
   const [rejectBid, setRejectBid] = useState(null)
   const [createOrderBid, setCreateOrderBid] = useState(null)
   const [searchText, setSearchText] = useState("")
-  const addressRef = useRef(null)
   const [orderForm, setOrderForm] = useState({
     payment_method: "escrow",
     buyer_name: "",
@@ -199,14 +189,8 @@ export function MyBidsPage() {
       errors.buyer_name = t("purchase.validation.nameMax", "الاسم طويل جدًا (الحد 255 حرفًا).")
     }
 
-    if (!buyerPhone) {
-      errors.buyer_phone = t("purchase.validation.phoneRequired", "رقم الجوال مطلوب.")
-    } else {
-      const normalized = normalizeSaudiPhone(buyerPhone)
-      if (!/^05\d{8}$/.test(normalized)) {
-        errors.buyer_phone = t("purchase.validation.phoneFormat", "استخدم رقم جوال سعودي، مثل 05xxxxxxxx.")
-      }
-    }
+    const phoneError = saudiPhoneFieldError(buyerPhone, t)
+    if (phoneError) errors.buyer_phone = phoneError
 
     if (shippingAddress.length > 500) {
       errors.shipping_address = t("purchase.validation.addressMax", "العنوان طويل جدًا (الحد 500 حرف).")
@@ -359,28 +343,32 @@ export function MyBidsPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-xl font-semibold text-foreground">
-            <Gavel className="size-6" />
-            {t("bids.myBidsTitle")}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">{t("bids.myBidsHubSubtitle")}</p>
+    <div className={embedded ? "space-y-4" : "space-y-6 p-4 md:p-6"}>
+      {!embedded && (
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="flex items-center gap-2 text-xl font-semibold text-foreground">
+              <Gavel className="size-6" />
+              {t("bids.myBidsTitle")}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">{t("bids.myBidsHubSubtitle")}</p>
+          </div>
+          <Button asChild variant="outline" size="sm" className="gap-1.5">
+            <Link to="/dashboard/orders">
+              <Package className="size-3.5" />
+              {t("bids.trackOrders", "Order tracking")}
+            </Link>
+          </Button>
         </div>
-        <Button asChild variant="outline" size="sm" className="gap-1.5">
-          <Link to="/dashboard/orders">
-            <Package className="size-3.5" />
-            {t("bids.trackOrders", "Order tracking")}
-          </Link>
-        </Button>
-      </div>
+      )}
       <div className="relative max-w-md">
         <Input value={searchText} onChange={(e) => setSearchText(e.target.value)} placeholder={t("common.search", "Search")} />
       </div>
-      <p className="text-xs text-muted-foreground">
-        {t("bids.incomingOwnerNote", "Incoming bids are shown only for listings owned by this account.")}
-      </p>
+      {!embedded && (
+        <p className="text-xs text-muted-foreground">
+          {t("bids.incomingOwnerNote", "Incoming bids are shown only for listings owned by this account.")}
+        </p>
+      )}
 
       {isLoading ? (
         <Skeleton className="h-48 w-full" />
@@ -509,9 +497,9 @@ export function MyBidsPage() {
             <div className="space-y-1">
               <Label>{t("purchase.buyerPhone", "رقم الجوال")}</Label>
               <Input
+                {...SAUDI_PHONE_INPUT_PROPS}
                 value={orderForm.buyer_phone}
                 onChange={(e) => setOrderForm((p) => ({ ...p, buyer_phone: e.target.value }))}
-                placeholder="05xxxxxxxx"
                 aria-invalid={Boolean(orderFormErrors.buyer_phone)}
               />
               {orderFormErrors.buyer_phone ? <p className="text-xs text-destructive">{orderFormErrors.buyer_phone}</p> : null}
@@ -519,7 +507,6 @@ export function MyBidsPage() {
             <div className="space-y-1">
               <Label>{t("purchase.shippingAddress", "Shipping address")}</Label>
               <Input
-                ref={addressRef}
                 value={orderForm.shipping_address}
                 onChange={(e) => setOrderForm((p) => ({ ...p, shipping_address: e.target.value }))}
                 placeholder={t("purchase.addressPlaceholder")}
@@ -536,15 +523,15 @@ export function MyBidsPage() {
                   </Skeleton>
                 }
               >
-                <LocationMapPicker
+                <StandardLocationMapField
                   key={`order-bid-map-${createOrderBid?.id ?? "new"}`}
                   language={i18n.language}
                   lat={orderForm.shipping_lat === "" ? null : Number(orderForm.shipping_lat)}
                   lng={orderForm.shipping_lng === "" ? null : Number(orderForm.shipping_lng)}
-                  addressInputRef={addressRef}
-                  onReverseGeocode={(addr) => {
-                    if (!addr) return
-                    setOrderForm((p) => ({ ...p, shipping_address: addr }))
+                  address={orderForm.shipping_address}
+                  searchPlaceholder={t("purchase.addressPlaceholder")}
+                  onAddressResolved={(addr) => {
+                    if (addr) setOrderForm((p) => ({ ...p, shipping_address: addr }))
                   }}
                   onChange={({ lat, lng }) => {
                     setOrderForm((p) => ({ ...p, shipping_lat: String(lat), shipping_lng: String(lng) }))
@@ -587,7 +574,7 @@ export function MyBidsPage() {
                 {escrowBlocked ? (
                   <p className="text-destructive">
                     {t("purchase.insufficientBalance", "الرصيد غير كافٍ. شحن الرصيد من المحفظة ثم أعد المحاولة.")}{" "}
-                    <Link to="/dashboard/balance" className="underline underline-offset-2">
+                    <Link to="/dashboard/wallet" className="underline underline-offset-2">
                       {t("purchase.openWallet", "فتح المحفظة")}
                     </Link>
                   </p>

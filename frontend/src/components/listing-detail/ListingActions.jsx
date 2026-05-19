@@ -9,6 +9,8 @@ import { Phone, MessageCircle, MapPin } from "lucide-react"
 import { ViewAtLocationModal } from "./ViewAtLocationModal"
 import { Separator } from "@/components/ui/separator"
 
+import { isRealEstateListing } from "@/lib/listings/isRealEstateListing"
+
 /**
  * Section 7 — Action Buttons Row.
  * Horizontal scrollable. Communication | View at location | Buy now
@@ -23,10 +25,11 @@ export function ListingActions({ product }) {
   const phoneNumber = product?.contact_preferences?.phone_number ?? product?.seller?.phone
   const canCall = Boolean(product?.contact_by_call && phoneNumber)
   const canMessage = product?.contact_preferences?.messages !== false
-  const viewAtLocation = product?.view_at_location ?? product?.shipping_details?.view_at_client ?? false
+  const isRE = isRealEstateListing(product)
+  const viewAtLocation = !isRE && (product?.view_at_location ?? product?.shipping_details?.view_at_client ?? false)
   const hasPrice = product?.price != null && product?.price > 0
   const isBuyableOffer =
-    hasPrice && (product?.type === "offer" || product?.is_offer === true)
+    !isRE && hasPrice && (product?.type === "offer" || product?.is_offer === true)
 
   if (isOwner) return null
 

@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\DocumentVerification;
 use App\Models\Notification;
 use App\Models\User;
+use App\Services\CompanyVerificationApprovalService;
 use App\Support\InAppNotificationPayload;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -38,7 +39,11 @@ class AdminVerificationController extends Controller
     /**
      * Approve a document verification.
      */
-    public function approve(Request $request, DocumentVerification $document_verification): JsonResponse
+    public function approve(
+        Request $request,
+        DocumentVerification $document_verification,
+        CompanyVerificationApprovalService $approval,
+    ): JsonResponse
     {
         $verification = $document_verification;
         if ($verification->status !== DocumentVerification::STATUS_PENDING) {
@@ -72,9 +77,10 @@ class AdminVerificationController extends Controller
                     'name' => $name,
                     'slug' => $slug,
                     'license_url' => $verification->document_url,
-                    'verification_status' => 'verified',
+                    'verification_status' => 'pending',
                 ]
             );
+            $approval->approve($company, $request->user()?->id);
         }
 
         $verification->refresh();

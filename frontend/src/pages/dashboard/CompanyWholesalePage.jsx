@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
@@ -11,23 +11,31 @@ import {
   fetchCompanyWholesaleProducts,
   updateCompanyWholesaleProduct,
 } from "@/services/wholesaleService"
+import { fetchUser, getMyCompanyStatus } from "@/services/authService"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon } from "lucide-react"
+import { CalendarIcon, Lightbulb } from "lucide-react"
 import { format } from "date-fns"
 import { ar, enUS } from "date-fns/locale"
 import { cn } from "@/lib/utils"
+import { getDirection } from "@/lib/direction"
 import { CategorySelector } from "@/components/add-listing/CategorySelector"
 import { LocationSelector } from "@/components/add-listing/LocationSelector"
 import { ListingDetailsForm } from "@/components/add-listing/ListingDetailsForm"
+import { WholesaleProductBuilderPreview } from "@/components/wholesale/WholesaleProductBuilderPreview"
+import { CompanyWholesaleProductsTable } from "@/components/wholesale/CompanyWholesaleProductsTable"
+
+function invalidateWholesaleProductQueries(queryClient) {
+  queryClient.invalidateQueries({ queryKey: ["company", "wholesale", "products"] })
+}
 
 const initialProductForm = {
   title: "",
@@ -56,28 +64,76 @@ export function CompanyWholesalePage() {
   const { t, i18n } = useTranslation()
   const queryClient = useQueryClient()
   const user = useAuthStore((s) => s.user)
+  const token = useAuthStore((s) => s.token)
+  const hasHydrated = useAuthStore((s) => s._hasHydrated)
   const [productForm, setProductForm] = useState(initialProductForm)
   const [bulkForm, setBulkForm] = useState(initialBulkForm)
   const [editingId, setEditingId] = useState(null)
   const [fieldErrors, setFieldErrors] = useState({})
+  const [activeTab, setActiveTab] = useState("single")
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(10)
+  const [search, setSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState("")
+  const formRef = useRef(null)
   const dateLocale = i18n.language?.startsWith("ar") ? ar : enUS
 
-  const canManageWholesale = user?.role === "company" && user?.company_verification_status === "approved"
+  const companyStatusQuery = useQuery({
+    queryKey: ["company", "my-status"],
+    queryFn: getMyCompanyStatus,
+    enabled: Boolean(hasHydrated && token),
+    refetchOnWindowFocus: true,
+  })
+
+  useEffect(() => {
+    if (!token) return
+    let cancelled = false
+    fetchUser()
+      .then(() => {
+        if (cancelled) return
+        queryClient.invalidateQueries({ queryKey: ["company", "my-status"] })
+        invalidateWholesaleProductQueries(queryClient)
+        queryClient.invalidateQueries({ queryKey: ["categories"] })
+        queryClient.invalidateQueries({ queryKey: ["regions"] })
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [token, queryClient])
+
+  const canManageWholesale =
+    companyStatusQuery.data?.can_post_wholesale === true ||
+    (user?.role === "company" && user?.company_verification_status === "approved")
 
   const productsQuery = useQuery({
-    queryKey: ["company", "wholesale", "products"],
-    queryFn: fetchCompanyWholesaleProducts,
-    enabled: canManageWholesale,
+    queryKey: ["company", "wholesale", "products", { page, perPage, search, status: statusFilter }],
+    queryFn: () =>
+      fetchCompanyWholesaleProducts({
+        page,
+        per_page: perPage,
+        search: search || undefined,
+        status: statusFilter || undefined,
+      }),
+    enabled: Boolean(hasHydrated && token && canManageWholesale),
+    placeholderData: (prev) => prev,
+  })
+
+  const productOptionsQuery = useQuery({
+    queryKey: ["company", "wholesale", "products", "options"],
+    queryFn: () => fetchCompanyWholesaleProducts({ per_page: 100, status: "published" }),
+    enabled: Boolean(hasHydrated && token && canManageWholesale && activeTab === "bulk"),
   })
 
   const products = useMemo(() => productsQuery.data?.data ?? [], [productsQuery.data])
+  const productsMeta = useMemo(() => productsQuery.data?.meta ?? {}, [productsQuery.data])
   const productOptions = useMemo(
     () =>
-      products.map((product) => ({
+      (productOptionsQuery.data?.data ?? []).map((product) => ({
         id: product.id,
         label: product.title,
       })),
-    [products]
+    [productOptionsQuery.data],
   )
 
   const normalizedProductPayload = useMemo(
@@ -99,6 +155,11 @@ export function CompanyWholesalePage() {
     [productForm]
   )
 
+  const buildProductPayload = (status) => ({
+    ...normalizedProductPayload,
+    status,
+  })
+
   const saveMutation = useMutation({
     mutationFn: async (payload) => {
       if (editingId) {
@@ -111,7 +172,7 @@ export function CompanyWholesalePage() {
       setProductForm(initialProductForm)
       setFieldErrors({})
       setEditingId(null)
-      queryClient.invalidateQueries({ queryKey: ["company", "wholesale", "products"] })
+      invalidateWholesaleProductQueries(queryClient)
     },
     onError: (error) => {
       toast.error(error?.response?.data?.message ?? t("wholesale.company.saveError"))
@@ -122,7 +183,7 @@ export function CompanyWholesalePage() {
     mutationFn: deleteCompanyWholesaleProduct,
     onSuccess: () => {
       toast.success(t("wholesale.company.deleteSuccess"))
-      queryClient.invalidateQueries({ queryKey: ["company", "wholesale", "products"] })
+      invalidateWholesaleProductQueries(queryClient)
     },
     onError: (error) => {
       toast.error(error?.response?.data?.message ?? t("wholesale.company.deleteError"))
@@ -134,7 +195,7 @@ export function CompanyWholesalePage() {
     onSuccess: () => {
       toast.success(t("wholesale.company.bulkSuccess"))
       setBulkForm(initialBulkForm)
-      queryClient.invalidateQueries({ queryKey: ["company", "wholesale", "products"] })
+      invalidateWholesaleProductQueries(queryClient)
     },
     onError: (error) => {
       toast.error(error?.response?.data?.message ?? t("wholesale.company.bulkError"))
@@ -149,6 +210,7 @@ export function CompanyWholesalePage() {
   }, [productForm.original_price, productForm.discount_percent])
 
   const handleEdit = (product) => {
+    setActiveTab("single")
     setEditingId(product.id)
     setProductForm({
       title: product.title ?? "",
@@ -162,6 +224,9 @@ export function CompanyWholesalePage() {
       city_id: product.city?.id ? String(product.city.id) : "",
       expires_at: product.wholesale_expires_at ? String(product.wholesale_expires_at).slice(0, 10) : "",
       image_urls: product.media?.gallery ?? (product.media?.image_url ? [product.media.image_url] : []),
+    })
+    requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
     })
   }
 
@@ -181,7 +246,36 @@ export function CompanyWholesalePage() {
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
 
-    saveMutation.mutate(normalizedProductPayload)
+    saveMutation.mutate(buildProductPayload("published"))
+  }
+
+  const saveDraft = () => {
+    const errors = {}
+    if (!productForm.title?.trim()) errors.title = t("addListing.errors.titleRequired")
+    setFieldErrors(errors)
+    if (Object.keys(errors).length > 0) return
+    saveMutation.mutate(buildProductPayload("pending_review"), {
+      onSuccess: (res) => {
+        const id = res?.data?.id
+        if (id) setEditingId(id)
+      },
+    })
+  }
+
+  const openPublicPreview = () => {
+    if (editingId) {
+      window.open(`/wholesale/product/${editingId}`, "_blank", "noopener,noreferrer")
+      return
+    }
+    saveMutation.mutate(buildProductPayload("pending_review"), {
+      onSuccess: (res) => {
+        const id = res?.data?.id
+        if (id) {
+          setEditingId(id)
+          window.open(`/wholesale/product/${id}`, "_blank", "noopener,noreferrer")
+        }
+      },
+    })
   }
 
   const submitBulk = () => {
@@ -211,7 +305,7 @@ export function CompanyWholesalePage() {
   }
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={getDirection(i18n.language)}>
       <div>
         <h1 className="text-2xl font-bold">{t("wholesale.company.title")}</h1>
         <p className="text-sm text-muted-foreground">{t("wholesale.company.subtitle")}</p>
@@ -225,21 +319,31 @@ export function CompanyWholesalePage() {
         </div>
       </div>
 
-      <Tabs defaultValue="single">
-        <TabsList className="w-full">
-          <TabsTrigger value="single" className="flex-1">
+      <Alert className="rounded-xl border-primary/25 bg-primary/5">
+        <Lightbulb className="text-primary" aria-hidden />
+        <AlertTitle>{t("wholesale.market.dashboardTips.title")}</AlertTitle>
+        <AlertDescription className="text-muted-foreground">{t("wholesale.market.dashboardTips.body")}</AlertDescription>
+      </Alert>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="w-full flex-wrap">
+          <TabsTrigger value="single" className="flex-1 min-w-[7rem]">
             {t("wholesale.company.singleTab")}
           </TabsTrigger>
-          <TabsTrigger value="bulk" className="flex-1">
+          <TabsTrigger value="bulk" className="flex-1 min-w-[7rem]">
             {t("wholesale.company.bulkTab")}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="single">
-          <Card>
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <Card ref={formRef}>
             <CardHeader>
               <CardTitle>{editingId ? t("wholesale.company.editProduct") : t("wholesale.company.newProduct")}</CardTitle>
-              <CardDescription>{t("wholesale.company.newProductDesc")}</CardDescription>
+              <CardDescription>
+                {t("wholesale.company.newProductDesc")}
+                <span className="mt-1 block text-xs">{t("wholesale.company.newProductGalleryHint")}</span>
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <CategorySelector
@@ -272,9 +376,8 @@ export function CompanyWholesalePage() {
                 title={productForm.title}
                 description={productForm.description}
                 imageUrls={productForm.image_urls}
-                priceEnabled
+                showPriceToggle={false}
                 price={productForm.original_price}
-                includeTax={false}
                 type="offer"
                 errors={{
                   title: fieldErrors.title,
@@ -287,9 +390,6 @@ export function CompanyWholesalePage() {
                   if ("description" in updates) setProductForm((p) => ({ ...p, description: updates.description ?? "" }))
                   if ("imageUrls" in updates) setProductForm((p) => ({ ...p, image_urls: updates.imageUrls ?? [] }))
                   if ("price" in updates) setProductForm((p) => ({ ...p, original_price: String(updates.price ?? "") }))
-                  if ("priceEnabled" in updates && updates.priceEnabled === false) {
-                    setProductForm((p) => ({ ...p, original_price: "" }))
-                  }
                 }}
               />
 
@@ -302,6 +402,7 @@ export function CompanyWholesalePage() {
                 <div className="space-y-2">
                   <Label>{t("wholesale.fields.minBuyers")}</Label>
                   <Input type="number" value={productForm.min_buyers} onChange={(e) => setProductForm((p) => ({ ...p, min_buyers: Number(e.target.value || 0) }))} />
+                  <p className="text-xs text-muted-foreground">{t("wholesale.company.groupSizeHint")}</p>
                   {fieldErrors.min_buyers ? <p className="text-sm text-destructive">{fieldErrors.min_buyers}</p> : null}
                 </div>
                 <div className="space-y-2">
@@ -342,32 +443,44 @@ export function CompanyWholesalePage() {
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Button
-                  onClick={submitProduct}
-                  disabled={saveMutation.isPending}
-                >
+                <Button onClick={submitProduct} disabled={saveMutation.isPending}>
                   {editingId ? t("common.save") : t("wholesale.company.publish")}
                 </Button>
+                <Button type="button" variant="outline" onClick={saveDraft} disabled={saveMutation.isPending}>
+                  {t("wholesale.company.saveDraft")}
+                </Button>
                 {editingId ? (
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setEditingId(null)
-                      setProductForm(initialProductForm)
-                    }}
-                  >
-                    {t("common.cancel")}
-                  </Button>
+                  <>
+                    <Button type="button" variant="outline" onClick={openPublicPreview} disabled={saveMutation.isPending}>
+                      {t("wholesale.company.openPreview")}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setEditingId(null)
+                        setProductForm(initialProductForm)
+                      }}
+                    >
+                      {t("common.cancel")}
+                    </Button>
+                  </>
                 ) : null}
               </div>
             </CardContent>
           </Card>
+          <WholesaleProductBuilderPreview
+            form={productForm}
+            companyName={user?.company?.name ?? user?.name}
+            user={user}
+          />
+          </div>
         </TabsContent>
 
         <TabsContent value="bulk">
           <Card>
             <CardHeader>
               <CardTitle>{t("wholesale.company.bulkTitle")}</CardTitle>
+              <CardDescription>{t("wholesale.company.bulkOfferDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
@@ -388,6 +501,7 @@ export function CompanyWholesalePage() {
                 <div className="space-y-2">
                   <Label>{t("wholesale.fields.minBuyers")}</Label>
                   <Input type="number" value={bulkForm.min_buyers} onChange={(e) => setBulkForm((p) => ({ ...p, min_buyers: Number(e.target.value || 0) }))} />
+                  <p className="text-xs text-muted-foreground">{t("wholesale.company.groupSizeHint")}</p>
                 </div>
                 <div className="space-y-2">
                   <Label>{t("wholesale.fields.validUntil")}</Label>
@@ -454,39 +568,33 @@ export function CompanyWholesalePage() {
         </TabsContent>
       </Tabs>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("wholesale.company.myProducts")}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {products.map((product) => (
-            <div key={product.id} className="rounded-lg border p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="font-semibold">{product.title}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {product.wholesale_price} - {t("wholesale.fields.minBuyers")}: {product.min_quantity}
-                  </p>
-                  <Badge variant="outline" className="mt-1">
-                    {t(`dashboard.status.${product.status}`, product.status)}
-                  </Badge>
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => handleEdit(product)}>
-                    {t("common.edit")}
-                  </Button>
-                  <Button size="sm" variant="destructive" onClick={() => deleteMutation.mutate(product.id)}>
-                    {t("common.delete")}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ))}
-          {products.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("wholesale.company.empty")}</p>
-          ) : null}
-        </CardContent>
-      </Card>
+      <CompanyWholesaleProductsTable
+        products={products}
+        meta={productsMeta}
+        isLoading={productsQuery.isLoading}
+        isFetching={productsQuery.isFetching}
+        page={page}
+        perPage={perPage}
+        search={search}
+        statusFilter={statusFilter}
+        onPageChange={setPage}
+        onPerPageChange={(size) => {
+          setPerPage(size)
+          setPage(1)
+        }}
+        onSearchChange={(value) => {
+          setSearch(value)
+          setPage(1)
+        }}
+        onStatusFilterChange={(value) => {
+          setStatusFilter(value)
+          setPage(1)
+        }}
+        onRefresh={() => productsQuery.refetch()}
+        onEdit={handleEdit}
+        onDelete={(id) => deleteMutation.mutate(id)}
+        isDeleting={deleteMutation.isPending}
+      />
     </div>
   )
 }

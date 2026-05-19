@@ -9,6 +9,7 @@ use App\Http\Resources\ReviewResource;
 use App\Models\PageVisit;
 use App\Models\Review;
 use App\Models\User;
+use App\Services\CompanyLocationSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -68,6 +69,11 @@ class PublicProfileController extends Controller
 
         $distribution = $user->getRatingDistribution();
         $company = $user->company;
+        if ($company) {
+            $company = app(CompanyLocationSyncService::class)->ensureCompanyMatchesUser($company);
+        }
+
+        $locale = $request->header('Accept-Language', 'ar');
 
         $myReview = $request->user()
             ? Review::where('reviewer_id', $request->user()->id)
@@ -76,6 +82,15 @@ class PublicProfileController extends Controller
             : null;
 
         $user->setAttribute('listings_count', $user->products()->where('status', 'published')->count());
+        $user->loadExists([
+            'purchasesAsBuyer as has_buyer_purchases',
+            'bids as has_bids',
+            'viewRequestsAsRequester as has_view_requests',
+        ]);
+        $user->setAttribute(
+            'has_buyer_activity',
+            (bool) ($user->has_buyer_purchases || $user->has_bids || $user->has_view_requests)
+        );
 
         return response()->json([
             'user' => new ProfileResource($user),
@@ -87,10 +102,12 @@ class PublicProfileController extends Controller
                 'distribution' => $distribution,
             ],
             'company' => $company ? [
+                'id' => $company->id,
                 'name' => $company->name,
-                'city' => $company->city?->name_ar ?? $company->city?->name ?? null,
+                'city' => $company->city?->getLocalizedName($locale),
                 'product_types' => $company->product_types,
                 'is_verified' => $company->verification_status === 'approved',
+                'can_post_wholesale' => $company->verification_status === 'approved',
             ] : null,
             'my_review' => $myReview ? new ReviewResource($myReview->load('reviewer')) : null,
         ]);

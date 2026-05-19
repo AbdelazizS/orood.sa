@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\WholesaleMarketIndexRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\GroupBuyReservation;
 use App\Models\Notification;
@@ -15,11 +16,25 @@ use Illuminate\Support\Facades\DB;
 
 class WholesaleMarketController extends Controller
 {
-    public function __construct(private readonly WholesaleReservationLifecycleService $lifecycle)
+    public function __construct(private readonly WholesaleReservationLifecycleService $lifecycle) {}
+
+    public function categoryCounts(): JsonResponse
     {
+        $counts = Product::query()
+            ->publiclyListed()
+            ->where('is_wholesale', true)
+            ->whereNotNull('wholesale_price')
+            ->whereNotNull('category_id')
+            ->selectRaw('category_id, COUNT(*) as c')
+            ->groupBy('category_id')
+            ->pluck('c', 'category_id')
+            ->map(fn ($c) => (int) $c)
+            ->all();
+
+        return response()->json(['data' => $counts]);
     }
 
-    public function index(Request $request): JsonResponse
+    public function index(WholesaleMarketIndexRequest $request): JsonResponse
     {
         $query = Product::query()
             ->publiclyListed()
@@ -39,11 +54,57 @@ class WholesaleMarketController extends Controller
         if ($request->filled('city_id')) {
             $query->where('city_id', $request->integer('city_id'));
         }
+        if ($request->filled('region_id')) {
+            $query->where('region_id', $request->integer('region_id'));
+        }
         if ($request->filled('search')) {
             $search = (string) $request->query('search');
             $query->where(fn ($q) => $q
                 ->where('title', 'like', "%{$search}%")
                 ->orWhere('description', 'like', "%{$search}%"));
+        }
+        if ($request->filled('price_min')) {
+            $query->where('wholesale_price', '>=', (float) $request->query('price_min'));
+        }
+        if ($request->filled('price_max')) {
+            $query->where('wholesale_price', '<=', (float) $request->query('price_max'));
+        }
+        if ($request->filled('condition')) {
+            $query->where('condition', (string) $request->query('condition'));
+        }
+        if ($request->filled('min_discount')) {
+            $min = (int) $request->query('min_discount');
+            $query->where(function ($q) use ($min) {
+                $q->where('discount_percent', '>=', $min)
+                    ->orWhereRaw(
+                        '(COALESCE(discount_percent, 0) = 0 AND price > 0 AND wholesale_price > 0 AND wholesale_price <= price AND ROUND(((price - wholesale_price) / price) * 100) >= ?)',
+                        [$min]
+                    );
+            });
+        }
+        if ($request->filled('min_buyers')) {
+            $query->where('min_quantity', '>=', $request->integer('min_buyers'));
+        }
+
+        $reservedSql = '(SELECT COALESCE(SUM(quantity),0) FROM group_buy_reservations gbr WHERE gbr.product_id = products.id AND gbr.status IN (?, ?))';
+        $pending = GroupBuyReservation::STATUS_PENDING;
+        $paymentPending = GroupBuyReservation::STATUS_PAYMENT_PENDING;
+
+        // Portable replacement for GREATEST(1, COALESCE(min_quantity, 1)) — SQLite has no GREATEST().
+        $minBuyersTargetSql = '(CASE WHEN COALESCE(products.min_quantity, 1) < 1 THEN 1 ELSE COALESCE(products.min_quantity, 1) END)';
+        // "Almost full": remaining slots <= ceil(target * 0.2). MySQL uses CEILING; SQLite has neither CEIL nor GREATEST.
+        $driver = DB::connection()->getDriverName();
+        $almostFullThresholdSql = in_array($driver, ['mysql', 'mariadb'], true)
+            ? "GREATEST(1, CEILING(({$minBuyersTargetSql}) * 0.2))"
+            : "(({$minBuyersTargetSql}) * 2 + 9) / 10";
+
+        if ($request->query('group_status') === 'open') {
+            $query->whereRaw("{$reservedSql} < {$minBuyersTargetSql}", [$pending, $paymentPending]);
+        } elseif ($request->query('group_status') === 'almost_full') {
+            $query->whereRaw(
+                "{$reservedSql} < {$minBuyersTargetSql} AND (({$minBuyersTargetSql}) - ({$reservedSql})) <= {$almostFullThresholdSql}",
+                [$pending, $paymentPending, $pending, $paymentPending]
+            );
         }
 
         $sort = (string) $request->query('sort', 'newest');
@@ -84,6 +145,7 @@ class WholesaleMarketController extends Controller
                 }
 
                 $item['current_buyers'] = $reserved;
+                $item['reserved_seats'] = $reserved;
                 $item['remaining_needed'] = max(0, $target - $reserved);
                 $item['progress_percentage'] = (int) min(100, round(($reserved / $target) * 100));
                 $item['discount_percent'] = $discountPercent;
@@ -97,6 +159,7 @@ class WholesaleMarketController extends Controller
                     'quantity' => (int) $mine->quantity,
                     'status' => $mine->status,
                     'checkout_expires_at' => optional($mine->checkout_expires_at)->toIso8601String(),
+                    'purchase_id' => $mine->purchase_id,
                 ] : null;
 
                 return $item;
@@ -122,10 +185,19 @@ class WholesaleMarketController extends Controller
 
         $this->lifecycle->expireOverdueReservations($product);
         $target = max(1, (int) ($product->min_quantity ?? 0));
+        $activeReservationStatuses = [
+            GroupBuyReservation::STATUS_PENDING,
+            GroupBuyReservation::STATUS_PAYMENT_PENDING,
+        ];
         $reserved = (int) GroupBuyReservation::query()
             ->where('product_id', $product->id)
-            ->whereIn('status', [GroupBuyReservation::STATUS_PENDING, GroupBuyReservation::STATUS_PAYMENT_PENDING])
+            ->whereIn('status', $activeReservationStatuses)
             ->sum('quantity');
+        $activeBuyerCount = (int) GroupBuyReservation::query()
+            ->where('product_id', $product->id)
+            ->whereIn('status', $activeReservationStatuses)
+            ->selectRaw('count(distinct user_id) as c')
+            ->value('c');
         $myReservation = $request->user()
             ? GroupBuyReservation::query()
                 ->where('product_id', $product->id)
@@ -135,6 +207,8 @@ class WholesaleMarketController extends Controller
 
         $resource = (new ProductResource($product->load(['seller.company', 'category', 'subcategory', 'region', 'city'])))->resolve();
         $resource['current_buyers'] = $reserved;
+        $resource['reserved_seats'] = $reserved;
+        $resource['active_buyer_count'] = $activeBuyerCount;
         $resource['remaining_needed'] = max(0, $target - $reserved);
         $resource['progress_percentage'] = (int) min(100, round(($reserved / $target) * 100));
         $resource['campaign_completed'] = $reserved >= $target;
@@ -160,6 +234,7 @@ class WholesaleMarketController extends Controller
                 'id' => $row->id,
                 'quantity' => (int) $row->quantity,
                 'status' => $row->status,
+                'joined_at' => $row->created_at?->toIso8601String(),
                 'user' => [
                     'id' => $row->user?->id,
                     'name' => $row->user?->name,
@@ -179,6 +254,10 @@ class WholesaleMarketController extends Controller
         }
         if ((int) $product->user_id === (int) $user->id) {
             return response()->json(['message' => __('wholesale.owner_cannot_reserve')], 422);
+        }
+
+        if (! config('wholesale.admin_reserve_enabled', true) && $user->isAdminRole()) {
+            return response()->json(['message' => __('wholesale.admin_cannot_reserve')], 422);
         }
 
         $validated = $request->validate(['quantity' => ['nullable', 'integer', 'min:1', 'max:10000']]);
@@ -201,7 +280,38 @@ class WholesaleMarketController extends Controller
         }
 
         $createdReservationId = null;
-        DB::transaction(function () use ($product, $user, $quantity, &$createdReservationId) {
+        $reserveError = null;
+
+        DB::transaction(function () use ($product, $user, $quantity, &$createdReservationId, &$reserveError) {
+            Product::query()->whereKey($product->id)->lockForUpdate()->first();
+            $product->refresh();
+
+            $target = max(1, (int) ($product->min_quantity ?? 0));
+            $reserved = (int) GroupBuyReservation::query()
+                ->where('product_id', $product->id)
+                ->whereIn('status', [GroupBuyReservation::STATUS_PENDING, GroupBuyReservation::STATUS_PAYMENT_PENDING])
+                ->sum('quantity');
+            $remaining = max(0, $target - $reserved);
+
+            if ($remaining < 1) {
+                $reserveError = [
+                    'message' => __('wholesale.group_full'),
+                    'code' => 'group_full',
+                ];
+
+                return;
+            }
+
+            if ($quantity > $remaining) {
+                $reserveError = [
+                    'message' => __('wholesale.reservation_quantity_exceeds_remaining', ['remaining' => $remaining]),
+                    'code' => 'quantity_exceeds_remaining',
+                    'data' => ['remaining' => $remaining],
+                ];
+
+                return;
+            }
+
             $reservation = GroupBuyReservation::query()->updateOrCreate(
                 ['product_id' => $product->id, 'user_id' => $user->id],
                 [
@@ -221,7 +331,26 @@ class WholesaleMarketController extends Controller
                     quantity: (int) $quantity,
                 )
             );
+            $sellerId = (int) $product->user_id;
+            if ($sellerId > 0) {
+                Notification::create(
+                    InAppNotificationPayload::wholesaleNewParticipantSeller(
+                        $sellerId,
+                        $product,
+                        trim((string) ($user->name ?? '')) !== '' ? (string) $user->name : 'Buyer',
+                        (int) $quantity
+                    )
+                );
+            }
         });
+
+        if ($reserveError !== null) {
+            return response()->json([
+                'message' => $reserveError['message'],
+                'code' => $reserveError['code'],
+                'data' => $reserveError['data'] ?? null,
+            ], 422);
+        }
 
         return response()->json([
             'message' => __('wholesale.reservation_created'),
@@ -271,15 +400,27 @@ class WholesaleMarketController extends Controller
             'checkout_expires_at' => optional($row->checkout_expires_at)->toIso8601String(),
             'purchased_at' => optional($row->purchased_at)->toIso8601String(),
             'purchase_id' => $row->purchase_id,
+            'order' => $row->purchase ? [
+                'id' => $row->purchase->id,
+                'status' => $row->purchase->status,
+                'payment_method' => $row->purchase->payment_method,
+                'amount' => (float) $row->purchase->amount,
+            ] : null,
+            'can_cancel' => in_array($row->status, [
+                GroupBuyReservation::STATUS_PENDING,
+                GroupBuyReservation::STATUS_PAYMENT_PENDING,
+            ], true),
             'can_checkout' => $row->status === GroupBuyReservation::STATUS_PAYMENT_PENDING
                 && $row->purchase_id === null
                 && ($row->checkout_expires_at === null || $row->checkout_expires_at->isFuture()),
+            'price_snapshot' => $row->price_snapshot !== null ? (float) $row->price_snapshot : null,
             'product' => $row->product ? [
                 'id' => $row->product->id,
                 'title' => $row->product->title,
                 'image_url' => $row->product->image_url,
                 'wholesale_price' => $row->product->wholesale_price,
                 'min_quantity' => $row->product->min_quantity,
+                'allow_cod' => (bool) ($row->product->allow_cod ?? true),
                 'seller' => [
                     'id' => $row->product->seller?->id,
                     'name' => $row->product->seller?->name,

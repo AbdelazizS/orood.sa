@@ -35,4 +35,8 @@ return [
     'notify_document_verification_approved_member_body' => 'تمت الموافقة على طلب التحقق من الوثائق.',
     'notify_document_verification_rejected_member_title' => 'لم يُقبل طلب التحقق من الوثائق',
     'notify_document_verification_rejected_member_body' => 'لم يُقبل طلب التحقق من الوثائق.',
+
+    'insufficient_balance_for_guarantee' => 'رصيد محفظة العضو غير كافٍ. اختر «دفع خارج المنصة» إذا استلمتم المبلغ بتحويل أو نقداً.',
+    'guarantee_deposit_from_wallet' => 'إيداع في الضمان المالي من محفظة المنصة',
+    'guarantee_deposit_external' => 'إيداع في الضمان المالي — دفع خارج المنصة (مؤكد من الإدارة)',
 ];

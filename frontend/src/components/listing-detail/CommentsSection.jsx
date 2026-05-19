@@ -25,105 +25,29 @@ import {
 } from "@/components/ui/alert-dialog"
 import apiClient from "@/lib/apiClient"
 import { useAuthStore } from "@/store/useAuthStore"
-import { cn } from "@/lib/utils"
 import { resolveImageUrl } from "@/lib/imageUrl"
 import { toast } from "sonner"
 import { timeAgo } from "@/lib/timeAgo"
 import {
   useDeleteComment,
   useEditComment,
-  useLikeComment,
   useListingComments,
   usePostComment,
   useToggleCommentVisibility,
 } from "@/hooks/useComments"
 import {
   Loader2,
-  ThumbsUp,
-  ThumbsDown,
   Pencil,
   RefreshCw,
   Trash2,
   MoreVertical,
   Share2,
   Flag,
+  Eye,
+  EyeOff,
 } from "lucide-react"
 import { ShareModal } from "./ShareModal"
 import { ListingReportDialog } from "./ListingReportDialog"
-
-function CommentVoteControls({ comment, isBusy, onVote, t }) {
-  const vote = comment.has_liked ?? comment.hasLiked
-  const likes = comment.likes_count ?? comment.likes ?? 0
-  const dislikes = comment.dislikes_count ?? comment.dislikes ?? 0
-
-  return (
-    <div className="flex shrink-0 flex-row items-center gap-1.5" dir="ltr" onClick={(e) => e.stopPropagation()}>
-      <div
-        className={cn(
-          "inline-flex items-center rounded-full border border-border/70 bg-muted/40 p-0.5 shadow-sm",
-          isBusy && "pointer-events-none opacity-70"
-        )}
-      >
-        <button
-          type="button"
-          disabled={isBusy}
-          aria-pressed={vote === true}
-          aria-label={t("comments.like", "Like")}
-          onClick={() => onVote(true)}
-          className={cn(
-            "flex min-h-[44px] min-w-[44px] flex-col items-center justify-center rounded-full px-2 py-1",
-            "transition-all duration-150 ease-out active:scale-[0.88]",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2",
-            vote === true
-              ? "bg-primary text-primary-foreground shadow-sm ring-2 ring-primary/25 hover:bg-primary/90"
-              : "text-muted-foreground hover:bg-background/90 hover:text-foreground"
-          )}
-        >
-          <ThumbsUp className={cn("size-4 transition-transform duration-150", vote === true && "scale-110")} strokeWidth={vote === true ? 2.25 : 2} />
-          <span
-            className={cn("tabular-nums text-[10px] font-medium leading-none", vote === true && "text-primary-foreground")}
-            key={likes}
-          >
-            {likes}
-          </span>
-        </button>
-        <button
-          type="button"
-          disabled={isBusy}
-          aria-pressed={vote === false}
-          aria-label={t("comments.dislike", "Dislike")}
-          onClick={() => onVote(false)}
-          className={cn(
-            "flex min-h-[44px] min-w-[44px] flex-col items-center justify-center rounded-full px-2 py-1",
-            "transition-all duration-150 ease-out active:scale-[0.88]",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40 focus-visible:ring-offset-2",
-            vote === false
-              ? "bg-destructive text-destructive-foreground shadow-sm ring-2 ring-destructive/25 hover:bg-destructive/90"
-              : "text-muted-foreground hover:bg-background/90 hover:text-foreground"
-          )}
-        >
-          <ThumbsDown
-            className={cn(
-              "size-4 stroke-current transition-transform duration-150",
-              vote === false && "scale-110 text-destructive-foreground"
-            )}
-            strokeWidth={vote === false ? 2.25 : 2}
-          />
-          <span
-            className={cn(
-              "tabular-nums text-[10px] font-medium leading-none",
-              vote === false && "text-destructive-foreground"
-            )}
-            key={dislikes}
-          >
-            {dislikes}
-          </span>
-        </button>
-      </div>
-      {isBusy ? <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" aria-hidden /> : null}
-    </div>
-  )
-}
 
 /**
  * Section 8 — Comments (PDF): title row → list → textarea → send → owner tools row (owner only).
@@ -152,7 +76,6 @@ export function CommentsSection({ product }) {
   const deleteComment = useDeleteComment()
   const editComment = useEditComment()
   const toggleVisibility = useToggleCommentVisibility()
-  const likeComment = useLikeComment()
 
   const bumpMutation = useMutation({
     mutationFn: () => apiClient.post(`/products/${product.id}/bump`),
@@ -161,6 +84,22 @@ export function CommentsSection({ product }) {
       toast.success(t("listingDetail.bumpSuccess", "تم تحديث ظهور الإعلان"))
     },
     onError: () => toast.error(t("common.errorGeneric", "حدث خطأ")),
+  })
+
+  const listingStatus = product?.status ?? "ACTIVE"
+  const sellerCanToggleVisibility = ["ACTIVE", "HIDDEN", "PENDING_REVIEW", "DRAFT"].includes(listingStatus)
+
+  const toggleVisibilityMutation = useMutation({
+    mutationFn: (newStatus) =>
+      apiClient.patch(`/dashboard/listings/${product.id}/status`, { status: newStatus }),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ["product", product.id] })
+      queryClient.invalidateQueries({ queryKey: ["my-listings"] })
+      toast.success(res?.data?.message ?? t("dashboard.listingsToast.updated"))
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.message ?? t("dashboard.listingsToast.error"))
+    },
   })
 
   const deleteListingMutation = useMutation({
@@ -420,19 +359,6 @@ export function CommentsSection({ product }) {
                     </div>
                   )}
                 </div>
-                <CommentVoteControls
-                  comment={item}
-                  isBusy={likeComment.isPending && likeComment.variables?.id === item.id}
-                  onVote={(isLike) => {
-                    if (!token) {
-                      toast.info(t("comments.loginToVote", "Sign in to react to comments"))
-                      navigate("/login", { state: { from: `/products/${product.id}` } })
-                      return
-                    }
-                    likeComment.mutate({ id: item.id, listingId: product.id, is_like: isLike })
-                  }}
-                  t={t}
-                />
                 {token && (
                   <div className="ms-2 shrink-0">
                     <DropdownMenu>
@@ -551,6 +477,26 @@ export function CommentsSection({ product }) {
               <Pencil className="size-[13px]" />
               {t("admin.editListing", "تعديل")}
             </Button>
+            {listingStatus !== "SOLD" && sellerCanToggleVisibility ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1 text-xs"
+                disabled={toggleVisibilityMutation.isPending}
+                onClick={() =>
+                  toggleVisibilityMutation.mutate(listingStatus === "ACTIVE" ? "HIDDEN" : "ACTIVE")
+                }
+              >
+                {listingStatus === "ACTIVE" ? (
+                  <EyeOff className="size-[13px]" />
+                ) : (
+                  <Eye className="size-[13px]" />
+                )}
+                {listingStatus === "ACTIVE"
+                  ? t("dashboard.listingHide", "إخفاء")
+                  : t("dashboard.listingShow", "إظهار")}
+              </Button>
+            ) : null}
             <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => setShareOpen(true)}>
               <Share2 className="size-[13px]" />
               {t("share.title", "مشاركة")}

@@ -21,6 +21,20 @@ class Permission extends Model
         });
     }
 
+    /** @return list<string> */
+    public static function getForUser(User $user): array
+    {
+        if ($user->role === 'super_admin') {
+            return ['*'];
+        }
+
+        if ($user->role === 'assistant') {
+            return app(\App\Services\AssistantPermissionService::class)->permissionsForUser($user);
+        }
+
+        return self::getForRole((string) $user->role);
+    }
+
     public static function syncForRole(string $role, array $permissionIds): void
     {
         DB::table('role_permission')->where('role', $role)->delete();

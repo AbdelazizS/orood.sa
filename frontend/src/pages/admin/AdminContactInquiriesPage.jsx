@@ -101,6 +101,7 @@ export function AdminContactInquiriesPage() {
                 <tr className="border-b">
                   <th className="px-4 py-3 text-left text-sm font-medium">{t("admin.name")}</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">{t("auth.email")}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">{t("admin.inquiryType", "Type")}</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">{t("admin.phone")}</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">{t("admin.message", "Message")}</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">{t("admin.status")}</th>
@@ -111,7 +112,7 @@ export function AdminContactInquiriesPage() {
               <tbody>
                 {inquiries.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
+                    <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
                       {t("analytics.noData", "No data")}
                     </td>
                   </tr>
@@ -120,6 +121,7 @@ export function AdminContactInquiriesPage() {
                     <tr key={inq.id} className="border-b hover:bg-muted/30">
                       <TableCell>{inq.name}</TableCell>
                       <TableCell>{inq.email}</TableCell>
+                      <TableCell>{inq.inquiry_type || "—"}</TableCell>
                       <TableCell>{inq.phone || "—"}</TableCell>
                       <TableCell className="max-w-[200px] truncate">{inq.message}</TableCell>
                       <TableCell>
@@ -197,6 +199,32 @@ function InquiryEditDialog({ inquiry, assignees, onClose, onSave, isPending, t }
             <p className="text-sm font-medium text-muted-foreground">{t("auth.email")}</p>
             <p>{inquiry.email}</p>
           </div>
+          {inquiry.inquiry_type ? (
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">{t("admin.inquiryType", "Type")}</p>
+              <p>{inquiry.inquiry_type}</p>
+            </div>
+          ) : null}
+          {inquiry.subject ? (
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">{t("admin.subject", "Subject")}</p>
+              <p>{inquiry.subject}</p>
+            </div>
+          ) : null}
+          {(inquiry.form_data?.attachments ?? []).length > 0 ? (
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-2">{t("admin.attachments", "Attachments")}</p>
+              <ul className="space-y-1 text-sm">
+                {inquiry.form_data.attachments.map((file, i) => (
+                  <li key={i}>
+                    <a href={file.url} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                      {file.name || file.path}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <div>
             <p className="text-sm font-medium text-muted-foreground">{t("admin.message", "Message")}</p>
             <p className="rounded border bg-muted/30 p-3 text-sm">{inquiry.message}</p>

@@ -17,6 +17,11 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { Menu, Plus, LayoutDashboard, Shield, User, Bell, LogOut, MessageSquare } from "lucide-react"
+import { NavbarLogo } from "@/components/brand/NavbarLogo"
+import {
+  NAVBAR_HEADER_ROW_CLASS,
+  NAVBAR_LOGO_LINK_CLASS,
+} from "@/lib/navbarLogoSizing"
 
 const linkClass =
   "flex w-full items-center gap-2 rounded-xl px-4 py-3 text-start transition-colors hover:bg-accent"
@@ -28,8 +33,8 @@ function MobileNavSheetContent({ t, showBottomNav, token, user, isAdmin, onClose
       {!showBottomNav && (
         <>
           <Button variant="ghost" size="sm" asChild className={linkClass}>
-            <Link to="/" onClick={onClose}>
-              {t("common.brandName")}
+            <Link to="/" onClick={onClose} className="flex items-center py-1">
+              <NavbarLogo variant="sheet" alt={t("common.brandName")} />
             </Link>
           </Button>
           <Button variant="ghost" size="sm" asChild className={linkClass}>
@@ -66,7 +71,7 @@ function MobileNavSheetContent({ t, showBottomNav, token, user, isAdmin, onClose
           {!showBottomNav && (
             <Button variant="ghost" size="sm" asChild className={linkClass}>
               <Link
-                to={isAdmin ? "/admin/notifications" : "/dashboard/notifications"}
+                to={isAdmin ? "/admin/notifications" : "/dashboard/messages?hub=notifications"}
                 onClick={onClose}
                 className="flex items-center gap-2"
               >
@@ -119,18 +124,12 @@ export function TopNavigation() {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-background text-foreground">
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-2 px-4 sm:h-16 sm:gap-4 sm:px-6">
-        {/* Mobile: logo only on start */}
-        <Link
-          to="/"
-          className="focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-lg shrink-0 min-w-0 flex flex-col items-start leading-tight"
-        >
-          <span className="truncate text-lg font-bold tracking-tight text-primary sm:text-xl md:text-2xl">
-            {t("common.brandLogoEn")}
-          </span>
-          <span className="truncate text-base font-bold text-foreground sm:text-lg md:text-xl">
-            {t("common.brandLogoAr")}
-          </span>
+      <div className={NAVBAR_HEADER_ROW_CLASS}>
+        <Link to="/" className={NAVBAR_LOGO_LINK_CLASS}>
+          <NavbarLogo
+            alt={`${t("common.brandLogoEn")} · ${t("common.brandLogoAr")}`}
+            priority
+          />
         </Link>
 
         {/* Mobile: theme + lang + burger grouped together */}
@@ -171,7 +170,7 @@ export function TopNavigation() {
                   </Link>
                 </Button>
                 <Button variant="ghost" size="icon" asChild className="relative">
-                  <Link to={isAdmin ? "/admin/notifications" : "/dashboard/notifications"} title={t("notifications.title", "الإشعارات")}>
+                  <Link to={isAdmin ? "/admin/notifications" : "/dashboard/messages?hub=notifications"} title={t("notifications.title", "الإشعارات")}>
                     <Bell className="size-5" />
                   </Link>
                 </Button>

@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import apiClient from "@/lib/apiClient"
 import { isProfileIdentifierNumeric } from "@/lib/profileRoutes"
 
@@ -45,6 +45,7 @@ export function useProfile(identifier) {
     enabled: !!raw,
     retry: 1,
     staleTime: 60_000,
+    placeholderData: keepPreviousData,
   })
 }
 

@@ -1,8 +1,10 @@
-import { useState, useEffect, useMemo } from "react"
-import { useNavigate } from "react-router-dom"
+import { useState, useEffect, useMemo, useCallback } from "react"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { useMyListings } from "@/hooks/useMyListings"
 import { useAppDirection } from "@/providers/DirectionProvider"
+import { useAuthStore } from "@/store/useAuthStore"
+import { fetchUser } from "@/services/authService"
 import { ListingCard } from "@/components/dashboard/ListingCard"
 import { ListingCardSkeleton } from "@/components/dashboard/ListingCardSkeleton"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -28,11 +30,59 @@ import {
 } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
 import { Plus, Search, X, List, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
-
+import { CompanyWholesalePage } from "@/pages/dashboard/CompanyWholesalePage"
 export function MyListingsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { user, token, _hasHydrated: hasHydrated } = useAuthStore()
   const { direction } = useAppDirection()
+  const isCompany = user?.role === "company"
+  const channel = searchParams.get("channel") === "wholesale" ? "wholesale" : "retail"
+
+  useEffect(() => {
+    if (channel !== "wholesale" || !token) return
+    fetchUser().catch(() => {})
+  }, [channel, token])
+
+  const setChannel = useCallback(
+    (ch) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          if (ch === "retail") next.delete("channel")
+          else next.set("channel", "wholesale")
+          return next
+        },
+        { replace: true },
+      )
+    },
+    [setSearchParams],
+  )
+
+  const channelBar =
+    isCompany ? (
+      <div className="flex flex-wrap gap-1 rounded-xl bg-muted/40 p-1">
+        <Button
+          type="button"
+          size="sm"
+          variant={channel === "retail" ? "default" : "ghost"}
+          className="rounded-lg"
+          onClick={() => setChannel("retail")}
+        >
+          {t("dashboard.nav.listingsTabRetail")}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={channel === "wholesale" ? "default" : "ghost"}
+          className="rounded-lg"
+          onClick={() => setChannel("wholesale")}
+        >
+          {t("dashboard.nav.listingsTabWholesale")}
+        </Button>
+      </div>
+    ) : null
   const {
     listings,
     counts,
@@ -78,6 +128,10 @@ export function MyListingsPage() {
             free_return: Boolean(listing.options?.free_return_days > 0),
             view_at_client: Boolean(listing.options?.view_at_location),
           },
+          location_lat: listing.location_lat ?? null,
+          location_lng: listing.location_lng ?? null,
+          location_address: listing.location_address ?? "",
+          real_estate: listing.real_estate ?? null,
         },
       },
     })
@@ -87,11 +141,9 @@ export function MyListingsPage() {
   const tabDefs = useMemo(
     () => [
       { value: "ALL", labelKey: "dashboard.listingsPage.tabAll", count: counts.all },
-      { value: "ACTIVE", labelKey: "dashboard.listingsPage.tabActive", count: counts.active },
-      { value: "SOLD", labelKey: "dashboard.listingsPage.tabSold", count: counts.sold },
       { value: "HIDDEN", labelKey: "dashboard.listingsPage.tabHidden", count: counts.hidden },
     ],
-    [counts.all, counts.active, counts.sold, counts.hidden]
+    [counts.all, counts.hidden]
   )
 
   const filterLabelForEmpty = useMemo(() => {
@@ -114,8 +166,32 @@ export function MyListingsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- debounce search only when searchInput changes
   }, [searchInput])
 
+  if (channel === "wholesale" && !hasHydrated) {
+    return (
+      <div className="space-y-5" dir={direction}>
+        {channelBar}
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <ListingCardSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (channel === "wholesale" && hasHydrated && isCompany) {
+    return (
+      <div className="space-y-5" dir={direction}>
+        {channelBar}
+        <CompanyWholesalePage />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-5" dir={direction}>
+      {channelBar}
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 text-start">
           <h1 className="text-xl font-bold text-foreground">{t("dashboard.listingsPage.title")}</h1>
@@ -247,13 +323,11 @@ export function MyListingsPage() {
             <ListingCard
               key={listing.id}
               listing={listing}
-              onToggleStatus={toggleStatus}
-              onBump={bump}
               onDelete={(id) => setDeleteTarget(id)}
               onMarkSold={markSold}
               onDuplicate={handleDuplicateToAdd}
-              onEdit={(id) => navigate(`/products/${id}/edit`)}
               onView={(id) => navigate(`/products/${id}`)}
+              onHideListing={(id) => toggleStatus.mutate({ id, newStatus: "HIDDEN" })}
             />
           ))}
         </div>

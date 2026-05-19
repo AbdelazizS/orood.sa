@@ -30,8 +30,8 @@ export function SimilarProductsSection({ product, variant = "default" }) {
   })
 
   const products = data ?? []
-  const categoryId = product?.category?.id
-  const seeMoreUrl = categoryId ? `/?category=${categoryId}` : "/"
+  const categorySlug = product?.category?.slug
+  const seeMoreUrl = categorySlug ? `/?cat=${categorySlug}` : "/"
 
   if (isLoading) {
     return (

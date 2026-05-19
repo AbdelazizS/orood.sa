@@ -10,7 +10,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-export function LanguageSwitcher() {
+/**
+ * @param {{ compact?: boolean }} props — compact: icon only (e.g. dashboard mobile header).
+ */
+export function LanguageSwitcher({ compact = false }) {
   const { t, i18n } = useTranslation()
   const [isSwitching, setIsSwitching] = useState(false)
 
@@ -30,9 +33,14 @@ export function LanguageSwitcher() {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-2" aria-label={t("common.language")}>
+          <Button
+            variant="outline"
+            size={compact ? "icon" : "sm"}
+            className={compact ? "shrink-0" : "gap-2"}
+            aria-label={`${t("common.language")}: ${currentLabel}`}
+          >
             <Languages className="size-4" />
-            {currentLabel}
+            {!compact && <span className="truncate">{currentLabel}</span>}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-[170px]">

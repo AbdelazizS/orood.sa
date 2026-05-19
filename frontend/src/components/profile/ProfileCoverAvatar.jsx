@@ -28,6 +28,9 @@ import apiClient from "@/lib/apiClient"
 import { getProfileQueryKey } from "@/hooks/useProfile"
 import { PUBLIC_PROFILE_CONTAINER } from "@/components/profile/publicProfileLayout"
 import { resolveImageUrl } from "@/lib/imageUrl"
+import { getProfileDisplayName, getProfileLocationLine } from "@/lib/profile/locationDisplay"
+import { CoverBanner } from "@/components/shared/CoverBanner"
+import { AccountKindBadge } from "@/components/profile/AccountKindBadge"
 
 function initialsFromUsername(username) {
   const s = String(username || "?").trim()
@@ -53,10 +56,7 @@ export function ProfileCoverAvatar({ user, profileIdentifier, isOwner }) {
   const hasAvatar = Boolean(user?.avatar_url)
   const rawKey = typeof profileIdentifier === "string" ? profileIdentifier.trim() : ""
 
-  const displayName =
-    [user?.username, user?.name]
-      .map((s) => (typeof s === "string" ? s.trim() : ""))
-      .find(Boolean) || t("publicProfile.unknownUser")
+  const displayName = getProfileDisplayName(user) || t("publicProfile.unknownUser")
 
   const invalidateProfile = () => {
     queryClient.invalidateQueries({ queryKey: getProfileQueryKey(rawKey) })
@@ -122,23 +122,12 @@ export function ProfileCoverAvatar({ user, profileIdentifier, isOwner }) {
   return (
     <div dir={direction} className={cn(PUBLIC_PROFILE_CONTAINER, "space-y-3 pb-2 pt-3")}>
       <div className="relative rounded-xl border border-border bg-card shadow-sm">
-        <div className="relative h-40 w-full overflow-hidden rounded-t-xl md:h-48">
-          {hasCover ? (
-            <button
-              type="button"
-              onClick={() => setCoverOpen(true)}
-              className="group relative z-0 block h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              aria-label={t("publicProfile.expandCover", "عرض صورة الغلاف")}
-            >
-              <img src={coverSrc} alt={t("publicProfile.coverAlt")} className="h-full w-full object-cover" />
-            </button>
-          ) : (
-            <div
-              className="flex h-full w-full items-center justify-center bg-gradient-to-br from-green-600 via-emerald-700 to-green-900"
-              aria-hidden
-            />
-          )}
-
+        <CoverBanner
+          coverUrl={hasCover ? user?.cover_url : null}
+          rounded="top"
+          alt={t("publicProfile.coverAlt")}
+          onCoverClick={hasCover ? () => setCoverOpen(true) : undefined}
+        >
           {isOwner ? (
             <>
               <input
@@ -192,12 +181,12 @@ export function ProfileCoverAvatar({ user, profileIdentifier, isOwner }) {
               </div>
             </>
           ) : null}
-        </div>
+        </CoverBanner>
 
         <div className="relative rounded-b-xl border-t border-border/60 bg-card px-4 pb-4 sm:px-6">
           <div className="flex items-start gap-3 pt-3 sm:gap-4">
             <div className="relative z-10 flex shrink-0 flex-col items-center gap-2 sm:items-start">
-              <div className="relative -mt-10">
+              <div className="relative -mt-8 sm:-mt-9">
                 <Avatar className="size-20 border-4 border-background shadow-md ring-1 ring-border/60">
                   {hasAvatar ? (
                     <AvatarImage src={avatarSrc} alt={displayName} className="object-cover" />
@@ -242,6 +231,7 @@ export function ProfileCoverAvatar({ user, profileIdentifier, isOwner }) {
             <div className="min-w-0 flex-1 overflow-visible pt-0.5 sm:pt-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-start text-lg font-bold break-words sm:text-xl">{displayName}</h1>
+                <AccountKindBadge user={user} />
                 {user?.is_verified ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
                     <ShieldCheck className="h-3 w-3" />
@@ -259,10 +249,10 @@ export function ProfileCoverAvatar({ user, profileIdentifier, isOwner }) {
                 ) : null}
               </div>
 
-              {user?.city ? (
+              {getProfileLocationLine(user) ? (
                 <p className="mt-1 flex items-center gap-1.5 text-start text-xs text-muted-foreground sm:text-sm">
                   <MapPin className="size-3.5 shrink-0" aria-hidden />
-                  <span>{user.city}</span>
+                  <span className="line-clamp-2">{getProfileLocationLine(user)}</span>
                 </p>
               ) : null}
 

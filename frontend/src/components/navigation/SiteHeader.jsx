@@ -31,9 +31,16 @@ export function SiteHeader({ categories = [], regions = [], isLoading }) {
         <div className="flex flex-wrap items-center gap-3">
           <Link
             to="/"
-            className="shrink-0 text-xl font-bold text-primary sm:text-2xl"
+            className="focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 shrink-0 rounded-lg"
           >
-            {t("common.brandName")}
+            <img
+              src="/logo.png"
+              alt={`${t("common.brandLogoEn")} · ${t("common.brandLogoAr")}`}
+              className="h-8 w-auto max-w-[180px] object-contain sm:h-9 sm:max-w-[200px]"
+              width={200}
+              height={40}
+              decoding="async"
+            />
           </Link>
 
           <div className="min-w-0 flex-1">

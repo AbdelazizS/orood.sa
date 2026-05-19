@@ -10,10 +10,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import apiClient from "@/lib/apiClient"
+import { useMainCategories } from "@/hooks/useCategories"
 import { Upload } from "lucide-react"
 
 export function CompanyFields({ value, onChange, disabled }) {
   const { t } = useTranslation()
+
+  const { data: categories = [] } = useMainCategories()
 
   const { data: regions = [] } = useQuery({
     queryKey: ["regions"],
@@ -42,6 +45,25 @@ export function CompanyFields({ value, onChange, disabled }) {
           placeholder={t("auth.companyNamePlaceholder")}
           disabled={disabled}
         />
+      </div>
+      <div className="space-y-2">
+        <Label>{t("auth.companyMainCategory")}</Label>
+        <Select
+          value={value?.companyCategoryId ? String(value.companyCategoryId) : ""}
+          onValueChange={(v) => onChange?.({ ...value, companyCategoryId: v ? Number(v) : null })}
+          disabled={disabled}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder={t("auth.companyMainCategoryPlaceholder")} />
+          </SelectTrigger>
+          <SelectContent>
+            {categories.map((c) => (
+              <SelectItem key={c.id} value={String(c.id)}>
+                {c.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-2">
         <Label>{t("auth.companyCity")}</Label>

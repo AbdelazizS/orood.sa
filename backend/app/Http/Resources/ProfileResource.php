@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\Purchase;
+use App\Support\UserAccountKindResolver;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -31,9 +32,11 @@ class ProfileResource extends JsonResource
             'cover_url' => $this->cover_photo_url ?? null,
             'bio' => $this->bio,
             'city' => $cityName,
+            'city_id' => $this->city_id,
             'region' => $regionName,
-            'location_lat' => $this->location_lat,
-            'location_lng' => $this->location_lng,
+            'location_lat' => $this->location_lat !== null ? (float) $this->location_lat : null,
+            'location_lng' => $this->location_lng !== null ? (float) $this->location_lng : null,
+            'location_address' => $this->location_address,
             'is_online' => $this->resource->appearsOnline(),
             'last_seen' => $this->last_seen?->toISOString(),
             'last_seen_human' => $this->last_seen?->diffForHumans(),
@@ -48,6 +51,7 @@ class ProfileResource extends JsonResource
             'member_since' => $this->created_at?->format('Y-m-d'),
             'created_at' => $this->created_at?->toISOString(),
             'is_owner' => $isOwner,
+            'account_kind' => UserAccountKindResolver::resolve($this->resource),
             '_count' => [
                 'listings' => (int) ($this->listings_count ?? 0),
                 'reviews' => (int) ($this->total_ratings ?? 0),

@@ -1,0 +1,68 @@
+{
+  "home": {
+    "ar": {
+      "titleKey": "seo.routes.home.title",
+      "descriptionKey": "seo.routes.home.description"
+    },
+    "en": {
+      "titleKey": "seo.routes.home.title",
+      "descriptionKey": "seo.routes.home.description"
+    }
+  },
+  "wholesale": {
+    "ar": { "titleKey": "seo.routes.wholesale.title", "descriptionKey": "seo.routes.wholesale.description" },
+    "en": { "titleKey": "seo.routes.wholesale.title", "descriptionKey": "seo.routes.wholesale.description" }
+  },
+  "add": {
+    "ar": { "titleKey": "seo.routes.add.title", "descriptionKey": "seo.routes.add.description" },
+    "en": { "titleKey": "seo.routes.add.title", "descriptionKey": "seo.routes.add.description" }
+  },
+  "login": {
+    "ar": { "titleKey": "seo.routes.login.title", "descriptionKey": "seo.routes.login.description" },
+    "en": { "titleKey": "seo.routes.login.title", "descriptionKey": "seo.routes.login.description" }
+  },
+  "requests": {
+    "ar": { "titleKey": "seo.routes.requests.title", "descriptionKey": "seo.routes.requests.description" },
+    "en": { "titleKey": "seo.routes.requests.title", "descriptionKey": "seo.routes.requests.description" }
+  },
+  "contact": {
+    "ar": { "titleKey": "seo.routes.contact.title", "descriptionKey": "seo.routes.contact.description" },
+    "en": { "titleKey": "seo.routes.contact.title", "descriptionKey": "seo.routes.contact.description" }
+  },
+  "legal.privacy-policy": {
+    "ar": { "titleKey": "seo.routes.privacy.title", "descriptionKey": "seo.routes.privacy.description" },
+    "en": { "titleKey": "seo.routes.privacy.title", "descriptionKey": "seo.routes.privacy.description" }
+  },
+  "legal.terms": {
+    "ar": { "titleKey": "seo.routes.terms.title", "descriptionKey": "seo.routes.terms.description" },
+    "en": { "titleKey": "seo.routes.terms.title", "descriptionKey": "seo.routes.terms.description" }
+  },
+  "legal.refund-policy": {
+    "ar": { "titleKey": "seo.routes.refund.title", "descriptionKey": "seo.routes.refund.description" },
+    "en": { "titleKey": "seo.routes.refund.title", "descriptionKey": "seo.routes.refund.description" }
+  },
+  "legal.payment-policy": {
+    "ar": { "titleKey": "seo.routes.payment.title", "descriptionKey": "seo.routes.payment.description" },
+    "en": { "titleKey": "seo.routes.payment.title", "descriptionKey": "seo.routes.payment.description" }
+  },
+  "legal.listing-policy": {
+    "ar": { "titleKey": "seo.routes.listing.title", "descriptionKey": "seo.routes.listing.description" },
+    "en": { "titleKey": "seo.routes.listing.title", "descriptionKey": "seo.routes.listing.description" }
+  },
+  "legal.safety": {
+    "ar": { "titleKey": "seo.routes.safety.title", "descriptionKey": "seo.routes.safety.description" },
+    "en": { "titleKey": "seo.routes.safety.title", "descriptionKey": "seo.routes.safety.description" }
+  },
+  "legal.fees": {
+    "ar": { "titleKey": "seo.routes.fees.title", "descriptionKey": "seo.routes.fees.description" },
+    "en": { "titleKey": "seo.routes.fees.title", "descriptionKey": "seo.routes.fees.description" }
+  },
+  "legal.about": {
+    "ar": { "titleKey": "seo.routes.about.title", "descriptionKey": "seo.routes.about.description" },
+    "en": { "titleKey": "seo.routes.about.title", "descriptionKey": "seo.routes.about.description" }
+  },
+  "legal.help": {
+    "ar": { "titleKey": "seo.routes.help.title", "descriptionKey": "seo.routes.help.description" },
+    "en": { "titleKey": "seo.routes.help.title", "descriptionKey": "seo.routes.help.description" }
+  }
+}

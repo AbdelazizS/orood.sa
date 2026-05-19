@@ -118,19 +118,61 @@ export function getNotificationBody(notification, t) {
   return appendMemberRejectionReasonIfNeeded(notification, base, t)
 }
 
+function actionPriority(action) {
+  if (action?.intent === "open_view_requests") return 0
+  if (action?.primary === true) return 1
+  if (action?.intent === "open_listing") return 2
+  return 3
+}
+
+function normalizeNotificationActions(actions) {
+  if (!actions?.length) return []
+  const sorted = [...actions].sort((a, b) => actionPriority(a) - actionPriority(b))
+  return sorted.map((action, index) => ({
+    ...action,
+    primary: Boolean(action.primary) || index === 0,
+  }))
+}
+
+/**
+ * @param {{ primary?: boolean }} action
+ * @param {number} index
+ */
+export function getNotificationActionButtonVariant(action, index = 0) {
+  return action?.primary || index === 0 ? "default" : "outline"
+}
+
+/**
+ * Seller view-request notification: show scheduled visit time when present in payload.
+ */
+export function getViewRequestNotificationHint(notification, t, language = "ar") {
+  if (notification?.type !== "view_request_new") return null
+  const d = notification?.data
+  if (!d || typeof d !== "object") return null
+  const iso = typeof d.scheduled_date === "string" ? d.scheduled_date : null
+  if (!iso) return translateIfDefined(t, "notifications.viewRequestActionHint", {})
+  try {
+    const locale = language?.startsWith("ar") ? ar : enUS
+    const formatted = format(new Date(iso), "PPp", { locale })
+    return translateIfDefined(t, "notifications.viewRequestScheduledHint", { date: formatted })
+  } catch {
+    return null
+  }
+}
+
 /**
  * Deep-link actions from API `data.actions` (i18n label keys + href).
  *
  * @param {Record<string, unknown> | null | undefined} notification
- * @returns {Array<{ i18n_label_key: string; href: string; intent?: string }>}
+ * @returns {Array<{ i18n_label_key: string; href: string; intent?: string; primary?: boolean }>}
  */
 export function getNotificationActions(notification) {
   const d = notification?.data
   const type = notification?.type
   const bidId = Number(d?.bid_id)
   const bidsManageHref = bidId
-    ? `/dashboard/bids?tab=received&bid=${bidId}`
-    : "/dashboard/bids?tab=received"
+    ? `/dashboard/orders?section=bids&tab=received&bid=${bidId}`
+    : "/dashboard/orders?section=bids&tab=received"
   const explicit = d && typeof d === "object" && Array.isArray(d.actions)
     ? d.actions.filter(
       (a) =>
@@ -142,7 +184,9 @@ export function getNotificationActions(notification) {
     : []
 
   if (explicit.length > 0) {
-    return explicit.map((action) => {
+    const reservationId = Number(d?.reservation_id)
+    const viewRequestId = Number(d?.view_request_id)
+    const mapped = explicit.map((action) => {
       const isBidAction = typeof type === "string" && type.startsWith("bid_")
       const isOpenBidsLabel = action.i18n_label_key === "notifications.actions.openBids"
       const isOpenBidsIntent = action.intent === "open_bids"
@@ -150,8 +194,25 @@ export function getNotificationActions(notification) {
       if (isBidAction && (isOpenBidsLabel || isOpenBidsIntent || isListingBidsHash)) {
         return { ...action, href: bidsManageHref }
       }
+      if (
+        type === "wholesale_campaign_completed" &&
+        reservationId > 0 &&
+        (action.intent === "open_wholesale_checkout" || String(action.href ?? "").includes("/wholesale/reservations"))
+      ) {
+        return { ...action, href: `/wholesale/checkout/${reservationId}` }
+      }
+      if (
+        type === "view_request_new" &&
+        action.intent === "open_view_requests" &&
+        viewRequestId > 0 &&
+        !String(action.href ?? "").includes("focus=")
+      ) {
+        const href = `/dashboard/view-requests?tab=incoming&focus=${viewRequestId}`
+        return { ...action, href, primary: true }
+      }
       return action
     })
+    return normalizeNotificationActions(mapped)
   }
 
   const productId = Number(d?.product_id)
@@ -186,7 +247,7 @@ export function getNotificationActions(notification) {
     ]
   }
   if (type === "review_new") {
-    const profileHref = typeof d?.link === "string" ? d.link : "/dashboard/reviews"
+    const profileHref = typeof d?.link === "string" ? d.link : "/dashboard/account?tab=reviews"
     return [
       { i18n_label_key: "notifications.actions.openProfile", href: profileHref, intent: "open_profile" },
     ]
@@ -211,7 +272,7 @@ export function getNotificationActions(notification) {
   }
 
   if (type === "charge_request_approved" || type === "charge_request_rejected") {
-    return [{ i18n_label_key: "notifications.actions.viewWallet", href: "/dashboard/balance", intent: "open_balance" }]
+    return [{ i18n_label_key: "notifications.actions.viewWallet", href: "/dashboard/wallet", intent: "open_balance" }]
   }
 
   if (type === "withdrawal_request_pending") {
@@ -233,7 +294,7 @@ export function getNotificationActions(notification) {
   }
 
   if (type === "withdrawal_request_approved" || type === "withdrawal_request_rejected") {
-    return [{ i18n_label_key: "notifications.actions.viewWallet", href: "/dashboard/balance", intent: "open_balance" }]
+    return [{ i18n_label_key: "notifications.actions.viewWallet", href: "/dashboard/wallet", intent: "open_balance" }]
   }
 
   if (type === "guarantee_request_pending") {
@@ -256,8 +317,8 @@ export function getNotificationActions(notification) {
 
   if (type === "guarantee_request_approved" || type === "guarantee_request_rejected") {
     return [
-      { i18n_label_key: "notifications.actions.viewWallet", href: "/dashboard/balance", intent: "open_balance" },
-      { i18n_label_key: "notifications.actions.openGuaranteePage", href: "/dashboard/guarantee", intent: "open_guarantee" },
+      { i18n_label_key: "notifications.actions.viewWallet", href: "/dashboard/wallet", intent: "open_balance" },
+      { i18n_label_key: "notifications.actions.openGuaranteePage", href: "/dashboard/wallet?tab=guarantee", intent: "open_guarantee" },
     ]
   }
 
@@ -280,7 +341,58 @@ export function getNotificationActions(notification) {
   }
 
   if (type === "document_verification_approved" || type === "document_verification_rejected") {
-    return [{ i18n_label_key: "notifications.actions.openVerification", href: "/dashboard/verification", intent: "open_verification" }]
+    return [{ i18n_label_key: "notifications.actions.openVerification", href: "/dashboard/account?tab=verification", intent: "open_verification" }]
+  }
+
+  if (type === "listing_pending_activation") {
+    const pid = Number(d?.product_id)
+    return [
+      {
+        i18n_label_key: "listingActions.setupPayments",
+        href: "/dashboard/account?tab=payments",
+        intent: "go_to_payment_setup",
+      },
+      {
+        i18n_label_key: "listingActions.editListing",
+        href: pid ? `/products/${pid}/edit` : "/dashboard/listings",
+        intent: "edit_listing",
+      },
+    ]
+  }
+
+  if (type === "payout_profile_verified") {
+    return [
+      {
+        i18n_label_key: "listingActions.viewListings",
+        href: "/dashboard/listings",
+        intent: "view_listings",
+      },
+      {
+        i18n_label_key: "listingActions.setupPayments",
+        href: "/dashboard/account?tab=payments",
+        intent: "go_to_payment_setup",
+      },
+    ]
+  }
+
+  if (type === "payout_profile_rejected") {
+    return [
+      {
+        i18n_label_key: "listingActions.setupPayments",
+        href: "/dashboard/account?tab=payments",
+        intent: "go_to_payment_setup",
+      },
+    ]
+  }
+
+  if (type === "payout_profile_pending") {
+    return [
+      {
+        i18n_label_key: "admin.reviewPayoutProfile",
+        href: "/admin/finance-ops?tab=queues",
+        intent: "review_payout_profile",
+      },
+    ]
   }
 
   return []

@@ -1,6 +1,86 @@
-# Maps setup: Google Cloud and OpenStreetMap (OSM)
+# Maps setup: Manfith/Mapbox, Google, and OpenStreetMap (OSM)
 
-This project’s **view-at-location** flow uses a map for the buyer’s meeting point. You can use **Google Maps** (rich address autocomplete + geocoding) or **Leaflet + OpenStreetMap** (no Google API key, different tradeoffs).
+Orood supports three stacks:
+
+| `VITE_MAP_ENGINE` | Stack | Best for |
+|-------------------|--------|----------|
+| `manfith` | **Mapbox GL JS** (Manfith-style tokens) | Match [Manfith](https://www.manfith.com) dashboard (`mapboxgl-canvas`) |
+| *(unset)* + Google key | **Google Maps** + Places | Rich autocomplete |
+| *(unset)* no Google key | **Leaflet + OSM** | No paid API key |
+
+See **[MANFITH_MAP_SDK.md](./MANFITH_MAP_SDK.md)** for Mapbox token and style setup.
+
+Clone the Manfith reference repo locally (requires GitHub access): `npm run setup:manfith` — then copy env keys from `docs/MANFITH_ENV_MAPPING.md`.
+
+```env
+VITE_MAP_ENGINE=manfith
+VITE_MANFITH_MAP_PUBLIC_TOKEN=pk.eyJ...
+# optional: VITE_MANFITH_MAP_STYLE_ID=mapbox/streets-v12
+```
+
+When Mapbox fails or token is missing, pickers and embeds **fall back to OSM** automatically.
+
+### Verify setup
+
+```powershell
+cd frontend
+npm run maps:verify
+npm run dev
+```
+
+- Dev smoke test: `http://localhost:5173/maps-test` (DEV only; hidden in production build)
+- Companies browse map: `http://localhost:5173/map`
+- Order delivery map: dashboard order detail when `shipping_lat` / `shipping_lng` exist
+
+### Mapbox address search (Manfith engine)
+
+`MapboxLocationMapPicker` includes a debounced `MapSearchBar` (300ms) plus **Enter** on linked address fields. Document for QA in AR/EN.
+
+### Enterprise map modules (MVP)
+
+| Layer | Path |
+|-------|------|
+| Facade | `src/lib/maps/manfithAdapter.js` |
+| Token / style | `src/lib/maps/token.js` |
+| Core | `src/lib/maps/core/` (instance, camera, rtl, mapTheme, controls, sdk) |
+| Layers | `src/lib/maps/layers/` (markers, cluster, route) |
+| UI shell | `src/components/maps/shell/` (MapShell, MapChrome, MapSearchBar) |
+| Cluster browse | `/map` + `MapboxClusterEmbed` when Mapbox active |
+| Delivery route | `DeliveryTrackingMap` + hub → destination line |
+
+Dark mode uses `mapbox://styles/mapbox/dark-v11` when no custom `VITE_MANFITH_MAP_STYLE_ID`. RTL text plugin loads automatically for Arabic.
+
+Run `npm run build` before release; restart `npm run dev` after any `.env` change.
+
+### Enterprise map checklist (production)
+
+Use this when reviewing maps before go-live (Airbnb/Uber/Zillow-style expectations):
+
+| Area | Requirement |
+|------|-------------|
+| **Legal** | Mapbox/Google attribution visible somewhere (site footer is OK if hidden on individual embeds). Privacy policy covers location storage (PDPL/GDPR). |
+| **Keys** | Separate dev/staging/prod keys; HTTP referrer restrictions; billing alerts and daily quotas. |
+| **UX** | One primary map per screen; read-only preview on browse, picker on edit; search + pin + address field in sync; RTL/locale on geocoding. |
+| **Performance** | Lazy-load SDK; avoid destroying the map on unrelated React re-renders; `resize()` when tabs/modals open; debounced reverse geocode with abort. |
+| **Data** | Store `lat`, `lng`, `location_address`, and canonical `city_id`; validate coords server-side; sync company city when user city changes. |
+| **A11y** | Text address line on profile (not map-only); labeled map controls; keyboard-focusable chrome. |
+| **Ops** | Monitor geocode failures and API quota; OSM fallback when Mapbox token fails. |
+
+Profile edit: picking on the map auto-fills address and city (when city dropdown is empty) via `mapboxReverseGeocodeDetailed` / `resolveCityIdFromName`.
+
+### Empty map (no pin saved yet)
+
+When `location_lat` / `location_lng` are empty, the **edit picker** should still show:
+
+- Real basemap tiles (OSM or Mapbox), centered on the Saudi default (Riyadh: `24.7136`, `46.6753` from `VITE_MAP_DEFAULT_LAT/LNG` or API `default_center`).
+- Zoom **~6** (KSA country overview on land), **no marker** until the user clicks or searches. After a pin is saved, pickers fly to street zoom (~13–14).
+- A short hint overlay: “Tap the map to set your location” (tiles stay visible underneath).
+
+**Solid blue with no streets is not the empty state** — it means Mapbox GL loaded but **tiles failed** (bad token, referrer block, or timeout). Fix: use `VITE_MAP_PROVIDER=osm` in dev, or set a valid Mapbox public token. The app falls back to OSM within ~5s when Mapbox errors.
+
+**Profile maps** (`ProfileEditForm`, public profile `الموقع`) always use OSM/Leaflet via `forceLegacy`, regardless of backend Mapbox token.
+
+**Public profile:** the **الموقع** block appears only after coordinates are saved; until then owners see a text hint (by design).
 
 ---
 
@@ -10,7 +90,11 @@ This project’s **view-at-location** flow uses a map for the buyer’s meeting 
 |--------|----------|
 | *(unset)* | **Google** if `VITE_GOOGLE_MAPS_API_KEY` is set; otherwise **OSM** (Leaflet). |
 | `google` | **Google** when a key exists; otherwise falls back to **OSM**. |
-| `osm` | Always **OSM**, even if a Google key is present. |
+| `osm` | **Leaflet/OSM for all maps**, even if `GET /api/v1/maps/config` returns a Mapbox token. Use this in local dev when the backend token is missing or invalid (avoids a blue Mapbox canvas). |
+
+To use Mapbox despite `VITE_MAP_PROVIDER=osm`, set `VITE_MAP_ENGINE=manfith` and a valid `VITE_MANFITH_MAP_PUBLIC_TOKEN` (or fix `MAPBOX_PUBLIC_ACCESS_TOKEN` on the API).
+
+When Mapbox is tried but tiles fail (401, bad style, timeout), pickers and embeds **fall back to OSM** automatically.
 
 Set in `frontend/.env` (not committed):
 
@@ -113,8 +197,9 @@ Restart `npm run dev` after changes.
 When the app runs in **OSM** mode:
 
 - **Tiles**: OpenStreetMap contributors ([copyright / license](https://www.openstreetmap.org/copyright)).
-- **Reverse geocoding**: [Nominatim](https://nominatim.org/) (OpenStreetMap Foundation usage policy applies). The app sends a modest debounced rate and identifies itself in the `User-Agent`. **Do not** use this for high-volume or offline bulk geocoding without your own Nominatim instance or another provider.
-- **Address field**: there is **no Google Places** autocomplete; users type the address manually and/or rely on reverse geocode after placing the pin.
+- **Geocoding (search + reverse)**: proxied through Laravel (`GET /api/v1/maps/geocode/search` and `/reverse`) with a proper `User-Agent`, caching, and rate limits. The browser **never** calls Nominatim directly.
+- **Address search**: `MapSearchBar` uses Mapbox when a public token is configured; otherwise the backend Nominatim proxy. Configure `NOMINATIM_USER_AGENT` in backend `.env` for production.
+- **Do not** use the public Nominatim instance for high-volume bulk geocoding without your own Nominatim server or another provider.
 
 **Cost**: no Google Maps bill for this path; respect OSM tile and Nominatim **fair use** policies.
 

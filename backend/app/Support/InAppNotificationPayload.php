@@ -77,14 +77,15 @@ class InAppNotificationPayload
                 ],
                 'actions' => [
                     [
+                        'i18n_label_key' => 'notifications.actions.manageViewRequests',
+                        'href' => '/dashboard/view-requests?tab=incoming&focus='.$viewRequestId,
+                        'intent' => 'open_view_requests',
+                        'primary' => true,
+                    ],
+                    [
                         'i18n_label_key' => 'notifications.actions.openListing',
                         'href' => '/products/'.$product->id,
                         'intent' => 'open_listing',
-                    ],
-                    [
-                        'i18n_label_key' => 'notifications.actions.manageViewRequests',
-                        'href' => '/dashboard/view-requests?tab=incoming',
-                        'intent' => 'open_view_requests',
                     ],
                 ],
                 'product_id' => $product->id,
@@ -300,6 +301,123 @@ class InAppNotificationPayload
                 'order_id' => $order->id,
                 'product_id' => $order->product_id,
             ],
+        ];
+    }
+
+    public static function orderTransferSentConfirmedForBuyer(Purchase $order): array
+    {
+        $product = $order->product;
+        $title = trim((string) ($product?->title ?? '')) ?: 'Listing';
+
+        return [
+            'user_id' => (int) $order->buyer_id,
+            'type' => 'order_transfer_sent_confirmed',
+            'title' => 'Transfer confirmation recorded',
+            'body' => 'You confirmed sending the bank transfer.',
+            'data' => array_merge(
+                self::orderNotificationData($order, $title, 'notifications.types.order_transfer_sent_confirmed'),
+                [
+                    'actions' => [
+                        [
+                            'i18n_label_key' => 'notifications.actions.openOrder',
+                            'href' => '/dashboard/orders/'.$order->id,
+                            'intent' => 'open_order',
+                        ],
+                    ],
+                ],
+            ),
+        ];
+    }
+
+    public static function orderTransferAwaitingSellerConfirmForSeller(Purchase $order): array
+    {
+        $product = $order->product;
+        $title = trim((string) ($product?->title ?? '')) ?: 'Listing';
+
+        return [
+            'user_id' => (int) $order->seller_id,
+            'type' => 'order_transfer_awaiting_seller_confirm',
+            'title' => 'Buyer confirmed transfer',
+            'body' => 'Confirm you received the bank transfer before shipping.',
+            'data' => array_merge(
+                self::orderNotificationData($order, $title, 'notifications.types.order_transfer_awaiting_seller_confirm'),
+                [
+                    'actions' => [
+                        [
+                            'i18n_label_key' => 'notifications.actions.confirmTransferReceived',
+                            'href' => '/dashboard/orders/'.$order->id,
+                            'intent' => 'confirm_direct_transfer',
+                        ],
+                    ],
+                ],
+            ),
+        ];
+    }
+
+    public static function orderTransferReceiptApprovedForBuyer(Purchase $order): array
+    {
+        $product = $order->product;
+        $title = trim((string) ($product?->title ?? '')) ?: 'Listing';
+
+        return [
+            'user_id' => (int) $order->buyer_id,
+            'type' => 'order_transfer_receipt_approved',
+            'title' => 'Transfer receipt approved',
+            'body' => 'Your transfer receipt was approved.',
+            'data' => self::orderNotificationData($order, $title, 'notifications.types.order_transfer_receipt_approved'),
+        ];
+    }
+
+    public static function orderTransferConfirmPaymentForSeller(Purchase $order): array
+    {
+        $product = $order->product;
+        $title = trim((string) ($product?->title ?? '')) ?: 'Listing';
+
+        return [
+            'user_id' => (int) $order->seller_id,
+            'type' => 'order_transfer_confirm_payment',
+            'title' => 'Confirm bank transfer',
+            'body' => 'Review the receipt and confirm you received the transfer.',
+            'data' => self::orderNotificationData($order, $title, 'notifications.types.order_transfer_confirm_payment'),
+        ];
+    }
+
+    public static function orderTransferPaymentConfirmedForBuyer(Purchase $order): array
+    {
+        $product = $order->product;
+        $title = trim((string) ($product?->title ?? '')) ?: 'Listing';
+
+        return [
+            'user_id' => (int) $order->buyer_id,
+            'type' => 'order_transfer_payment_confirmed',
+            'title' => 'Seller confirmed payment',
+            'body' => 'The seller confirmed receiving your bank transfer.',
+            'data' => self::orderNotificationData($order, $title, 'notifications.types.order_transfer_payment_confirmed'),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected static function orderNotificationData(Purchase $order, string $productTitle, string $i18nPrefix): array
+    {
+        return [
+            'i18n_title_key' => "{$i18nPrefix}.title",
+            'i18n_body_key' => "{$i18nPrefix}.body",
+            'i18n_params' => [
+                'productTitle' => $productTitle,
+                'orderNumber' => 'ORD-'.str_pad((string) $order->id, 6, '0', STR_PAD_LEFT),
+            ],
+            'payment_method' => $order->payment_method,
+            'actions' => [
+                [
+                    'i18n_label_key' => 'notifications.actions.openOrder',
+                    'href' => '/dashboard/orders/'.$order->id,
+                    'intent' => 'open_order',
+                ],
+            ],
+            'order_id' => $order->id,
+            'product_id' => $order->product_id,
         ];
     }
 
@@ -938,7 +1056,7 @@ class InAppNotificationPayload
                 'actions' => [
                     [
                         'i18n_label_key' => 'notifications.actions.openWholesaleCheckout',
-                        'href' => '/wholesale/reservations',
+                        'href' => '/wholesale/checkout/'.$reservationId,
                         'intent' => 'open_wholesale_checkout',
                     ],
                 ],
@@ -966,9 +1084,154 @@ class InAppNotificationPayload
                 'product_id' => $product->id,
                 'actions' => [
                     [
-                        'i18n_label_key' => 'notifications.actions.openWholesaleCheckout',
+                        'i18n_label_key' => 'notifications.actions.openWholesaleReservations',
                         'href' => '/wholesale/reservations',
                         'intent' => 'open_wholesale_reservations',
+                    ],
+                ],
+            ],
+        ];
+    }
+
+    public static function wholesaleNewParticipantSeller(int $sellerUserId, Product $product, string $buyerName, int $quantity): array
+    {
+        $productTitle = self::safeProductTitle($product);
+
+        return [
+            'user_id' => $sellerUserId,
+            'type' => 'wholesale_new_participant_seller',
+            'title' => 'New wholesale reservation',
+            'body' => 'A buyer reserved slots on your wholesale listing.',
+            'data' => [
+                'i18n_title_key' => 'notifications.types.wholesale_new_participant_seller.title',
+                'i18n_body_key' => 'notifications.types.wholesale_new_participant_seller.body',
+                'i18n_params' => [
+                    'productTitle' => $productTitle,
+                    'buyerName' => $buyerName,
+                    'quantity' => (string) $quantity,
+                ],
+                'product_id' => $product->id,
+                'actions' => [
+                    [
+                        'i18n_label_key' => 'notifications.actions.openWholesaleProduct',
+                        'href' => '/wholesale/product/'.$product->id,
+                        'intent' => 'open_wholesale_product',
+                    ],
+                ],
+            ],
+        ];
+    }
+
+    public static function listingPendingActivation(Product $product, int $sellerUserId): array
+    {
+        $productTitle = self::safeProductTitle($product);
+
+        return [
+            'user_id' => $sellerUserId,
+            'type' => 'listing_pending_activation',
+            'title' => __('finance.notification.listing_pending_title'),
+            'body' => __('finance.notification.listing_pending_body'),
+            'data' => [
+                'i18n_title_key' => 'notifications.types.listing_pending_activation.title',
+                'i18n_body_key' => 'notifications.types.listing_pending_activation.body',
+                'i18n_params' => [
+                    'productTitle' => $productTitle,
+                ],
+                'product_id' => $product->id,
+                'actions' => [
+                    [
+                        'i18n_label_key' => 'listingActions.setupPayments',
+                        'href' => '/dashboard/payment-setup',
+                        'intent' => 'go_to_payment_setup',
+                        'variant' => 'primary',
+                    ],
+                    [
+                        'i18n_label_key' => 'listingActions.editListing',
+                        'href' => '/products/'.$product->id.'/edit',
+                        'intent' => 'edit_listing',
+                        'variant' => 'secondary',
+                    ],
+                    [
+                        'i18n_label_key' => 'listingActions.viewListing',
+                        'href' => '/products/'.$product->id,
+                        'intent' => 'view_listing',
+                        'variant' => 'outline',
+                    ],
+                ],
+            ],
+        ];
+    }
+
+    public static function payoutProfileVerified(int $userId): array
+    {
+        return [
+            'user_id' => $userId,
+            'type' => 'payout_profile_verified',
+            'title' => __('finance.notification.payout_verified_title'),
+            'body' => __('finance.notification.payout_verified_body'),
+            'data' => [
+                'i18n_title_key' => 'notifications.types.payout_profile_verified.title',
+                'i18n_body_key' => 'notifications.types.payout_profile_verified.body',
+                'i18n_params' => [],
+                'actions' => [
+                    [
+                        'i18n_label_key' => 'listingActions.viewListings',
+                        'href' => '/dashboard/listings',
+                        'intent' => 'view_listings',
+                        'variant' => 'primary',
+                    ],
+                    [
+                        'i18n_label_key' => 'listingActions.setupPayments',
+                        'href' => '/dashboard/account?tab=payments',
+                        'intent' => 'go_to_payment_setup',
+                        'variant' => 'secondary',
+                    ],
+                ],
+            ],
+        ];
+    }
+
+    public static function payoutProfilePendingReview(int $staffUserId, int $sellerUserId, string $sellerLabel): array
+    {
+        return [
+            'user_id' => $staffUserId,
+            'type' => 'payout_profile_pending',
+            'title' => __('finance.notification.payout_pending_staff_title'),
+            'body' => __('finance.notification.payout_pending_staff_body', ['seller' => $sellerLabel]),
+            'data' => [
+                'seller_user_id' => $sellerUserId,
+                'i18n_title_key' => 'notifications.types.payout_profile_pending.title',
+                'i18n_body_key' => 'notifications.types.payout_profile_pending.body',
+                'i18n_params' => ['seller' => $sellerLabel],
+                'actions' => [
+                    [
+                        'i18n_label_key' => 'admin.reviewPayoutProfile',
+                        'href' => '/admin/finance-ops?tab=queues',
+                        'intent' => 'review_payout_profile',
+                        'variant' => 'primary',
+                    ],
+                ],
+            ],
+        ];
+    }
+
+    public static function payoutProfileRejected(int $userId, string $reason): array
+    {
+        return [
+            'user_id' => $userId,
+            'type' => 'payout_profile_rejected',
+            'title' => __('finance.notification.payout_rejected_title'),
+            'body' => $reason !== '' ? $reason : __('finance.notification.payout_rejected_body'),
+            'data' => [
+                'i18n_title_key' => 'notifications.types.payout_profile_rejected.title',
+                'i18n_body_key' => 'notifications.types.payout_profile_rejected.body',
+                'i18n_params' => ['reason' => $reason],
+                'actions' => [
+                    [
+                        'i18n_label_key' => 'listingActions.setupPayments',
+                        'href' => '/dashboard/account?tab=payments',
+                        'intent' => 'go_to_payment_setup',
+                        'variant' => 'primary',
                     ],
                 ],
             ],

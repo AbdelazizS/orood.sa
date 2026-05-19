@@ -39,7 +39,9 @@ class ComplianceNotificationsTest extends TestCase
         $req = GuaranteeRequest::query()->where('user_id', $member->id)->firstOrFail();
 
         $this->withHeader('Authorization', "Bearer {$adminToken}")
-            ->postJson("/api/v1/admin/guarantee-requests/{$req->id}/approve")
+            ->postJson("/api/v1/admin/guarantee-requests/{$req->id}/approve", [
+                'funding_source' => 'platform_wallet',
+            ])
             ->assertOk();
 
         $this->assertDatabaseHas('notifications', [

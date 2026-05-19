@@ -23,7 +23,7 @@ export function ListingImages({ product }) {
       <>
         <div
           dir={direction}
-          className="flex aspect-video w-full items-center justify-center bg-muted text-muted-foreground"
+          className="flex aspect-video w-full items-center justify-center bg-background text-muted-foreground"
         >
           <span className="text-sm">{t("listingDetail.imageLabel", "Image")}</span>
         </div>
@@ -38,7 +38,7 @@ export function ListingImages({ product }) {
         {urls.map((url, i) => (
           <div
             key={i}
-            className={`relative w-full overflow-hidden bg-muted ${i === 0 ? "min-h-[260px] max-h-[65vh] sm:min-h-[320px] sm:max-h-[60vh] lg:min-h-[420px]" : "min-h-[180px] sm:min-h-[220px]"}`}
+            className={`relative w-full overflow-hidden bg-background ${i === 0 ? "min-h-[260px] max-h-[65vh] sm:min-h-[320px] sm:max-h-[60vh] lg:min-h-[420px]" : "min-h-[180px] sm:min-h-[220px]"}`}
           >
             <img
               src={url}

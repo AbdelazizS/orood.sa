@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, Link } from "react-router-dom"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import { useDashboardHome } from "@/hooks/useDashboardHome"
@@ -50,7 +50,7 @@ import {
 function getStatsCardsConfig(stats, user, t) {
   const perms = Array.isArray(user?.permissions) ? user.permissions : []
   const canManageIncomingBids = perms.includes("*") || perms.includes("bids.review_listing")
-  const sellerBidsLink = canManageIncomingBids ? "/dashboard/seller-bids" : "/dashboard/bids"
+  const sellerBidsLink = canManageIncomingBids ? "/dashboard/orders?section=bids&tab=received" : "/dashboard/orders?section=bids"
   const h = stats?.listings?.hidden ?? 0
   const w = stats?.views?.thisWeek ?? 0
   return [
@@ -90,7 +90,7 @@ function getStatsCardsConfig(stats, user, t) {
       icon: <Wallet size={18} />,
       iconBg: "bg-green-500/10",
       iconColor: "text-green-600",
-      link: "/dashboard/balance",
+      link: "/dashboard/wallet",
     },
     {
       labelKey: "dashboard.home.unreadMessages",
@@ -125,7 +125,7 @@ function getStatsCardsConfig(stats, user, t) {
       icon: <Shield size={18} />,
       iconBg: "bg-orange-500/10",
       iconColor: "text-orange-600",
-      link: "/dashboard/balance",
+      link: "/dashboard/wallet",
     },
   ]
 }
@@ -148,7 +148,7 @@ export function DashboardHome() {
   const username = user?.username ?? user?.name ?? user?.id ?? ""
   const perms = Array.isArray(user?.permissions) ? user.permissions : []
   const canManageIncomingBids = perms.includes("*") || perms.includes("bids.review_listing")
-  const sellerBidsLink = canManageIncomingBids ? "/dashboard/seller-bids" : "/dashboard/bids"
+  const sellerBidsLink = canManageIncomingBids ? "/dashboard/orders?section=bids&tab=received" : "/dashboard/orders?section=bids"
   const locale = i18n.language === "ar" ? "ar" : "en"
 
   const bumpMutation = useMutation({
@@ -179,7 +179,7 @@ export function DashboardHome() {
     alerts.push({ type: "urgent", messageKey: "dashboard.home.alertPendingBids", count: stats.bids.pending, link: sellerBidsLink })
   }
   if (!user?.isVerified) {
-    alerts.push({ type: "info", messageKey: "dashboard.home.alertVerifyAccount", link: "/dashboard/verification" })
+    alerts.push({ type: "info", messageKey: "dashboard.home.alertVerifyAccount", link: "/dashboard/account?tab=verification" })
   }
   if ((stats?.messages?.unread ?? 0) > 0) {
     alerts.push({ type: "info", messageKey: "dashboard.home.alertUnreadMessages", count: stats.messages.unread, link: "/dashboard/messages" })
@@ -321,7 +321,7 @@ export function DashboardHome() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate("/dashboard/verification")}
+            onClick={() => navigate("/dashboard/account?tab=verification")}
             className="gap-1.5 border-orange-300 text-orange-600"
           >
             <ShieldCheck size={14} /> {t("dashboard.home.verifyAccount")}
@@ -332,16 +332,18 @@ export function DashboardHome() {
       {/* 5. Two-column: Recent Orders + Wallet */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <Card className="lg:col-span-3">
-          <CardHeader className="pb-3 flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
+            <CardTitle className="min-w-0 flex-1 truncate text-base text-start">
+              {t("dashboard.home.recentOrders")}
+            </CardTitle>
             <Button
               variant="ghost"
               size="sm"
-              className="text-primary text-xs gap-1"
+              className="shrink-0 gap-1 text-xs text-primary"
               onClick={() => navigate("/dashboard/orders")}
             >
-              {t("dashboard.viewAll")} <ChevronRight size={13} className="rtl-rotate" />
+              {t("dashboard.viewAll")} <ChevronRight size={13} className="rtl:rotate-180" />
             </Button>
-            <CardTitle className="text-base">{t("dashboard.home.recentOrders")}</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             {recentOrders.length === 0 ? (
@@ -417,16 +419,18 @@ export function DashboardHome() {
         </Card>
 
         <Card className="lg:col-span-2">
-          <CardHeader className="pb-3 flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
+            <CardTitle className="min-w-0 flex-1 truncate text-base text-start">
+              {t("dashboard.home.wallet")}
+            </CardTitle>
             <Button
               variant="ghost"
               size="sm"
-              className="text-primary text-xs gap-1"
-              onClick={() => navigate("/dashboard/balance")}
+              className="shrink-0 gap-1 text-xs text-primary"
+              onClick={() => navigate("/dashboard/wallet")}
             >
-              {t("dashboard.home.manage")} <ChevronRight size={13} className="rtl-rotate" />
+              {t("dashboard.home.manage")} <ChevronRight size={13} className="rtl:rotate-180" />
             </Button>
-            <CardTitle className="text-base">{t("dashboard.home.wallet")}</CardTitle>
           </CardHeader>
           <CardContent className="pt-0 space-y-3">
             <div className="bg-primary/5 border border-primary/15 rounded-xl p-4 text-start">
@@ -465,7 +469,7 @@ export function DashboardHome() {
                 variant="outline"
                 size="sm"
                 className="gap-1 text-xs"
-                onClick={() => navigate("/dashboard/balance")}
+                onClick={() => navigate("/dashboard/wallet")}
               >
                 <ArrowDownToLine size={13} /> {t("dashboard.home.withdraw")}
               </Button>
@@ -477,40 +481,57 @@ export function DashboardHome() {
         </Card>
       </div>
 
-      {/* 6. Recent listings */}
+      {/* 6. Recent listings — mobile: horizontal scroll (RTL-aware); cards aligned with marketplace card shell */}
       {recentListings.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-3">
+        <div className="min-w-0">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="min-w-0 flex-1 truncate text-base font-semibold text-start">
+              {t("dashboard.home.myRecentListings")}
+            </h2>
             <Button
               variant="ghost"
               size="sm"
-              className="text-primary text-xs gap-1"
+              className="shrink-0 gap-1 text-xs text-primary"
+              title={t("dashboard.viewAll")}
               onClick={() => navigate("/dashboard/listings")}
             >
-              {t("dashboard.viewAll")} <ChevronRight size={13} className="rtl-rotate" />
+              <span className="hidden sm:inline">{t("dashboard.viewAll")}</span>
+              <ChevronRight size={13} className="rtl:rotate-180" />
             </Button>
-            <h2 className="text-base font-semibold text-start">{t("dashboard.home.myRecentListings")}</h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div
+            className={cn(
+              "gap-3",
+              "flex min-w-0 flex-row overflow-x-auto overflow-y-visible pb-2 [-ms-overflow-style:none] [scrollbar-width:none] md:grid md:grid-cols-3 md:overflow-visible [&::-webkit-scrollbar]:hidden",
+              "snap-x snap-mandatory scroll-pb-2 md:snap-none",
+            )}
+          >
             {recentListings.map((listing) => (
               <Card
                 key={listing.id}
-                className="overflow-hidden hover:border-primary/40 transition-all"
+                className={cn(
+                  "group flex min-w-0 shrink-0 snap-start flex-col overflow-hidden border border-black/5 bg-background transition-all duration-300",
+                  "rounded-[22px] shadow-[0_1px_2px_rgba(0,0,0,0.02),0_12px_32px_rgba(0,0,0,0.04)] hover:border-primary/25 hover:shadow-md",
+                  "w-[min(100%,17.5rem)] max-md:flex-[0_0_auto] md:w-auto md:max-w-none",
+                )}
               >
-                <div className="h-28 overflow-hidden border-b border-border bg-muted relative">
+                <Link
+                  to={`/products/${listing.id}`}
+                  className="relative block aspect-[4/3] w-full shrink-0 overflow-hidden bg-muted/25 dark:bg-muted/15"
+                >
                   {listing.images?.[0]?.url ? (
                     <img
                       src={resolveImageUrl(listing.images[0].url)}
                       alt=""
-                      className="w-full h-full object-cover"
+                      className="absolute inset-0 size-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.02]"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center">
+                    <div className="absolute inset-0 flex items-center justify-center bg-muted/40">
                       <ImageIcon size={24} className="text-muted-foreground" />
                     </div>
                   )}
                   <Badge
-                    className="absolute top-1.5 end-1.5 text-xs"
+                    className="absolute start-3 top-3 z-10 text-xs shadow-sm"
                     variant={
                       listing.status === "published"
                         ? "default"
@@ -525,32 +546,53 @@ export function DashboardHome() {
                         ? t("dashboard.home.sold")
                         : t("dashboard.home.hidden")}
                   </Badge>
-                </div>
-                <CardContent className="p-3 text-start">
-                  <p className="text-sm font-medium line-clamp-1">{listing.title}</p>
-                  <p className="text-base font-bold text-primary mt-0.5">
-                    {listing.price ? `${Number(listing.price).toFixed(0)} ${t("common.currency")}` : t("dashboard.home.noPrice")}
+                </Link>
+                <CardContent className="flex min-w-0 flex-1 flex-col gap-3 p-4 text-start sm:p-5">
+                  <Link to={`/products/${listing.id}`} className="min-w-0 hover:underline">
+                    <p className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">{listing.title}</p>
+                  </Link>
+                  <p className="text-base font-bold text-primary">
+                    {listing.price
+                      ? `${Number(listing.price).toFixed(0)} ${t("common.currency")}`
+                      : t("dashboard.home.noPrice")}
                   </p>
-                  <div className="mt-2 flex flex-wrap items-center justify-end gap-3">
-                    <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
-                      {listing.viewCount ?? 0}
-                      <Eye size={11} />
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-0.5",
+                        direction === "rtl" && "flex-row-reverse",
+                      )}
+                    >
+                      <Eye size={11} className="shrink-0" />
+                      <span>{listing.viewCount ?? 0}</span>
                     </span>
-                    <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
-                      {listing.messageCount ?? 0}
-                      <MessageCircle size={11} />
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-0.5",
+                        direction === "rtl" && "flex-row-reverse",
+                      )}
+                    >
+                      <MessageCircle size={11} className="shrink-0" />
+                      <span>{listing.messageCount ?? 0}</span>
                     </span>
-                    <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
-                      {listing.soldCount ?? 0}
-                      <ShoppingBag size={11} />
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-0.5",
+                        direction === "rtl" && "flex-row-reverse",
+                      )}
+                    >
+                      <ShoppingBag size={11} className="shrink-0" />
+                      <span>{listing.soldCount ?? 0}</span>
                     </span>
                   </div>
-                  <div className="mt-2 flex justify-end gap-1">
+                  <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
                     <Button
-                      variant="ghost"
+                      type="button"
+                      variant="outline"
                       size="sm"
-                      className="h-7 px-2 text-xs gap-1"
+                      className="h-9 flex-1 rounded-xl text-xs font-medium sm:flex-none"
                       onClick={(e) => {
+                        e.preventDefault()
                         e.stopPropagation()
                         bumpMutation.mutate(listing.id)
                       }}
@@ -559,15 +601,15 @@ export function DashboardHome() {
                       <ArrowUp size={11} /> {t("dashboard.home.update")}
                     </Button>
                     <Button
-                      variant="ghost"
+                      type="button"
+                      variant="secondary"
                       size="sm"
-                      className="h-7 px-2 text-xs gap-1"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        navigate(`/products/${listing.id}/edit`)
-                      }}
+                      className="h-9 flex-1 rounded-xl text-xs font-medium sm:flex-none"
+                      asChild
                     >
-                      <Pencil size={11} /> {t("dashboard.home.edit")}
+                      <Link to={`/products/${listing.id}/edit`} onClick={(e) => e.stopPropagation()}>
+                        <Pencil size={11} /> {t("dashboard.home.edit")}
+                      </Link>
                     </Button>
                   </div>
                 </CardContent>
@@ -579,23 +621,23 @@ export function DashboardHome() {
 
       {/* 7. Recent notifications */}
       <Card>
-        <CardHeader className="pb-3 flex flex-row items-center justify-between">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-primary text-xs gap-1"
-            onClick={() => navigate("/dashboard/notifications")}
-          >
-            {t("dashboard.viewAll")} <ChevronRight size={13} className="rtl-rotate" />
-          </Button>
-          <CardTitle className="text-base flex items-center gap-2">
-            {t("dashboard.home.recentNotifications")}
+        <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
+          <CardTitle className="flex min-w-0 flex-1 items-center gap-2 text-start text-base">
+            <span className="truncate">{t("dashboard.home.recentNotifications")}</span>
             {(stats?.notifications?.unread ?? 0) > 0 && (
-              <Badge className="ms-2 text-xs rounded-full">
+              <Badge className="ms-0 shrink-0 rounded-full text-xs">
                 {stats.notifications.unread}
               </Badge>
             )}
           </CardTitle>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="shrink-0 gap-1 text-xs text-primary"
+            onClick={() => navigate("/dashboard/messages?hub=notifications")}
+          >
+            {t("dashboard.viewAll")} <ChevronRight size={13} className="rtl:rotate-180" />
+          </Button>
         </CardHeader>
         <CardContent className="pt-0">
           {recentNotifications.length === 0 ? (
@@ -660,7 +702,7 @@ export function DashboardHome() {
       {/* 8. Verification nudge */}
       {!user?.isVerified && (
         <div
-          onClick={() => navigate("/dashboard/verification")}
+          onClick={() => navigate("/dashboard/account?tab=verification")}
           className={cn(
             "flex items-center gap-4 p-4 rounded-xl",
             "border-2 border-dashed border-orange-200",

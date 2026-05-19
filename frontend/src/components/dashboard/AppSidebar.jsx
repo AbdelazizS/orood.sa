@@ -14,8 +14,6 @@ import {
 import {
   LayoutDashboard,
   Package,
-  Heart,
-  Search,
   MessageSquare,
   FolderTree,
   Users,
@@ -33,14 +31,15 @@ import {
   Landmark,
   Shield,
   Gavel,
+  Wallet,
 } from "lucide-react"
 
 const userLinks = [
   { to: "/dashboard", labelKey: "dashboard.overview", icon: LayoutDashboard },
-  { to: "/dashboard/listings", labelKey: "dashboard.listings", icon: Package },
-  { to: "/dashboard/favorites", labelKey: "dashboard.favorites", icon: Heart },
-  { to: "/dashboard/saved-searches", labelKey: "dashboard.savedSearches", icon: Search },
-  { to: "/dashboard/messages", labelKey: "dashboard.messages", icon: MessageSquare },
+  { to: "/dashboard/orders", labelKey: "dashboard.nav.orderCenter", icon: Package },
+  { to: "/dashboard/wallet", labelKey: "dashboard.nav.wallet", icon: Wallet },
+  { to: "/dashboard/messages", labelKey: "dashboard.nav.inbox", icon: MessageSquare },
+  { to: "/dashboard/listings", labelKey: "dashboard.nav.listings", icon: Megaphone },
 ]
 
 const adminLinks = [

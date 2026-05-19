@@ -41,7 +41,7 @@ class ListingController extends Controller
         }
 
         $listing->loadCount(['bids', 'comments'])
-            ->load(['category', 'subcategory', 'region.cities', 'city', 'seller.city', 'currentBidUser']);
+            ->load(['category', 'subcategory.category', 'region.cities', 'city', 'seller.city', 'seller.company', 'currentBidUser', 'realEstateDetail']);
 
         $isOwner = $user && $user->id === $listing->user_id;
         if ($listing->isPubliclyListed() && (! $user || ! $isOwner)) {

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\MyListingResource;
 use App\Models\Product;
+use App\Services\Listings\ListingActionResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -31,7 +32,7 @@ class MyListingsController extends Controller
 
         $query = Product::forUser($user->id)
             ->visible()
-            ->with(['category', 'subcategory', 'region', 'city'])
+            ->with(['category', 'subcategory', 'region', 'city', 'realEstateDetail'])
             ->withCount(['bids as pending_bids_count' => fn ($q) => $q->where('status', 'PENDING')]);
 
         if ($status !== 'ALL') {
@@ -52,11 +53,28 @@ class MyListingsController extends Controller
 
         $listings = $query->paginate($perPage);
 
+        $resolver = app(ListingActionResolver::class);
+        $user->loadMissing('sellerPayoutProfile');
+
+        $needsAction = 0;
+        Product::forUser($user->id)
+            ->visible()
+            ->with(['category', 'subcategory', 'region', 'city'])
+            ->chunkById(50, function ($chunk) use ($resolver, $user, &$needsAction) {
+                foreach ($chunk as $product) {
+                    $state = $resolver->resolve($product, $user);
+                    if ($resolver->isBlocking($state)) {
+                        $needsAction++;
+                    }
+                }
+            });
+
         $counts = [
             'all' => Product::forUser($user->id)->visible()->count(),
             'active' => Product::forUser($user->id)->where('status', 'published')->count(),
             'sold' => Product::forUser($user->id)->where('status', 'sold')->count(),
             'hidden' => Product::forUser($user->id)->where('status', 'hidden')->count(),
+            'needs_action' => $needsAction,
         ];
 
         return response()->json([
@@ -97,7 +115,7 @@ class MyListingsController extends Controller
         return response()->json([
             'success' => true,
             'message' => $request->status === 'ACTIVE' ? 'تم إظهار الإعلان' : 'تم إخفاء الإعلان',
-            'listing' => new MyListingResource($product->load(['category', 'subcategory', 'region', 'city'])),
+            'listing' => new MyListingResource($product->load(['category', 'subcategory', 'region', 'city', 'realEstateDetail'])),
         ]);
     }
 
@@ -204,11 +222,17 @@ class MyListingsController extends Controller
         $newProduct->published_at = null;
         $newProduct->save();
 
+        if ($product->realEstateDetail) {
+            $re = $product->realEstateDetail->replicate();
+            $re->product_id = $newProduct->id;
+            $re->save();
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'تم نسخ الإعلان، يمكنك تعديله الآن',
             'listing' => new MyListingResource(
-                $newProduct->load(['category', 'subcategory', 'region', 'city'])
+                $newProduct->load(['category', 'subcategory', 'region', 'city', 'realEstateDetail'])
             ),
         ]);
     }

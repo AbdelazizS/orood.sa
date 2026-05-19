@@ -1,7 +1,7 @@
 import { useLocation } from "react-router-dom"
 import { useAuthStore } from "@/store/useAuthStore"
 
-const ADMIN_ROLES = new Set(["super_admin", "admin", "manager", "employee", "moderator"])
+const ADMIN_ROLES = new Set(["super_admin", "admin", "manager", "employee", "moderator", "assistant"])
 
 export function isStaffUser(user) {
   return Boolean(user?.role && ADMIN_ROLES.has(user.role))

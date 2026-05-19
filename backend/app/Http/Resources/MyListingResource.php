@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\Listings\ListingActionResolver;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -9,6 +10,7 @@ class MyListingResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $seller = $request->user();
         $media = is_array($this->media) ? $this->media : [];
         $gallery = $media['gallery'] ?? ($media['cover'] ? [$media['cover']] : []);
         $cover = $media['cover'] ?? $this->image_url ?? null;
@@ -27,6 +29,11 @@ class MyListingResource extends JsonResource
             'price' => $this->price ? (float) $this->price : null,
             'currency' => 'SAR',
             'status' => $this->mapStatus($this->status),
+            'moderation_status' => $this->moderation_status,
+            'payout_activation_status' => $this->payout_activation_status ?? 'active',
+            'seller_state' => $seller
+                ? app(ListingActionResolver::class)->resolve($this->resource, $seller)
+                : null,
             'main_category' => [
                 'id' => $this->category?->id,
                 'name' => $this->category?->name_ar ?? $this->category?->name,
@@ -65,6 +72,33 @@ class MyListingResource extends JsonResource
                 'contact_phone' => $this->contact_phone,
                 'tax_included' => false,
             ],
+            'location_lat' => $this->location_lat,
+            'location_lng' => $this->location_lng,
+            'location_address' => $this->location_address,
+            'listing_attributes' => $this->when(
+                $this->relationLoaded('listingAttributeValues') || $this->category_id,
+                fn () => app(\App\Services\Listings\ListingAttributeSchemaService::class)->attributesMapForProduct($this->resource)
+            ),
+            'dynamic_schema_enabled' => (bool) ($this->category?->dynamic_schema_enabled ?? false),
+            'real_estate' => $this->when($this->relationLoaded('realEstateDetail') && $this->realEstateDetail, function () {
+                $d = $this->realEstateDetail;
+
+                return [
+                    'purpose' => $d->purpose,
+                    'property_type' => $d->property_type,
+                    'area_sqm' => $d->area_sqm,
+                    'bedrooms' => $d->bedrooms,
+                    'bathrooms' => $d->bathrooms,
+                    'land_width_m' => $d->land_width_m,
+                    'land_length_m' => $d->land_length_m,
+                    'street_width_m' => $d->street_width_m,
+                    'property_age_years' => $d->property_age_years,
+                    'furnished' => (bool) $d->furnished,
+                    'floor_number' => $d->floor_number,
+                    'total_floors' => $d->total_floors,
+                    'amenities' => $d->amenities ?? [],
+                ];
+            }),
             'bumped_at' => $this->bumped_at?->toIso8601String(),
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),

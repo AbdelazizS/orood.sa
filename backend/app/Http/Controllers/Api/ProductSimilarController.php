@@ -29,6 +29,7 @@ class ProductSimilarController extends Controller
             ->withCount('bids')
             ->published()
             ->approved()
+            ->where('is_wholesale', false)
             ->where('id', '!=', $product->id)
             ->where('user_id', '!=', $product->user_id); // Exclude same seller
 

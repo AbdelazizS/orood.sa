@@ -38,3 +38,12 @@ npm run dev
 Backend:
 
 See `backend/README.md`.
+
+## Production deploy (arooth.com)
+
+Full checklist: **[backend/deploy/README.md](backend/deploy/README.md)**
+
+- Branch: `clean-deploy`
+- Seed: `php artisan db:seed --class=ProductionSeeder` (not `db:seed` — that includes demo data)
+- Nginx: `backend/deploy/nginx/arooth.conf`
+- Server script: `backend/deploy/server-setup.sh`

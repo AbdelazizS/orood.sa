@@ -29,46 +29,30 @@ function resolveMemberTail(path, t) {
     return { label: t("breadcrumb.orderDetail", { id }) }
   }
   if (path.startsWith("/dashboard/orders")) {
-    return { to: "/dashboard/orders", label: t("dashboard.orderTracking") }
+    return { to: "/dashboard/orders", label: t("dashboard.nav.orderCenter") }
   }
-  if (path.startsWith("/dashboard/view-requests")) {
-    return { to: "/dashboard/view-requests", label: t("dashboard.viewRequests") }
-  }
-  if (path.startsWith("/dashboard/balance")) {
-    return { to: "/dashboard/balance", label: t("dashboard.walletMenu") }
-  }
-  if (path.startsWith("/dashboard/guarantee")) {
-    return { to: "/dashboard/guarantee", label: t("dashboard.financialGuarantee") }
-  }
-  if (path.startsWith("/dashboard/listings")) {
-    return { to: "/dashboard/listings", label: t("dashboard.listings") }
-  }
-  if (path.startsWith("/dashboard/favorites")) {
-    return { to: "/dashboard/favorites", label: t("dashboard.favorites") }
-  }
-  if (path.startsWith("/dashboard/saved-searches")) {
-    return { to: "/dashboard/saved-searches", label: t("dashboard.savedSearches") }
+  if (path.startsWith("/dashboard/wallet")) {
+    return { to: "/dashboard/wallet", label: t("dashboard.nav.wallet") }
   }
   if (path.startsWith("/dashboard/messages")) {
-    return { to: "/dashboard/messages", label: t("dashboard.messages") }
+    return { to: "/dashboard/messages", label: t("dashboard.nav.inbox") }
   }
-  if (path.startsWith("/dashboard/notifications")) {
-    return { to: "/dashboard/notifications", label: t("dashboard.notifications") }
+  if (path.startsWith("/dashboard/account")) {
+    return { to: "/dashboard/account", label: t("dashboard.nav.account") }
   }
-  if (path.startsWith("/dashboard/verification")) {
-    return { to: "/dashboard/verification", label: t("dashboard.verification") }
+  if (
+    path.startsWith("/dashboard/profile") ||
+    path.startsWith("/dashboard/verification") ||
+    path.startsWith("/dashboard/reports") ||
+    path.startsWith("/dashboard/reviews")
+  ) {
+    return { to: "/dashboard/account", label: t("dashboard.nav.account") }
   }
-  if (path.startsWith("/dashboard/views")) {
-    return { to: "/dashboard/views", label: t("dashboard.views") }
-  }
-  if (path.startsWith("/dashboard/reports")) {
-    return { to: "/dashboard/reports", label: t("dashboard.reportsTitle") }
+  if (path.startsWith("/dashboard/listings") || path.startsWith("/dashboard/wholesale")) {
+    return { to: "/dashboard/listings", label: t("dashboard.nav.listings") }
   }
   if (path.startsWith("/dashboard/help")) {
-    return { to: "/dashboard/help", label: t("dashboard.help") }
-  }
-  if (path.startsWith("/dashboard/profile") || path.startsWith("/dashboard/account")) {
-    return { label: t("dashboard.personalData") }
+    return { to: "/dashboard/help", label: t("dashboard.nav.help") }
   }
 
   return { label: t("breadcrumb.fallbackPage") }

@@ -10,7 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   optimizeDeps: {
-    include: ['react-day-picker', 'react-leaflet', 'leaflet'],
+    include: ['react-day-picker', 'react-leaflet', 'leaflet', 'mapbox-gl'],
   },
   resolve: {
     alias: {

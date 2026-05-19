@@ -1,5 +1,6 @@
 import { StrictMode, Suspense, useEffect, useState } from "react"
 import { createRoot } from "react-dom/client"
+import { HelmetProvider } from "react-helmet-async"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { RouterProvider } from "react-router-dom"
 import "./index.css"
@@ -9,10 +10,15 @@ import { router } from "@/routes"
 import { AppDirectionProvider } from "@/providers/DirectionProvider"
 import { LanguageProvider } from "@/contexts/LanguageContext"
 import { AuthInit } from "@/components/AuthInit"
+import { MapsConfigInit } from "@/components/MapsConfigInit"
 import { PresenceHeartbeat } from "@/components/PresenceHeartbeat"
 import { ThemeProvider } from "@/providers/ThemeProvider"
+import { BrandingProvider } from "@/providers/BrandingProvider"
 import { Preloader } from "@/components/Preloader"
 import { Toaster } from "@/components/ui/sonner"
+import { fetchPublicBranding } from "@/services/brandingService"
+import { brandingQueryKey } from "@/hooks/useBranding"
+import { writeBrandingCache } from "@/lib/brandingCache"
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,6 +33,25 @@ const queryClient = new QueryClient({
     },
   },
 })
+
+function brandingLocale() {
+  return i18n.language?.startsWith("en") ? "en" : "ar"
+}
+
+async function prefetchBranding() {
+  const locale = brandingLocale()
+  const key = brandingQueryKey(locale)
+  try {
+    await queryClient.prefetchQuery({
+      queryKey: key,
+      queryFn: fetchPublicBranding,
+    })
+    const data = queryClient.getQueryData(key)
+    if (data) writeBrandingCache(locale, data)
+  } catch {
+    // App falls back to BRANDING_FALLBACK in useBranding
+  }
+}
 
 function AppFallback() {
   return (
@@ -44,7 +69,6 @@ function AppRoot() {
 
   useEffect(() => {
     const handleLanguageChanged = () => {
-      // Refetch active queries so server-localized fields switch immediately.
       queryClient.invalidateQueries()
     }
     i18n.on("languageChanged", handleLanguageChanged)
@@ -54,30 +78,40 @@ function AppRoot() {
   }, [])
 
   return (
-    <>
-      {!preloaderDone && (
-        <Preloader onComplete={() => setPreloaderDone(true)} minDuration={1400} />
-      )}
-      <Suspense fallback={null}>
-        <QueryClientProvider client={queryClient}>
-          <ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <HelmetProvider>
+        <ThemeProvider>
+          <BrandingProvider>
+            {!preloaderDone && (
+              <Preloader onComplete={() => setPreloaderDone(true)} minDuration={1400} />
+            )}
             <Toaster richColors position="top-right" />
-            <LanguageProvider>
-              <AppDirectionProvider>
-                <AuthInit />
-                <PresenceHeartbeat />
-                <RouterProvider router={router} fallbackElement={<AppFallback />} />
-              </AppDirectionProvider>
-            </LanguageProvider>
-          </ThemeProvider>
-        </QueryClientProvider>
-      </Suspense>
-    </>
+            <Suspense fallback={null}>
+              <LanguageProvider>
+                <AppDirectionProvider>
+                  <AuthInit />
+                  <MapsConfigInit />
+                  <PresenceHeartbeat />
+                  <RouterProvider router={router} fallbackElement={<AppFallback />} />
+                </AppDirectionProvider>
+              </LanguageProvider>
+            </Suspense>
+          </BrandingProvider>
+        </ThemeProvider>
+      </HelmetProvider>
+    </QueryClientProvider>
   )
 }
 
-createRoot(document.getElementById("root")).render(
-  <StrictMode>
-    <AppRoot />
-  </StrictMode>,
-)
+async function bootstrap() {
+  await prefetchBranding()
+  const root = document.getElementById("root")
+  if (!root) return
+  createRoot(root).render(
+    <StrictMode>
+      <AppRoot />
+    </StrictMode>,
+  )
+}
+
+bootstrap()

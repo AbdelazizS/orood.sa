@@ -3,6 +3,7 @@ import { useInView } from "react-intersection-observer"
 import { useTranslation } from "react-i18next"
 import { FeedSkeleton } from "@/components/feed/FeedSkeleton"
 import { ProductCard } from "@/components/feed/cards/ProductCard"
+import { formatRealEstateCardMeta } from "@/lib/realEstate/labels"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 
@@ -38,14 +39,32 @@ export function FeedList({ feedQuery }) {
       {feedQuery.isError && (
         <Alert variant="destructive">
           <AlertDescription>
-            {feedQuery.error?.message ?? t("common.errorGeneric")}
+            {(() => {
+              const err = feedQuery.error
+              const msg = err?.message ?? ""
+              const code = err?.code
+              if (code === "TIMEOUT" || err?.isApiTimeout) return t("feed.timeoutError")
+              if (code === "ERR_NETWORK" || msg === "Network Error") return t("feed.networkError")
+              return msg || t("common.errorGeneric")
+            })()}
           </AlertDescription>
         </Alert>
       )}
       <div className="bg-card">
-        {items.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
+        {items.map((product) => {
+          const reMeta = formatRealEstateCardMeta(product.real_estate, t)
+          return (
+            <ProductCard
+              key={product.id}
+              product={product}
+              preMetaSlot={
+                reMeta ? (
+                  <p className="text-xs text-muted-foreground line-clamp-1">{reMeta}</p>
+                ) : null
+              }
+            />
+          )
+        })}
       </div>
       {items.length === 0 && !feedQuery.isLoading && !feedQuery.isError && (
         <div className="rounded-lg border border-dashed border-border p-12 text-center text-muted-foreground bg-card">

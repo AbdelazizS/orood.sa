@@ -1,69 +1,84 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AccountController;
+use App\Http\Controllers\Api\Admin\AdminAnalyticsController;
+use App\Http\Controllers\Api\Admin\AdminAnnouncementController;
+use App\Http\Controllers\Api\Admin\AdminAuditController;
+use App\Http\Controllers\Api\Admin\AdminBidController;
+use App\Http\Controllers\Api\Admin\AdminCategoryController;
+use App\Http\Controllers\Api\Admin\AdminChargeRequestController;
+use App\Http\Controllers\Api\Admin\AdminCompanyVerificationController;
+use App\Http\Controllers\Api\Admin\AdminContactInquiryController;
+use App\Http\Controllers\Api\Admin\AdminGuaranteeRequestController;
+use App\Http\Controllers\Api\Admin\AdminListingReportController;
+use App\Http\Controllers\Api\Admin\AdminMessageController;
+use App\Http\Controllers\Api\Admin\AdminOrderController;
+use App\Http\Controllers\Api\Admin\AdminOverviewController;
+use App\Http\Controllers\Api\Admin\AdminPermissionController;
+use App\Http\Controllers\Api\Admin\AdminProductController;
+use App\Http\Controllers\Api\Admin\AdminProfileReportController;
+use App\Http\Controllers\Api\Admin\AdminRegionController;
+use App\Http\Controllers\Api\Admin\AdminSecuritySettingsController;
+use App\Http\Controllers\Api\Admin\AdminBrandingController;
+use App\Http\Controllers\Api\Admin\AdminSettingsController;
+use App\Http\Controllers\Api\BrandingController;
+use App\Http\Controllers\Api\Admin\AdminTaskController;
+use App\Http\Controllers\Api\Admin\AdminUserController;
+use App\Http\Controllers\Api\Admin\AdminVerificationController;
+use App\Http\Controllers\Api\Admin\AdminVisitorController;
+use App\Http\Controllers\Api\Admin\AdminWithdrawalController;
+use App\Http\Controllers\Api\AnnouncementController;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\HomeFeedController;
+use App\Http\Controllers\Api\BidController;
 use App\Http\Controllers\Api\CategoryController;
-use App\Http\Controllers\Api\RegionController;
-use App\Http\Controllers\Api\SearchController;
-use App\Http\Controllers\Api\FilterController;
+use App\Http\Controllers\Api\CommentController;
+use App\Http\Controllers\Api\Company\CompanyWholesaleProductController;
 use App\Http\Controllers\Api\CompanyController;
+use App\Http\Controllers\Api\ContactController;
+use App\Http\Controllers\Api\FavoriteController;
+use App\Http\Controllers\Api\FilterController;
+use App\Http\Controllers\Api\HomeFeedController;
+use App\Http\Controllers\Api\HomepageSectionsController;
+use App\Http\Controllers\Api\MapsConfigController;
+use App\Http\Controllers\Api\MapsGeocodeController;
+use App\Http\Controllers\Api\ListingController;
+use App\Http\Controllers\Api\ListingMapController;
+use App\Http\Controllers\Api\ListingReportController;
+use App\Http\Controllers\Api\MessageController;
+use App\Http\Controllers\Api\MyListingsController;
+use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductShowController;
 use App\Http\Controllers\Api\ProductSimilarController;
-use App\Http\Controllers\Api\FavoriteController;
-use App\Http\Controllers\Api\SavedSearchController;
-use App\Http\Controllers\Api\MessageController;
-use App\Http\Controllers\Api\BidController;
-use App\Http\Controllers\Api\CommentController;
-use App\Http\Controllers\Api\UploadController;
-use App\Http\Controllers\Api\Admin\AdminCategoryController;
-use App\Http\Controllers\Api\Admin\AdminUserController;
-use App\Http\Controllers\Api\Admin\AdminAnalyticsController;
-use App\Http\Controllers\Api\Admin\AdminAuditController;
-use App\Http\Controllers\Api\Admin\AdminProductController;
-use App\Http\Controllers\Api\Admin\AdminRegionController;
-use App\Http\Controllers\Api\Admin\AdminPermissionController;
-use App\Http\Controllers\Api\Admin\AdminTaskController;
-use App\Http\Controllers\Api\Admin\AdminOverviewController;
-use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ProfileController;
-use App\Http\Controllers\Api\PurchaseController;
-use App\Http\Controllers\Api\ReviewController;
-use App\Http\Controllers\Api\AccountController;
-use App\Http\Controllers\Api\OrderController;
-use App\Http\Controllers\Api\MyListingsController;
-use App\Http\Controllers\Api\Admin\AdminVerificationController;
-use App\Http\Controllers\Api\Admin\AdminOrderController;
-use App\Http\Controllers\Api\Admin\AdminContactInquiryController;
-use App\Http\Controllers\Api\ContactController;
-use App\Http\Controllers\Api\AnnouncementController;
-use App\Http\Controllers\Api\Admin\AdminAnnouncementController;
-use App\Http\Controllers\Api\Admin\AdminMessageController;
-use App\Http\Controllers\Api\Admin\AdminVisitorController;
-use App\Http\Controllers\Api\PublicProfileController;
-use App\Http\Controllers\Api\ListingController;
-use App\Http\Controllers\Api\HomepageSectionsController;
-use App\Http\Controllers\Api\ListingReportController;
-use App\Http\Controllers\Api\Admin\AdminListingReportController;
-use App\Http\Controllers\Api\Admin\AdminProfileReportController;
 use App\Http\Controllers\Api\ProfileReportController;
-use App\Http\Controllers\Api\Admin\AdminChargeRequestController;
-use App\Http\Controllers\Api\Admin\AdminWithdrawalController;
-use App\Http\Controllers\Api\Admin\AdminGuaranteeRequestController;
-use App\Http\Controllers\Api\Admin\AdminSecuritySettingsController;
-use App\Http\Controllers\Api\Admin\AdminSettingsController;
-use App\Http\Controllers\Api\Admin\AdminBidController;
-use App\Http\Controllers\Api\Admin\AdminCompanyVerificationController;
-use App\Http\Controllers\Api\Company\CompanyWholesaleProductController;
+use App\Http\Controllers\Api\PublicProfileController;
+use App\Http\Controllers\Api\PurchaseController;
+use App\Http\Controllers\Api\RegionController;
+use App\Http\Controllers\Api\ReviewController;
+use App\Http\Controllers\Api\SavedSearchController;
+use App\Http\Controllers\Api\SearchController;
+use App\Http\Controllers\Api\SeoController;
+use App\Http\Controllers\Api\UploadController;
+use App\Http\Controllers\Api\Admin\AdminSeoController;
+use App\Http\Controllers\Api\ServiceMarketController;
 use App\Http\Controllers\Api\WholesaleMarketController;
+use App\Http\Controllers\Api\WholesalePageSettingsController;
+use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
     // Public
+    Route::get('/maps/config', MapsConfigController::class);
+    Route::middleware('throttle:60,1')->group(function () {
+        Route::get('/maps/geocode/search', [MapsGeocodeController::class, 'search']);
+        Route::get('/maps/geocode/reverse', [MapsGeocodeController::class, 'reverse']);
+    });
     Route::get('/homepage/feed', HomeFeedController::class);
     Route::get('/homepage/sections', HomepageSectionsController::class);
     Route::get('/homepage/features', \App\Http\Controllers\Api\HomepageFeaturesController::class);
     Route::get('/listings', [ListingController::class, 'index']);
+    Route::get('/listings/map', [ListingMapController::class, 'index']);
     Route::middleware(['optional.auth.api'])->group(function () {
         Route::get('/listings/{listing}', [ListingController::class, 'show']);
         Route::get('/listings/{listing}/reviews', [ReviewController::class, 'forListing']);
@@ -80,7 +95,11 @@ Route::prefix('v1')->group(function () {
         Route::get('/profile/{username}/reviews', [PublicProfileController::class, 'reviews']);
     });
     Route::get('/categories', [CategoryController::class, 'index']);
+    Route::get('/categories/tree', [CategoryController::class, 'tree']);
+    Route::get('/categories/by-slug/{slug}', [CategoryController::class, 'bySlug']);
     Route::get('/categories/{category}/subcategories', [CategoryController::class, 'subcategories']);
+    Route::get('/seo/resolve', [SeoController::class, 'resolve']);
+    Route::get('/categories/{category}/listing-schema', [\App\Http\Controllers\Api\ListingSchemaController::class, 'show']);
     Route::get('/regions', [RegionController::class, 'index']);
     Route::get('/areas', [RegionController::class, 'index']);
     Route::get('/regions/{region}/cities', [RegionController::class, 'cities']);
@@ -88,17 +107,32 @@ Route::prefix('v1')->group(function () {
     Route::get('/companies/{company}', [CompanyController::class, 'show'])->whereNumber('company');
     Route::get('/search', SearchController::class);
     Route::get('/filters', FilterController::class);
+    Route::get('/contact/page', [\App\Http\Controllers\Api\ContactPageController::class, 'show']);
+    Route::get('/cms/pages/{slug}', [\App\Http\Controllers\Api\CmsPageController::class, 'show']);
     Route::post('/contact', [ContactController::class, 'store']);
     Route::get('/announcements', [AnnouncementController::class, 'index']);
     Route::post('/visitors/track', [\App\Http\Controllers\Api\VisitorController::class, 'track']);
     Route::post('/listings/{listing}/report', [ListingReportController::class, 'store']);
-    Route::prefix('wholesale')->group(function () {
+    Route::middleware(['optional.auth.api'])->prefix('wholesale')->group(function () {
+        Route::get('/page-settings', WholesalePageSettingsController::class);
+        Route::get('/category-counts', [WholesaleMarketController::class, 'categoryCounts']);
         Route::get('/products', [WholesaleMarketController::class, 'index']);
         Route::get('/products/{product}', [WholesaleMarketController::class, 'show']);
         Route::get('/companies', [CompanyController::class, 'wholesaleCompanies']);
         Route::get('/companies/{company}', [CompanyController::class, 'wholesaleShow'])->whereNumber('company');
         Route::get('/companies/{company}/products', [CompanyController::class, 'wholesaleProducts'])->whereNumber('company');
     });
+    Route::prefix('services')->group(function () {
+        Route::get('/categories', [ServiceMarketController::class, 'categories']);
+        Route::get('/providers', [ServiceMarketController::class, 'providers']);
+        Route::get('/providers/{provider}', [ServiceMarketController::class, 'show'])->whereNumber('provider');
+    });
+    Route::get('/payment-methods', [\App\Http\Controllers\Api\Finance\PaymentConfigController::class, 'methods']);
+    Route::get('/payment-methods/fields', [\App\Http\Controllers\Api\Finance\PaymentConfigController::class, 'fields']);
+    Route::get('/finance/wallet/charge-schema', [\App\Http\Controllers\Api\Finance\WalletSchemaController::class, 'chargeSchema']);
+    Route::get('/finance/wallet/withdraw-schema', [\App\Http\Controllers\Api\Finance\WalletSchemaController::class, 'withdrawSchema']);
+    Route::get('/help/page', [\App\Http\Controllers\Api\HelpPageController::class, 'show']);
+    Route::get('/branding', [BrandingController::class, 'show']);
     Route::get('/users/by-username/{username}', [ProfileController::class, 'showByUsername']);
     Route::get('/users/{user}', [ProfileController::class, 'show']);
     Route::post('/users/{user}/report', [ProfileReportController::class, 'store']);
@@ -133,6 +167,14 @@ Route::prefix('v1')->group(function () {
             Route::put('/products/{product}', [CompanyWholesaleProductController::class, 'update']);
             Route::delete('/products/{product}', [CompanyWholesaleProductController::class, 'destroy']);
             Route::post('/bulk-offers', [CompanyWholesaleProductController::class, 'storeBulkOffer']);
+            Route::post('/products/bulk', [CompanyWholesaleProductController::class, 'storeBulkProducts']);
+        });
+        Route::prefix('services')->group(function () {
+            Route::post('/providers', [ServiceMarketController::class, 'storeProvider']);
+            Route::post('/requests', [ServiceMarketController::class, 'storeRequest']);
+            Route::get('/my-requests', [ServiceMarketController::class, 'myRequests']);
+            Route::get('/provider/dashboard', [ServiceMarketController::class, 'providerDashboard']);
+            Route::patch('/requests/{serviceRequest}/status', [ServiceMarketController::class, 'updateRequestStatus']);
         });
         Route::middleware('can.create.listing')->group(function () {
             Route::post('/products', [ProductController::class, 'store']);
@@ -174,6 +216,14 @@ Route::prefix('v1')->group(function () {
         Route::post('/products/{product}/bump', [ProductController::class, 'bump']);
         Route::delete('/products/{product}', [ProductController::class, 'destroy']);
         Route::post('/products/{product}/purchase', [PurchaseController::class, 'store']);
+        Route::get('/products/{product}/checkout-payment-options', [\App\Http\Controllers\Api\Finance\CheckoutPaymentController::class, 'options']);
+        Route::get('/seller/payout-profile', [\App\Http\Controllers\Api\Finance\SellerPayoutProfileController::class, 'show']);
+        Route::put('/seller/payout-profile', [\App\Http\Controllers\Api\Finance\SellerPayoutProfileController::class, 'update']);
+        Route::get('/seller/payment-setup-status', [\App\Http\Controllers\Api\Finance\SellerPayoutProfileController::class, 'setupStatus']);
+        Route::get('/account/financial-requests', [\App\Http\Controllers\Api\Finance\WalletFinancialRequestController::class, 'index']);
+        Route::post('/account/financial-requests/charge', [\App\Http\Controllers\Api\Finance\WalletFinancialRequestController::class, 'charge']);
+        Route::post('/account/financial-requests/withdraw', [\App\Http\Controllers\Api\Finance\WalletFinancialRequestController::class, 'withdraw']);
+        Route::get('/account/financial-activity', [\App\Http\Controllers\Api\Finance\FinancialActivityController::class, 'index']);
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::get('/notifications/{notification}', [NotificationController::class, 'show']);
         Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
@@ -226,7 +276,7 @@ Route::prefix('v1')->group(function () {
     });
 
     // Admin (protected, role: super_admin, admin, manager)
-    Route::middleware(['auth.api', 'role:super_admin,admin,manager,employee,moderator'])->prefix('admin')->group(function () {
+    Route::middleware(['auth.api', 'role:super_admin,admin,manager,employee,moderator,assistant'])->prefix('admin')->group(function () {
         Route::post('/comments/{comment}/reply', [CommentController::class, 'teamReply']);
         Route::get('/categories', [AdminCategoryController::class, 'index']);
         Route::post('/categories', [AdminCategoryController::class, 'store']);
@@ -252,6 +302,46 @@ Route::prefix('v1')->group(function () {
         Route::get('/withdrawal-requests', [AdminWithdrawalController::class, 'index'])->middleware('permission:finance.approve_withdrawal');
         Route::post('/withdrawal-requests/{withdrawal_request}/approve', [AdminWithdrawalController::class, 'approve'])->middleware('permission:finance.approve_withdrawal');
         Route::post('/withdrawal-requests/{withdrawal_request}/reject', [AdminWithdrawalController::class, 'reject'])->middleware('permission:finance.approve_withdrawal');
+        Route::get('/finance/payment-methods', [\App\Http\Controllers\Api\Admin\AdminPaymentMethodController::class, 'index'])->middleware('permission:settings.update');
+        Route::post('/finance/payment-methods', [\App\Http\Controllers\Api\Admin\AdminPaymentMethodController::class, 'store'])->middleware('permission:settings.update');
+        Route::put('/finance/payment-methods/{paymentMethod}', [\App\Http\Controllers\Api\Admin\AdminPaymentMethodController::class, 'update'])->middleware('permission:settings.update');
+        Route::post('/finance/payment-method-fields/reorder', [\App\Http\Controllers\Api\Admin\AdminPaymentMethodController::class, 'reorderFields'])->middleware('permission:settings.update');
+        Route::post('/finance/payment-methods/{paymentMethod}/fields', [\App\Http\Controllers\Api\Admin\AdminPaymentMethodController::class, 'storeField'])->middleware('permission:settings.update');
+        Route::put('/finance/payment-method-fields/{field}', [\App\Http\Controllers\Api\Admin\AdminPaymentMethodController::class, 'updateField'])->middleware('permission:settings.update');
+        Route::delete('/finance/payment-method-fields/{field}', [\App\Http\Controllers\Api\Admin\AdminPaymentMethodController::class, 'destroyField'])->middleware('permission:settings.update');
+        Route::get('/finance/requests', [\App\Http\Controllers\Api\Admin\AdminFinancialRequestController::class, 'index'])->middleware('permission:finance.approve_charge');
+        Route::get('/finance/requests/{financialRequest}', [\App\Http\Controllers\Api\Admin\AdminFinancialRequestController::class, 'show'])->middleware('permission:finance.approve_charge');
+        Route::post('/finance/requests/{financialRequest}/approve', [\App\Http\Controllers\Api\Admin\AdminFinancialRequestController::class, 'approve'])->middleware('permission:finance.approve_charge');
+        Route::post('/finance/requests/{financialRequest}/reject', [\App\Http\Controllers\Api\Admin\AdminFinancialRequestController::class, 'reject'])->middleware('permission:finance.approve_charge');
+        Route::get('/finance/order-payments', [\App\Http\Controllers\Api\Admin\AdminOrderPaymentRequestController::class, 'index'])->middleware('permission:finance.approve_charge');
+        Route::post('/finance/order-payments/{orderPaymentRequest}/approve', [\App\Http\Controllers\Api\Admin\AdminOrderPaymentRequestController::class, 'approve'])->middleware('permission:finance.approve_charge');
+        Route::post('/finance/order-payments/{orderPaymentRequest}/reject', [\App\Http\Controllers\Api\Admin\AdminOrderPaymentRequestController::class, 'reject'])->middleware('permission:finance.approve_charge');
+        Route::get('/finance/payout-profiles', [\App\Http\Controllers\Api\Admin\AdminSellerPayoutProfileController::class, 'index'])->middleware('permission:finance.approve_charge');
+        Route::post('/finance/payout-profiles/{sellerPayoutProfile}/verify', [\App\Http\Controllers\Api\Admin\AdminSellerPayoutProfileController::class, 'verify'])->middleware('permission:finance.approve_charge');
+        Route::post('/finance/payout-profiles/{sellerPayoutProfile}/reject', [\App\Http\Controllers\Api\Admin\AdminSellerPayoutProfileController::class, 'reject'])->middleware('permission:finance.approve_charge');
+        Route::get('/finance/cod-policies', [\App\Http\Controllers\Api\Admin\AdminCodPolicyController::class, 'index'])->middleware('permission:settings.update');
+        Route::post('/finance/cod-policies', [\App\Http\Controllers\Api\Admin\AdminCodPolicyController::class, 'store'])->middleware('permission:settings.update');
+        Route::put('/finance/cod-policies/{codPolicy}', [\App\Http\Controllers\Api\Admin\AdminCodPolicyController::class, 'update'])->middleware('permission:settings.update');
+        Route::delete('/finance/cod-policies/{codPolicy}', [\App\Http\Controllers\Api\Admin\AdminCodPolicyController::class, 'destroy'])->middleware('permission:settings.update');
+        Route::get('/category-fields', [\App\Http\Controllers\Api\Admin\AdminCategoryFieldController::class, 'index'])->middleware('permission:settings.update');
+        Route::post('/category-fields', [\App\Http\Controllers\Api\Admin\AdminCategoryFieldController::class, 'store'])->middleware('permission:settings.update');
+        Route::put('/category-fields/{categoryField}', [\App\Http\Controllers\Api\Admin\AdminCategoryFieldController::class, 'update'])->middleware('permission:settings.update');
+        Route::delete('/category-fields/{categoryField}', [\App\Http\Controllers\Api\Admin\AdminCategoryFieldController::class, 'destroy'])->middleware('permission:settings.update');
+        Route::get('/category-schemas', [\App\Http\Controllers\Api\Admin\AdminCategorySchemaController::class, 'index'])->middleware('permission:settings.update');
+        Route::post('/category-schemas', [\App\Http\Controllers\Api\Admin\AdminCategorySchemaController::class, 'store'])->middleware('permission:settings.update');
+        Route::get('/category-schemas/{categorySchema}', [\App\Http\Controllers\Api\Admin\AdminCategorySchemaController::class, 'show'])->middleware('permission:settings.update');
+        Route::put('/category-schemas/{categorySchema}', [\App\Http\Controllers\Api\Admin\AdminCategorySchemaController::class, 'update'])->middleware('permission:settings.update');
+        Route::post('/category-schemas/{categorySchema}/publish', [\App\Http\Controllers\Api\Admin\AdminCategorySchemaController::class, 'publish'])->middleware('permission:settings.update');
+        Route::post('/category-schemas/{categorySchema}/clone', [\App\Http\Controllers\Api\Admin\AdminCategorySchemaController::class, 'clone'])->middleware('permission:settings.update');
+        Route::put('/category-schemas/{categorySchema}/reorder', [\App\Http\Controllers\Api\Admin\AdminCategorySchemaController::class, 'reorder'])->middleware('permission:settings.update');
+        Route::post('/category-schemas/{categorySchema}/sections/{section}/duplicate', [\App\Http\Controllers\Api\Admin\AdminCategorySchemaController::class, 'duplicateSection'])->middleware('permission:settings.update');
+        Route::post('/category-schemas/{categorySchema}/sections', [\App\Http\Controllers\Api\Admin\AdminCategorySchemaController::class, 'storeSection'])->middleware('permission:settings.update');
+        Route::post('/category-schemas/{categorySchema}/fields', [\App\Http\Controllers\Api\Admin\AdminCategorySchemaController::class, 'storeField'])->middleware('permission:settings.update');
+        Route::put('/category-schema-fields/{categorySchemaField}', [\App\Http\Controllers\Api\Admin\AdminCategorySchemaController::class, 'updateField'])->middleware('permission:settings.update');
+        Route::delete('/category-schema-fields/{categorySchemaField}', [\App\Http\Controllers\Api\Admin\AdminCategorySchemaController::class, 'destroyField'])->middleware('permission:settings.update');
+        Route::put('/category-schemas/{categorySchema}/policy', [\App\Http\Controllers\Api\Admin\AdminCategorySchemaController::class, 'updatePolicy'])->middleware('permission:settings.update');
+        Route::post('/category-schemas/{categorySchema}/agreements', [\App\Http\Controllers\Api\Admin\AdminCategorySchemaController::class, 'storeAgreement'])->middleware('permission:settings.update');
+        Route::delete('/listing-agreements/{listingAgreement}', [\App\Http\Controllers\Api\Admin\AdminCategorySchemaController::class, 'destroyAgreement'])->middleware('permission:settings.update');
         Route::get('/charge-requests', [AdminChargeRequestController::class, 'index'])->middleware('permission:finance.approve_charge');
         Route::post('/charge-requests/{charge_request}/approve', [AdminChargeRequestController::class, 'approve'])->middleware('permission:finance.approve_charge');
         Route::post('/charge-requests/{charge_request}/reject', [AdminChargeRequestController::class, 'reject'])->middleware('permission:finance.approve_charge');
@@ -259,6 +349,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/guarantee-requests/{guarantee_request}/approve', [AdminGuaranteeRequestController::class, 'approve'])->middleware('permission:compliance.review_guarantee_requests');
         Route::post('/guarantee-requests/{guarantee_request}/reject', [AdminGuaranteeRequestController::class, 'reject'])->middleware('permission:compliance.review_guarantee_requests');
         Route::get('/users', [AdminUserController::class, 'index']);
+        Route::post('/users', [AdminUserController::class, 'store'])->middleware('permission:users.assign_roles');
         Route::get('/users/{user}', [AdminUserController::class, 'show']);
         Route::put('/users/{user}', [AdminUserController::class, 'update']);
         Route::get('/products', [AdminProductController::class, 'index']);
@@ -279,6 +370,20 @@ Route::prefix('v1')->group(function () {
         Route::get('/permissions/roles/{role}', [AdminPermissionController::class, 'rolePermissions']);
         Route::put('/permissions/roles/{role}', [AdminPermissionController::class, 'syncRole'])
             ->middleware('permission:users.assign_roles');
+        Route::get('/assistants/meta', [\App\Http\Controllers\Api\Admin\AdminAssistantController::class, 'meta'])
+            ->middleware('permission:assistants.manage');
+        Route::get('/assistants', [\App\Http\Controllers\Api\Admin\AdminAssistantController::class, 'index'])
+            ->middleware('permission:assistants.manage');
+        Route::post('/assistants', [\App\Http\Controllers\Api\Admin\AdminAssistantController::class, 'store'])
+            ->middleware('permission:assistants.manage');
+        Route::get('/assistants/{assistant}', [\App\Http\Controllers\Api\Admin\AdminAssistantController::class, 'show'])
+            ->middleware('permission:assistants.manage');
+        Route::put('/assistants/{assistant}', [\App\Http\Controllers\Api\Admin\AdminAssistantController::class, 'update'])
+            ->middleware('permission:assistants.manage');
+        Route::delete('/assistants/{assistant}', [\App\Http\Controllers\Api\Admin\AdminAssistantController::class, 'destroy'])
+            ->middleware('permission:assistants.manage');
+        Route::post('/assistants/{assistant}/reset-password', [\App\Http\Controllers\Api\Admin\AdminAssistantController::class, 'resetPassword'])
+            ->middleware('permission:assistants.manage');
         Route::get('/tasks', [AdminTaskController::class, 'index'])->middleware('permission:tasks.view');
         Route::post('/tasks', [AdminTaskController::class, 'store'])->middleware('permission:tasks.create');
         Route::put('/tasks/{task}', [AdminTaskController::class, 'update'])->middleware('permission:tasks.update');
@@ -336,6 +441,47 @@ Route::prefix('v1')->group(function () {
         Route::put('/settings/account', [AdminSettingsController::class, 'updateAccount'])->middleware('permission:settings.update');
         Route::put('/settings/auth', [AdminSettingsController::class, 'updateAuth'])->middleware('permission:settings.update');
         Route::put('/settings/content', [AdminSettingsController::class, 'updateContent'])->middleware('permission:settings.update');
+        Route::put('/settings/wholesale-market-page', [AdminSettingsController::class, 'updateWholesaleMarketPage'])->middleware('permission:settings.update');
+        Route::put('/settings/payments', [AdminSettingsController::class, 'updatePayments'])->middleware('permission:settings.update');
+        Route::put('/settings/contact', [AdminSettingsController::class, 'updateContact'])->middleware('permission:settings.update');
+        Route::get('/branding', [AdminBrandingController::class, 'show'])->middleware('permission:settings.view');
+        Route::put('/branding', [AdminBrandingController::class, 'update'])->middleware('permission:settings.update');
+        Route::post('/branding/upload', [AdminBrandingController::class, 'upload'])->middleware('permission:settings.update');
+        Route::middleware('permission:seo.manage')->prefix('seo')->group(function () {
+            Route::get('/dashboard', [AdminSeoController::class, 'dashboard']);
+            Route::get('/global', [AdminSeoController::class, 'globalShow']);
+            Route::put('/global', [AdminSeoController::class, 'globalUpdate']);
+            Route::get('/pages', [AdminSeoController::class, 'pagesIndex']);
+            Route::post('/pages', [AdminSeoController::class, 'pagesStore']);
+            Route::put('/pages/{pageKey}', [AdminSeoController::class, 'pagesUpdate']);
+            Route::delete('/pages/{pageKey}', [AdminSeoController::class, 'pagesDestroy']);
+            Route::post('/pages/bulk', [AdminSeoController::class, 'pagesBulk']);
+            Route::post('/pages/sync-categories', [AdminSeoController::class, 'syncCategories']);
+            Route::get('/sitemap', [AdminSeoController::class, 'sitemapShow']);
+            Route::put('/sitemap', [AdminSeoController::class, 'sitemapUpdate']);
+            Route::post('/sitemap/generate', [AdminSeoController::class, 'sitemapGenerate']);
+            Route::get('/robots', [AdminSeoController::class, 'robotsShow']);
+            Route::put('/robots', [AdminSeoController::class, 'robotsUpdate']);
+            Route::get('/audit', [AdminSeoController::class, 'auditIssues']);
+            Route::post('/audit/run', [AdminSeoController::class, 'runAudit']);
+            Route::post('/cache/clear', [AdminSeoController::class, 'clearCache']);
+            Route::post('/upload/og-image', [AdminSeoController::class, 'uploadOgImage']);
+        });
+        Route::get('/help/support-settings', [\App\Http\Controllers\Api\Admin\AdminHelpController::class, 'getSupportSettings'])->middleware('permission:settings.update');
+        Route::put('/help/support-settings', [\App\Http\Controllers\Api\Admin\AdminHelpController::class, 'updateSupportSettings'])->middleware('permission:settings.update');
+        Route::get('/help/blocks', [\App\Http\Controllers\Api\Admin\AdminHelpController::class, 'indexBlocks'])->middleware('permission:settings.update');
+        Route::post('/help/blocks', [\App\Http\Controllers\Api\Admin\AdminHelpController::class, 'storeBlock'])->middleware('permission:settings.update');
+        Route::put('/help/blocks/{helpBlock}', [\App\Http\Controllers\Api\Admin\AdminHelpController::class, 'updateBlock'])->middleware('permission:settings.update');
+        Route::post('/help/blocks/reorder', [\App\Http\Controllers\Api\Admin\AdminHelpController::class, 'reorderBlocks'])->middleware('permission:settings.update');
+        Route::get('/help/categories', [\App\Http\Controllers\Api\Admin\AdminHelpController::class, 'indexCategories'])->middleware('permission:settings.update');
+        Route::get('/order-edit-policies', [\App\Http\Controllers\Api\Admin\AdminOrderEditPolicyController::class, 'show'])->middleware('permission:settings.update');
+        Route::put('/order-edit-policies', [\App\Http\Controllers\Api\Admin\AdminOrderEditPolicyController::class, 'update'])->middleware('permission:settings.update');
+        Route::get('/cms/pages', [\App\Http\Controllers\Api\Admin\AdminCmsPageController::class, 'index'])->middleware('permission:settings.update');
+        Route::post('/cms/pages', [\App\Http\Controllers\Api\Admin\AdminCmsPageController::class, 'store'])->middleware('permission:settings.update');
+        Route::put('/cms/pages/{cmsPage}', [\App\Http\Controllers\Api\Admin\AdminCmsPageController::class, 'update'])->middleware('permission:settings.update');
+        Route::get('/settings/mail', [\App\Http\Controllers\Api\Admin\AdminMailSettingsController::class, 'show'])->middleware('permission:settings.view');
+        Route::put('/settings/mail', [\App\Http\Controllers\Api\Admin\AdminMailSettingsController::class, 'update'])->middleware('permission:settings.update');
+        Route::post('/settings/mail/test', [\App\Http\Controllers\Api\Admin\AdminMailSettingsController::class, 'sendTest'])->middleware('permission:settings.update');
     });
 });
 

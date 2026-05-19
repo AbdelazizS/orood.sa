@@ -16,6 +16,7 @@ class RegisterCompanyRequest extends FormRequest
         return [
             'company_name' => ['required', 'string', 'max:255'],
             'city_id' => ['required', 'exists:cities,id'],
+            'category_id' => ['required', 'exists:categories,id'],
             'product_types' => ['nullable', 'string', 'max:255'],
             'license' => ['nullable', 'file', 'mimes:jpeg,jpg,png,pdf', 'max:5120'],
         ];

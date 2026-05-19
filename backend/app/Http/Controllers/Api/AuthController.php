@@ -10,6 +10,7 @@ use App\Models\Verification;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Requests\RegisterCompanyRequest;
+use App\Models\City;
 use App\Models\Company;
 use App\Services\AdminSettingsService;
 use App\Services\PasswordPolicyService;
@@ -83,11 +84,16 @@ class AuthController extends Controller
             $licenseUrl = '/storage/' . $path;
         }
 
+        $cityId = (int) $request->validated('city_id');
+        $city = City::query()->find($cityId);
+
         $company = Company::create([
             'user_id' => $user->id,
             'name' => $request->validated('company_name'),
             'slug' => Str::slug($request->validated('company_name')) . '-' . $user->id . '-' . Str::random(6),
-            'city_id' => $request->validated('city_id'),
+            'city_id' => $cityId,
+            'region_id' => $city?->region_id,
+            'category_id' => $request->validated('category_id'),
             'product_types' => $request->validated('product_types'),
             'verification_status' => 'pending',
             'license_url' => $licenseUrl,
@@ -95,6 +101,7 @@ class AuthController extends Controller
 
         $user->forceFill([
             'role' => 'company',
+            'city_id' => $cityId,
             'company_verification_status' => 'pending',
             'company_verification_note' => null,
         ])->save();
@@ -211,6 +218,13 @@ class AuthController extends Controller
 
         if ($this->adminSettings->getBool(AdminSettingsService::KEY_EMAIL_VERIFICATION_REQUIRED, false) && ! $user->email_verified_at) {
             return response()->json(['message' => __('auth.email_verification_required')], 403);
+        }
+
+        if ($user->isAssistant()) {
+            $assistant = $user->assistantProfile;
+            if (! $assistant || $assistant->status !== \App\Models\Assistant::STATUS_ACTIVE) {
+                return response()->json(['message' => __('auth.assistant_inactive')], 403);
+            }
         }
 
         $this->revokeToken($user);
@@ -428,10 +442,16 @@ class AuthController extends Controller
 
     private function userResource(User $user): array
     {
-        $user->load('city.region');
-        $permissions = $user->role === 'super_admin'
-            ? ['*']
-            : Permission::getForRole($user->role);
+        $user->load(['city.region', 'assistantProfile']);
+        $permissions = Permission::getForUser($user);
+        $assistantPayload = null;
+        if ($user->isAssistant() && $user->assistantProfile) {
+            $assistantPayload = [
+                'job_role' => $user->assistantProfile->job_role,
+                'assigned_user_types' => $user->assistantProfile->assignedUserTypes(),
+                'status' => $user->assistantProfile->status,
+            ];
+        }
 
         return [
             'id' => $user->id,
@@ -465,6 +485,7 @@ class AuthController extends Controller
             'email_verified' => (bool) $user->email_verified_at,
             'created_at' => $user->created_at?->toIso8601String(),
             'permissions' => $permissions,
+            'assistant' => $assistantPayload,
             'company_verification_status' => $user->company_verification_status ?? 'none',
             'company_verification_note' => $user->company_verification_note,
         ];

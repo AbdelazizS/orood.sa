@@ -108,7 +108,7 @@ export function UserMenu() {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link to={isAdmin ? "/admin/notifications" : "/dashboard/notifications"} className="flex cursor-pointer items-center gap-2">
+          <Link to={isAdmin ? "/admin/notifications" : "/dashboard/messages?hub=notifications"} className="flex cursor-pointer items-center gap-2">
             <Bell className="size-4" />
             {t("notifications.title", "Notifications")}
             {unreadCount > 0 && (

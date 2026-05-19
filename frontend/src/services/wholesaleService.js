@@ -1,5 +1,6 @@
 import apiClient from "@/lib/apiClient"
 
+/** @param {{ page?: number, per_page?: number, search?: string, status?: string }} params */
 export async function fetchCompanyWholesaleProducts(params = {}) {
   const { data } = await apiClient.get("/company/wholesale/products", { params })
   return data
@@ -25,9 +26,24 @@ export async function createCompanyBulkOffer(payload) {
   return data
 }
 
+export async function createCompanyWholesaleProductsBulk(payload) {
+  const { data } = await apiClient.post("/company/wholesale/products/bulk", payload)
+  return data
+}
+
 export async function fetchWholesaleMarketProducts(params = {}) {
   const { data } = await apiClient.get("/wholesale/products", { params })
   return data
+}
+
+export async function fetchWholesalePageSettings() {
+  const { data } = await apiClient.get("/wholesale/page-settings")
+  return data?.data ?? null
+}
+
+export async function fetchWholesaleCategoryCounts() {
+  const { data } = await apiClient.get("/wholesale/category-counts")
+  return data?.data ?? {}
 }
 
 export async function fetchWholesaleProductDetails(productId) {

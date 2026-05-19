@@ -7,10 +7,10 @@ import * as authService from "@/services/authService"
 import { useNavigate } from "react-router-dom"
 import { LogOut } from "lucide-react"
 import { resolveImageUrl } from "@/lib/imageUrl"
-import { dashboardUserNavLinks } from "@/navigation/dashboardUserNavLinks"
+import { getMemberDashboardNavFlat, isMemberNavItemActive } from "@/navigation/memberDashboardNav"
 
-/** @deprecated Use dashboardUserNavLinks from @/navigation/dashboardUserNavLinks */
-export const sidebarLinks = dashboardUserNavLinks
+/** @deprecated Use getMemberDashboardNavFlat from @/navigation/memberDashboardNav */
+export const sidebarLinks = []
 
 export function AccountSideMenu({ className, onNavClick }) {
   const { t } = useTranslation()
@@ -25,9 +25,9 @@ export function AccountSideMenu({ className, onNavClick }) {
       : null
 
   return (
-    <div className={cn("flex w-full flex-col gap-2", className)}>
+    <div className={cn("flex w-full flex-col gap-3 md:gap-4", className)}>
       {user && (
-        <div className="mb-2 flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-3 py-3">
+        <div className="mb-3 flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-4 py-4">
           {user.avatar_url ? (
             <img
               src={resolveImageUrl(user.avatar_url)}
@@ -50,36 +50,35 @@ export function AccountSideMenu({ className, onNavClick }) {
         </div>
       )}
 
-      <div className="mb-2 px-3">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+      <div className="mb-3 px-3">
+        <h3 className="text-xs font-semibold text-muted-foreground/80 uppercase tracking-wider">
           {t("dashboard.menu", "قائمة الحساب")}
         </h3>
       </div>
-      
-      <div className="space-y-1">
-        {dashboardUserNavLinks.map((link) => {
-          const isActive = link.to === "/dashboard"
-            ? location.pathname === link.to
-            : location.pathname === link.to || location.pathname.startsWith(link.to + "/")
-            
+
+      <div className="space-y-2">
+        {getMemberDashboardNavFlat(user).map((link) => {
+          const isActive = isMemberNavItemActive(link, location)
           return (
             <Link
-              key={link.to}
+              key={link.id}
               to={link.to}
               onClick={onNavClick}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:bg-muted",
-                isActive ? "bg-primary/10 text-primary hover:bg-primary/15" : "text-muted-foreground hover:text-foreground"
+                "flex min-h-11 items-center gap-3 rounded-full px-4 py-3 text-sm font-medium transition-all hover:bg-muted",
+                isActive
+                  ? "bg-primary/10 text-primary shadow-sm ring-1 ring-border/60 hover:bg-primary/15"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <link.icon className={cn("size-4", isActive ? "text-primary" : "text-muted-foreground")} />
+              <link.icon className={cn("size-4 shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
               {t(link.labelKey)}
             </Link>
           )
         })}
       </div>
 
-      <div className="mt-8 border-t border-border pt-4">
+      <div className="mt-8 border-t border-border pt-6">
         <button
           onClick={() => {
             authService.performLogout({ navigate, replaceTo: "/", queryClient })

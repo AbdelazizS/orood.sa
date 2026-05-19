@@ -7,6 +7,7 @@ import { VerificationBadge } from "@/components/auth/VerificationBadge"
 import { resolveImageUrl } from "@/lib/imageUrl"
 import { publicProfilePath } from "@/lib/profileRoutes"
 import { getSellerPresenceUi } from "@/lib/sellerPresence"
+import { AccountKindBadge } from "@/components/profile/AccountKindBadge"
 
 /**
  * Seller info: city, online status, completed requests, verification.
@@ -41,12 +42,15 @@ export function SellerInfoCard({ product }) {
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            <Link
-              to={publicProfilePath(seller) ?? "/"}
-              className="font-semibold hover:underline truncate block"
-            >
-              {seller.name}
-            </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                to={publicProfilePath(seller) ?? "/"}
+                className="font-semibold hover:underline truncate"
+              >
+                {seller.name}
+              </Link>
+              <AccountKindBadge user={seller} size="sm" />
+            </div>
             <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
               {cityName && (
                 <span className="flex items-center gap-1">

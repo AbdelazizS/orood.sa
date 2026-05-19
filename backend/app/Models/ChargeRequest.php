@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class ChargeRequest extends Model
 {
@@ -43,5 +44,10 @@ class ChargeRequest extends Model
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function financialRequest(): HasOne
+    {
+        return $this->hasOne(FinancialRequest::class, 'legacy_charge_request_id');
     }
 }

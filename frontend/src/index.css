@@ -145,6 +145,81 @@
   }
 }
 
+/* Wholesale surfaces: spacing rhythm (4–64 scale) + type ramp — use under /wholesale only */
+@layer components {
+  .wholesale-section-y {
+    @apply py-8 md:py-12 lg:py-16;
+  }
+  .wholesale-header-y {
+    @apply pt-12 pb-8 md:pt-16 md:pb-12;
+  }
+  .wholesale-type-display {
+    @apply text-2xl font-bold tracking-tight text-foreground md:text-3xl lg:text-4xl;
+    line-height: 1.25;
+  }
+  .wholesale-type-title {
+    @apply text-xl font-bold tracking-tight text-foreground sm:text-2xl lg:text-[1.65rem];
+    line-height: 1.35;
+  }
+  .wholesale-type-subtitle {
+    @apply text-sm font-medium text-muted-foreground md:text-base;
+    line-height: 1.45;
+  }
+  .wholesale-type-body {
+    @apply text-sm leading-relaxed text-foreground md:text-[0.9375rem];
+    line-height: 1.55;
+  }
+  .wholesale-type-caption {
+    @apply text-xs font-medium uppercase tracking-wide text-muted-foreground;
+    line-height: 1.4;
+  }
+  .wholesale-page-container {
+    @apply mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8;
+  }
+  .wholesale-product-grid {
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6 [&>*]:min-w-0;
+  }
+  .wholesale-product-grid--4 {
+    @apply xl:grid-cols-4 2xl:grid-cols-4;
+  }
+  .wholesale-company-grid {
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6 2xl:grid-cols-4 2xl:gap-6 [&>*]:min-w-0;
+  }
+
+  .legal-content {
+    @apply min-w-0 overflow-x-hidden;
+  }
+  .legal-content h2 {
+    @apply mt-8 mb-3 border-b-2 border-primary pb-2 text-lg font-bold text-foreground sm:text-xl;
+  }
+  .legal-content h3 {
+    @apply mt-5 mb-2 text-lg font-semibold text-foreground;
+  }
+  .legal-content p {
+    @apply mb-3 leading-relaxed text-muted-foreground;
+  }
+  .legal-content ul,
+  .legal-content ol {
+    @apply mb-4 ms-5 list-disc space-y-1 text-muted-foreground;
+  }
+  .legal-content a {
+    @apply font-medium text-primary underline-offset-2 hover:underline;
+  }
+  .legal-content table {
+    @apply my-4 block w-full max-w-full overflow-x-auto border-collapse text-sm;
+  }
+  .legal-content th,
+  .legal-content td {
+    @apply border border-border px-3 py-2 text-start;
+  }
+  .legal-content th {
+    @apply bg-muted/60 font-semibold text-foreground;
+  }
+  .legal-content .legal-callout {
+    @apply my-4 rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm;
+  }
+}
+
 
 /* Hide scrollbar for category bar - works in light and dark mode */
 .scrollbar-hide {
@@ -153,4 +228,73 @@
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.map-marker-pin {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
+}
+
+.map-marker-pin--property {
+  width: 18px;
+  height: 18px;
+  background: #16a34a;
+}
+
+.map-marker-pin--delivery {
+  width: 16px;
+  height: 16px;
+  background: #2563eb;
+}
+
+.map-marker--delivery .map-marker-pin--delivery {
+  animation: map-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes map-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 0.75;
+  }
+}
+
+/* Manfith-style: hide Mapbox logo/attribution and Leaflet attribution on pickers & previews */
+.map-embed-preview .mapboxgl-ctrl-logo,
+.map-embed-preview .mapboxgl-ctrl-attrib,
+.map-embed-preview .mapboxgl-ctrl-bottom-left,
+.map-embed-preview .mapboxgl-ctrl-bottom-right,
+.map-embed-preview .mapbox-improve-map,
+.map-embed-preview a.mapbox-improve-map,
+.map-picker-clean .mapboxgl-ctrl-logo,
+.map-picker-clean .mapboxgl-ctrl-attrib,
+.map-picker-clean .mapboxgl-ctrl-bottom-left,
+.map-picker-clean .mapboxgl-ctrl-bottom-right,
+.map-picker-clean .mapbox-improve-map,
+.map-picker-clean a.mapbox-improve-map {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+.map-embed-preview.leaflet-container .leaflet-control-attribution,
+.map-embed-preview .leaflet-control-attribution,
+.map-picker-clean.leaflet-container .leaflet-control-attribution,
+.map-picker-clean .leaflet-control-attribution {
+  display: none !important;
 }

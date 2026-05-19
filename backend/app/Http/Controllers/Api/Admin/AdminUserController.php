@@ -8,12 +8,24 @@ use App\Models\Guarantee;
 use App\Models\Purchase;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Rules\AroothComEmail;
+use App\Services\AssistantUserTypeScope;
+use App\Services\AuditLogService;
+use App\Services\CompanyVerificationApprovalService;
+use App\Services\PasswordPolicyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class AdminUserController extends Controller
 {
+    private const STAFF_ROLES = ['super_admin', 'admin', 'manager', 'employee'];
+
+    public function __construct(
+        private readonly AssistantUserTypeScope $assistantScope,
+        private readonly AuditLogService $audit
+    ) {}
+
     public function index(Request $request): JsonResponse
     {
         $query = User::query()
@@ -53,6 +65,10 @@ class AdminUserController extends Controller
             })
             ->orderByDesc('created_at');
 
+        if ($request->user()) {
+            $this->assistantScope->applyToUsersQuery($query, $request->user());
+        }
+
         $users = $query->paginate($request->get('per_page', 20));
 
         $data = $users->getCollection()->map(fn ($u) => [
@@ -82,6 +98,41 @@ class AdminUserController extends Controller
                 'total' => $users->total(),
             ],
         ]);
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email', new AroothComEmail],
+            'password' => PasswordPolicyService::rulesForField('password'),
+            'role' => ['required', 'string', 'in:'.implode(',', self::STAFF_ROLES)],
+            'phone' => ['sometimes', 'nullable', 'string', 'max:50'],
+        ]);
+
+        $user = User::query()->create([
+            'name' => $validated['name'],
+            'email' => strtolower($validated['email']),
+            'password' => bcrypt($validated['password']),
+            'role' => $validated['role'],
+            'phone' => $validated['phone'] ?? null,
+            'email_verified_at' => now(),
+        ]);
+
+        $this->audit->log('admin.staff.create', $user, null, [
+            'email' => $user->email,
+            'role' => $user->role,
+        ], $request->user()?->id);
+
+        return response()->json([
+            'message' => __('settings.updated'),
+            'data' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+            ],
+        ], 201);
     }
 
     public function update(Request $request, User $user): JsonResponse
@@ -201,16 +252,23 @@ class AdminUserController extends Controller
     /**
      * Set verification badge level for a user.
      */
-    public function verify(Request $request, User $user): JsonResponse
-    {
+    public function verify(
+        Request $request,
+        User $user,
+        CompanyVerificationApprovalService $approval,
+    ): JsonResponse {
         $validated = $request->validate([
             'verification_level' => ['required', 'string', 'in:unverified,email,id_verified,company_verified'],
         ]);
 
         $user->update([
             'verification_level' => $validated['verification_level'],
-            'is_verified' => in_array($validated['verification_level'], ['email', 'id_verified', 'company_verified']),
+            'is_verified' => in_array($validated['verification_level'], ['email', 'id_verified', 'company_verified'], true),
         ]);
+
+        if ($validated['verification_level'] === 'company_verified' && $user->company) {
+            $approval->approve($user->company, $request->user()?->id);
+        }
 
         return response()->json(['data' => $user->fresh(), 'message' => 'Verification level updated']);
     }

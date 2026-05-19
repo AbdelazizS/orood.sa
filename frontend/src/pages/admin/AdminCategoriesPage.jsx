@@ -29,6 +29,7 @@ import {
 import apiClient from "@/lib/apiClient"
 import { LocalizedNameFields } from "@/components/admin/LocalizedNameFields"
 import { ChevronDown, Plus, Pencil, Trash2, Loader2, MapPin } from "lucide-react"
+import { CategoryListingSchemaEditor } from "@/features/admin/categories/CategoryListingSchemaEditor"
 
 export function AdminCategoriesPage() {
   const { t } = useTranslation()
@@ -303,6 +304,10 @@ export function AdminCategoriesPage() {
                             </div>
                           ))}
                         </div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium mb-2">{t("admin.listingSchemaTitle", "مخطط الإعلان")}</p>
+                        <CategoryListingSchemaEditor categoryId={category.id} />
                       </div>
                       <div>
                         <p className="text-sm font-medium mb-2">{t("wholesale.title", "سعر الجملة")} — {t("categories.wholesalePerRegion", "تفعيل لكل منطقة")}</p>

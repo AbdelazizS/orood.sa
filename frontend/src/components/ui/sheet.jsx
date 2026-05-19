@@ -5,11 +5,7 @@ import { XIcon } from "lucide-react"
 import * as SheetPrimitive from "@radix-ui/react-dialog"
 
 import { cn } from "@/lib/utils"
-
-function useDirection() {
-  if (typeof document === "undefined") return "ltr"
-  return document.documentElement.dir === "rtl" ? "rtl" : "ltr"
-}
+import { useAppDirection } from "@/providers/DirectionProvider"
 
 function Sheet({ ...props }) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
@@ -53,15 +49,15 @@ function SheetContent({
   showCloseButton = true,
   ...props
 }) {
-  const dir = useDirection()
-  const isRtl = dir === "rtl"
+  const { direction } = useAppDirection()
+  const isRtl = direction === "rtl"
 
   const startSideClasses =
     "inset-y-0 start-0 w-[min(320px,85vw)] sm:max-w-sm border-e"
-  const startAnimLtr =
-    "data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left"
-  const startAnimRtl =
-    "data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right"
+  /** Physical X motion so RTL opens from the right edge (not viewport-left). */
+  const startMotion = "motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-out"
+  const startAnimLtr = cn(startMotion, "data-[state=closed]:-translate-x-full data-[state=open]:translate-x-0")
+  const startAnimRtl = cn(startMotion, "data-[state=closed]:translate-x-full data-[state=open]:translate-x-0")
 
   return (
     <SheetPortal>
@@ -69,13 +65,15 @@ function SheetContent({
       <SheetPrimitive.Content
         data-slot="sheet-content"
         data-side={side}
+        dir={direction}
         className={cn(
           "bg-background fixed z-[100] flex h-full flex-col shadow-xl outline-none",
-          "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-300",
+          (side === "right" || side === "top" || side === "bottom") &&
+            "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-300",
           side === "start" &&
             cn(startSideClasses, isRtl ? startAnimRtl : startAnimLtr),
           side === "left" &&
-            "inset-y-0 start-0 w-[min(320px,85vw)] sm:max-w-sm border-e data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left",
+            cn(startSideClasses, isRtl ? startAnimRtl : startAnimLtr),
           side === "right" &&
             "inset-y-0 end-0 w-[min(320px,85vw)] sm:max-w-sm border-s data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right",
           side === "top" &&

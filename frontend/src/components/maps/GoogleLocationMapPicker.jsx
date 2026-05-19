@@ -3,6 +3,8 @@ import { Loader } from "@googlemaps/js-api-loader"
 import { Button } from "@/components/ui/button"
 import { useTranslation } from "react-i18next"
 import { Navigation } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { MAP_PICKER_MAP_CLASS } from "@/lib/maps/mapPickerUi"
 
 const loads = new Map()
 
@@ -65,6 +67,8 @@ export function GoogleLocationMapPicker({
   addressInputRef,
   language = "en",
   className = "",
+  showInlineHint = true,
+  mapClassName: mapClassNameProp,
 }) {
   const { t } = useTranslation()
   const mapElRef = useRef(null)
@@ -261,16 +265,18 @@ export function GoogleLocationMapPicker({
         <p className="text-xs text-destructive">{t("purchase.mapLoadError")}</p>
       ) : null}
       <div className="relative z-0 overflow-hidden rounded-md border border-border">
-        <div ref={mapElRef} className="h-[220px] w-full touch-manipulation" />
+        <div ref={mapElRef} className={cn(mapClassNameProp ?? MAP_PICKER_MAP_CLASS, "touch-manipulation")} />
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center justify-start gap-2">
         <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={handleMyLocation}>
           <Navigation className="size-3.5 shrink-0" />
           {t("purchase.mapUseMyLocation", "موقعي الحالي")}
         </Button>
-        <p className="text-[11px] text-muted-foreground">
-          {t("purchase.mapHint", "انقر على الخريطة أو اسحب الدبوس لتحديد موقع المعاينة")}
-        </p>
+        {showInlineHint ? (
+          <p className="min-w-0 flex-1 text-[11px] text-muted-foreground sm:flex-initial">
+            {t("purchase.mapHint", "انقر على الخريطة أو اسحب الدبوس لتحديد موقع المعاينة")}
+          </p>
+        ) : null}
       </div>
       {geoError ? <p className="text-xs text-destructive">{geoError}</p> : null}
     </div>

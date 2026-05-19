@@ -93,6 +93,7 @@ export async function registerCompany(payload) {
   const formData = new FormData()
   formData.append("company_name", payload.company_name)
   formData.append("city_id", payload.city_id)
+  formData.append("category_id", payload.category_id)
   if (payload.product_types) formData.append("product_types", payload.product_types)
   if (payload.license) formData.append("license", payload.license)
 

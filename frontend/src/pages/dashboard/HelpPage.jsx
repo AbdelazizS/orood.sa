@@ -1,55 +1,72 @@
+import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Mail, MessageCircle } from "lucide-react"
+import { Link } from "react-router-dom"
+import apiClient from "@/lib/apiClient"
+import { DynamicContentRenderer } from "@/components/finance/DynamicContentRenderer"
+import { HelpQuickTopics } from "@/components/help/HelpQuickTopics"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { PageLoadingShell } from "@/components/ui/PageLoadingShell"
+import { PAGE_CONTAINER_CLASS } from "@/lib/pageLayout"
+import { cn } from "@/lib/utils"
 
-const supportEmail =
-  (typeof import.meta.env.VITE_SUPPORT_EMAIL === "string" && import.meta.env.VITE_SUPPORT_EMAIL.trim()) ||
-  "support@example.com"
-
-/**
- * Minimal help / contact hub for dashboard members.
- */
 export function HelpPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["help-page", i18n.language],
+    queryFn: async () => {
+      const { data: res } = await apiClient.get("/help/page", {
+        params: { page: "dashboard_help" },
+        headers: { "Accept-Language": i18n.language?.startsWith("en") ? "en" : "ar" },
+      })
+      return res?.data ?? {}
+    },
+  })
+
+  if (isLoading) {
+    return <PageLoadingShell variant="help" />
+  }
+
+  if (isError) {
+    return (
+      <div className={cn(PAGE_CONTAINER_CLASS, "py-16 text-center text-sm text-muted-foreground")}>
+        <p>{t("common.error")}</p>
+        <Button variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>
+          {t("common.retry", "Retry")}
+        </Button>
+      </div>
+    )
+  }
+
+  const hasSupportEmail = Boolean(data?.support?.email)
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 px-4 py-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t("help.title", "Help & support")}</h1>
-        <p className="text-muted-foreground mt-1">{t("help.subtitle", "How to get assistance on the platform.")}</p>
-      </div>
+    <div className={cn(PAGE_CONTAINER_CLASS, "space-y-8 py-6 md:py-10 overflow-x-hidden")}>
+      <header className="space-y-2 border-b border-border pb-6">
+        <p className="text-sm font-medium text-primary">{t("help.kicker", "Help center")}</p>
+        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{t("help.pageTitle", "Help & support")}</h1>
+        <p className="text-muted-foreground max-w-3xl leading-relaxed">{t("help.pageSubtitle")}</p>
+      </header>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Mail className="size-5" />
-            {t("help.contactTitle", "Contact")}
-          </CardTitle>
-          <CardDescription>{t("help.contactDesc", "Reach the team by email for account or payment issues.")}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <p>
-            <a href={`mailto:${supportEmail}`} className="text-primary font-medium hover:underline">
-              {supportEmail}
-            </a>
-          </p>
-          <p className="text-muted-foreground">{t("help.contactNote", "Set VITE_SUPPORT_EMAIL in the frontend env for your real support address.")}</p>
-        </CardContent>
-      </Card>
+      <HelpQuickTopics />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <MessageCircle className="size-5" />
-            {t("help.faqTitle", "Quick tips")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="list-disc space-y-2 ps-5 text-sm text-muted-foreground">
-            <li>{t("help.faqOrders", "Track purchases and sales from Order tracking in the side menu.")}</li>
-            <li>{t("help.faqWallet", "Top up your wallet from Balance to pay with platform escrow.")}</li>
-            <li>{t("help.faqVerify", "Complete verification to build trust with buyers and sellers.")}</li>
-          </ul>
+      <DynamicContentRenderer
+        blocks={(data?.blocks ?? []).filter((b) => b.block_type !== "hero")}
+        support={data?.support}
+        contacts={data?.contacts ?? []}
+        showContactCard={hasSupportEmail}
+      />
+
+      <Card className="border-primary/20 bg-muted/30">
+        <CardContent className="flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-semibold">{t("help.needMoreTitle", "Still need help?")}</p>
+            <p className="text-sm text-muted-foreground mt-1">{t("help.needMoreDesc")}</p>
+          </div>
+          <Button asChild className="shrink-0">
+            <Link to="/contact">{t("help.contactFormLink", "Contact us")}</Link>
+          </Button>
         </CardContent>
       </Card>
     </div>

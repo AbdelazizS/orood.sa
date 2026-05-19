@@ -38,12 +38,51 @@ class GuaranteeRequestFlowTest extends TestCase
         $req = GuaranteeRequest::query()->where('user_id', $member->id)->firstOrFail();
 
         $this->withHeader('Authorization', "Bearer {$adminToken}")
-            ->postJson("/api/v1/admin/guarantee-requests/{$req->id}/approve")
+            ->postJson("/api/v1/admin/guarantee-requests/{$req->id}/approve", [
+                'funding_source' => 'platform_wallet',
+            ])
             ->assertOk();
 
         $member->refresh();
         $this->assertSame(200.0, (float) $member->financial_guarantee);
         $this->assertSame(GuaranteeRequest::STATUS_APPROVED, $req->fresh()->status);
+    }
+
+    public function test_admin_can_approve_deposit_via_external_when_wallet_insufficient(): void
+    {
+        $member = User::factory()->create(['role' => 'seller']);
+        Balance::getOrCreateForUser($member->id)->update(['available' => 100]);
+
+        $memberToken = $this->issueApiToken($member);
+        $this->withHeader('Authorization', "Bearer {$memberToken}")
+            ->postJson('/api/v1/account/guarantee-requests', [
+                'type' => 'deposit',
+                'amount' => 5000,
+            ])
+            ->assertCreated();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $adminToken = $this->issueApiToken($admin);
+        $req = GuaranteeRequest::query()->where('user_id', $member->id)->firstOrFail();
+
+        $this->withHeader('Authorization', "Bearer {$adminToken}")
+            ->postJson("/api/v1/admin/guarantee-requests/{$req->id}/approve", [
+                'funding_source' => 'platform_wallet',
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath('code', 'INSUFFICIENT_WALLET_FOR_GUARANTEE');
+
+        $this->withHeader('Authorization', "Bearer {$adminToken}")
+            ->postJson("/api/v1/admin/guarantee-requests/{$req->id}/approve", [
+                'funding_source' => 'external',
+                'approval_note' => 'Bank transfer TRX-8844 confirmed by phone',
+            ])
+            ->assertOk();
+
+        $member->refresh();
+        $this->assertSame(5000.0, (float) $member->financial_guarantee);
+        $this->assertSame(100.0, (float) Balance::getOrCreateForUser($member->id)->available);
+        $this->assertSame('external', $req->fresh()->funding_source);
     }
 
     public function test_second_pending_request_is_rejected(): void

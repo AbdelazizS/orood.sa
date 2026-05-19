@@ -1,4 +1,4 @@
-import { Suspense, useState, useEffect, useMemo, useRef } from "react"
+import { Suspense, useState, useEffect, useMemo } from "react"
 import { useParams, useNavigate, Navigate, Link } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Skeleton } from "@/components/ui/skeleton"
-import { LocationMapPicker } from "@/components/maps/LocationMapPicker"
+import { StandardLocationMapField } from "@/components/maps/StandardLocationMapField"
+import { SaudiMobilePhoneField } from "@/components/phone/SaudiMobilePhoneField"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,10 +22,26 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import apiClient from "@/lib/apiClient"
+import { fetchCheckoutPaymentOptions, fetchPaymentFields } from "@/services/financeService"
+import { DynamicFormRenderer } from "@/components/finance/DynamicFormRenderer"
+import { SellerBankDetailsCard } from "@/components/finance/SellerBankDetailsCard"
+import { mapFinanceApiErrors, validateDynamicFormFields } from "@/lib/finance/dynamicFieldErrors"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useAuthStore } from "@/store/useAuthStore"
-import { ShoppingCart, Loader2, Wallet, Package, Shield } from "lucide-react"
+import { ShoppingCart, Loader2, Wallet, Package, Shield, Landmark } from "lucide-react"
 import { resolveImageUrl } from "@/lib/imageUrl"
 import { toast } from "sonner"
+import {
+  getPurchaseFieldErrors,
+  normalizeSaudiPhone,
+  purchaseErrorMessage,
+} from "@/lib/purchaseCheckoutValidation"
+import {
+  getPurchaseConfirmDialogNote,
+  getPurchasePaymentMethodLabel,
+  getPurchaseSuccessToast,
+  PURCHASE_PAYMENT_UI,
+} from "@/lib/purchasePaymentLabels"
 
 const formatPrice = (price, t) => {
   if (price == null) return null
@@ -35,93 +52,25 @@ const formatPrice = (price, t) => {
   }).format(price)
 }
 
-/** Laravel-style API error body → single user-facing string */
-function purchaseErrorMessage(error, t) {
-  const data = error?.response?.data
-  if (typeof data?.message === "string" && data.message.trim()) {
-    return data.message
-  }
-  const errors = data?.errors
-  if (errors && typeof errors === "object") {
-    const first = Object.values(errors).flat().find((m) => typeof m === "string" && m.trim())
-    if (first) return first
-  }
-  const status = error?.response?.status
-  if (status === 403) return t("purchase.errorForbidden", "لا يمكن إتمام هذه العملية.")
-  if (status === 401) return t("purchase.errorAuth", "انتهت الجلسة. سجّل الدخول مجددًا.")
-  if (status === 422) return t("purchase.errorValidation", "تعذّر إتمام الشراء. تحقق من الرصيد والبيانات.")
-  if (error?.message && typeof error.message === "string") return error.message
-  return t("common.error")
-}
-
-/** Strip spaces; accept +9665… / 9665… and normalize to 05xxxxxxxx */
-export function normalizeSaudiPhone(raw) {
-  let s = String(raw ?? "")
-    .trim()
-    .replace(/[\s-]/g, "")
-  if (!s) return ""
-  if (s.startsWith("+966")) s = `0${s.slice(4)}`
-  else if (s.startsWith("966")) s = `0${s.slice(3)}`
-  return s
-}
-
-/** Client-side checkout rules (mirrors backend max lengths where applicable). */
-export function getPurchaseFieldErrors(
-  { buyerName, buyerPhone, quantity, buyerNote, shippingAddress, paymentMethod },
-  t,
-) {
-  const errors = {}
-
-  const name = String(buyerName ?? "").trim()
-  if (!name) {
-    errors.buyerName = t("purchase.validation.nameRequired", "Please enter your name.")
-  } else if (name.length < 2) {
-    errors.buyerName = t("purchase.validation.nameMin", "Name must be at least 2 characters.")
-  } else if (name.length > 255) {
-    errors.buyerName = t("purchase.validation.nameMax", "Name is too long (max 255).")
-  }
-
-  const phoneRaw = String(buyerPhone ?? "").trim()
-  if (!phoneRaw) {
-    errors.buyerPhone = t("purchase.validation.phoneRequired", "Phone number is required.")
-  } else {
-    const phoneNorm = normalizeSaudiPhone(buyerPhone)
-    if (!/^05\d{8}$/.test(phoneNorm)) {
-      errors.buyerPhone = t(
-        "purchase.validation.phoneFormat",
-        "Use a Saudi mobile number, e.g. 05xxxxxxxx.",
-      )
-    }
-  }
-
-  const qRaw = quantity === "" || quantity == null ? "" : String(quantity).trim()
-  if (qRaw === "") {
-    errors.quantity = t("purchase.validation.quantityRequired", "Enter a quantity.")
-  } else {
-    const qNum = Number(quantity)
-    if (!Number.isFinite(qNum) || !Number.isInteger(qNum)) {
-      errors.quantity = t("purchase.validation.quantityInteger", "Quantity must be a whole number.")
-    } else if (qNum < 1 || qNum > 999) {
-      errors.quantity = t("purchase.validation.quantityRange", "Quantity must be between 1 and 999.")
-    }
-  }
-
-  const note = String(buyerNote ?? "")
-  if (note.length > 2000) {
-    errors.buyerNote = t("purchase.validation.noteMax", "Notes are too long (max 2000 characters).")
-  }
-
-  const addr = String(shippingAddress ?? "").trim()
-  if (addr.length > 500) {
-    errors.shippingAddress = t("purchase.validation.addressMax", "Address is too long (max 500 characters).")
-  } else if (paymentMethod === "cod" && addr.length < 5) {
-    errors.shippingAddress = t(
-      "purchase.validation.addressCodMin",
-      "For cash on delivery, enter a full shipping address (at least 5 characters).",
-    )
-  }
-
-  return errors
+const PAYMENT_UI = {
+  escrow: {
+    Icon: Wallet,
+    ...PURCHASE_PAYMENT_UI.escrow,
+    descKey: "purchase.escrowDescription",
+    descDefault: "يتم شحن الرصيد واحتفاظ المبلغ حتى استلام المنتج",
+  },
+  cod: {
+    Icon: Package,
+    ...PURCHASE_PAYMENT_UI.cod,
+    descKey: "purchase.codDescription",
+    descDefault: "ادفع عند وصول المنتج — مثل أمازون أو مستقل",
+  },
+  direct_transfer: {
+    Icon: Landmark,
+    ...PURCHASE_PAYMENT_UI.direct_transfer,
+    descKey: "purchase.directTransferDescription",
+    descDefault: "حوّل المبلغ إلى حساب البائع ثم أرفق إيصال التحويل",
+  },
 }
 
 export function PurchasePage() {
@@ -140,9 +89,10 @@ export function PurchasePage() {
   const [quantity, setQuantity] = useState(1)
   const [buyerNote, setBuyerNote] = useState("")
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [codAccepted, setCodAccepted] = useState(false)
+  const [paymentFields, setPaymentFields] = useState({})
+  const [paymentFieldErrors, setPaymentFieldErrors] = useState({})
   const [redirectToLogin, setRedirectToLogin] = useState(false)
-  const addressRef = useRef(null)
-
   const { data: product, isLoading, isError, error } = useQuery({
     queryKey: ["product", id, i18n.language],
     queryFn: async () => {
@@ -161,13 +111,29 @@ export function PurchasePage() {
     enabled: Boolean(token && id),
   })
 
-  const allowCod = product?.allow_cod !== false
+  const productIdForCheckout = product?.id
+
+  const { data: checkoutOptions = [] } = useQuery({
+    queryKey: ["checkout-payment-options", productIdForCheckout],
+    queryFn: () => fetchCheckoutPaymentOptions(productIdForCheckout),
+    enabled: Boolean(productIdForCheckout && token),
+  })
+
+  const allowedMethods = checkoutOptions.map((o) => o.legacy_code)
+  const selectedOption = checkoutOptions.find((o) => o.legacy_code === paymentMethod)
+  const codRequiresAccept = selectedOption?.buyer_must_accept
+
+  const { data: orderPaymentFieldDefs = [] } = useQuery({
+    queryKey: ["payment-fields", "order_payment", "direct_transfer"],
+    queryFn: () => fetchPaymentFields("order_payment", "direct_transfer"),
+    enabled: paymentMethod === "direct_transfer",
+  })
 
   useEffect(() => {
-    if (product && product.allow_cod === false && paymentMethod === "cod") {
-      setPaymentMethod("escrow")
+    if (allowedMethods.length && !allowedMethods.includes(paymentMethod)) {
+      setPaymentMethod(allowedMethods[0])
     }
-  }, [product, paymentMethod])
+  }, [allowedMethods, paymentMethod])
 
   useEffect(() => {
     if (!token) {
@@ -195,11 +161,7 @@ export function PurchasePage() {
       if (newOrderId != null) {
         await queryClient.invalidateQueries({ queryKey: ["account", "orders", String(newOrderId)] })
       }
-      const method = created?.payment_method
-      const methodLabel = method === "cod"
-        ? t("purchase.cod", "الدفع عند الاستلام")
-        : t("purchase.escrow", "الدفع عبر المنصة")
-      toast.success(`${t("purchase.invoiceIssued", "تم إصدار الفاتورة")} — ${methodLabel}`)
+      toast.success(getPurchaseSuccessToast(created?.payment_method, t))
       setConfirmOpen(false)
       if (newOrderId != null) {
         navigate(`/dashboard/orders/${newOrderId}`)
@@ -212,6 +174,10 @@ export function PurchasePage() {
       if (err?.message === "missing_product") {
         toast.error(t("purchase.errorNoProduct", "تعذّر تحميل المنتج. أعد تحميل الصفحة."))
         return
+      }
+      const mapped = mapFinanceApiErrors(err, t)
+      if (Object.keys(mapped).length) {
+        setPaymentFieldErrors(mapped)
       }
       toast.error(purchaseErrorMessage(err, t))
     },
@@ -232,7 +198,18 @@ export function PurchasePage() {
       ),
     [buyerName, buyerPhone, quantity, buyerNote, shippingAddress, paymentMethod, t],
   )
-  const purchaseFormInvalid = Object.keys(purchaseFieldErrors).length > 0
+
+  const orderPaymentErrors = useMemo(() => {
+    if (paymentMethod !== "direct_transfer" || !orderPaymentFieldDefs.length) return {}
+    return validateDynamicFormFields(orderPaymentFieldDefs, paymentFields, t)
+  }, [paymentMethod, orderPaymentFieldDefs, paymentFields, t])
+
+  const mergedPurchaseErrors = useMemo(
+    () => ({ ...purchaseFieldErrors, ...paymentFieldErrors, ...orderPaymentErrors }),
+    [purchaseFieldErrors, paymentFieldErrors, orderPaymentErrors],
+  )
+
+  const purchaseFormInvalid = Object.keys(mergedPurchaseErrors).length > 0
 
   if (redirectToLogin) {
     return <Navigate to="/login" replace />
@@ -285,15 +262,23 @@ export function PurchasePage() {
   const escrowShortfall =
     paymentMethod === "escrow" && lineTotal > 0 ? Math.max(0, lineTotal - availableBalance) : 0
   const escrowBlocked = paymentMethod === "escrow" && escrowShortfall > 0
+  const directTransferOption = checkoutOptions.find((o) => o.legacy_code === "direct_transfer")
+  const sellerBank = directTransferOption?.seller_bank
+  const paymentUi = PAYMENT_UI[paymentMethod]
+  const paymentMethodLabel = paymentUi
+    ? t(paymentUi.titleKey, paymentUi.titleDefault)
+    : getPurchasePaymentMethodLabel(paymentMethod, t)
 
   const buyerPhoneNormalized = normalizeSaudiPhone(buyerPhone)
 
   const handleConfirmPurchase = () => {
     if (purchaseMutation.isPending || product?.id == null) return
     if (purchaseFormInvalid) {
+      setPaymentFieldErrors(orderPaymentErrors)
       toast.error(t("purchase.validation.fixForm", "Please fix the highlighted fields."))
       return
     }
+    setPaymentFieldErrors({})
     if (shippingLat === "" || shippingLng === "") {
       toast.error(t("purchase.mapPinRequired", "حدّد موقع المعاينة على الخريطة"))
       return
@@ -308,6 +293,8 @@ export function PurchasePage() {
       buyer_phone: buyerPhoneNormalized || user?.phone,
       buyer_email: user?.email,
       buyer_name: buyerName?.trim() ? buyerName.trim() : user?.name,
+      cod_accepted: codRequiresAccept ? codAccepted : undefined,
+      payment_fields: paymentMethod === "direct_transfer" ? paymentFields : undefined,
     })
   }
 
@@ -381,17 +368,13 @@ export function PurchasePage() {
               ) : null}
             </div>
             <div className="space-y-2">
-              <Label>{t("purchase.buyerPhone", "رقم الجوال")}</Label>
-              <Input
-                type="tel"
+              <Label htmlFor="purchase-buyer-phone">{t("purchase.buyerPhone", "رقم الجوال")}</Label>
+              <SaudiMobilePhoneField
+                id="purchase-buyer-phone"
                 value={buyerPhone}
-                onChange={(e) => setBuyerPhone(e.target.value)}
-                placeholder="05xxxxxxxx"
-                aria-invalid={Boolean(purchaseFieldErrors.buyerPhone)}
+                onChange={setBuyerPhone}
+                error={purchaseFieldErrors.buyerPhone}
               />
-              {purchaseFieldErrors.buyerPhone ? (
-                <p className="text-sm text-destructive">{purchaseFieldErrors.buyerPhone}</p>
-              ) : null}
             </div>
             <div className="space-y-2">
               <Label>
@@ -401,7 +384,6 @@ export function PurchasePage() {
                   : ` (${t("common.optional")})`}
               </Label>
               <Input
-                ref={addressRef}
                 value={shippingAddress}
                 onChange={(e) => setShippingAddress(e.target.value)}
                 placeholder={t("purchase.addressPlaceholder", "المدينة، الحي، الشارع")}
@@ -420,15 +402,15 @@ export function PurchasePage() {
                   </Skeleton>
                 }
               >
-                <LocationMapPicker
+                <StandardLocationMapField
                   key={`purchase-map-${product?.id ?? "new"}`}
                   language={i18n.language}
                   lat={shippingLat === "" ? null : Number(shippingLat)}
                   lng={shippingLng === "" ? null : Number(shippingLng)}
-                  addressInputRef={addressRef}
-                  onReverseGeocode={(addr) => {
-                    if (!addr) return
-                    setShippingAddress(addr)
+                  address={shippingAddress}
+                  searchPlaceholder={t("purchase.addressPlaceholder", "المدينة، الحي، الشارع")}
+                  onAddressResolved={(addr) => {
+                    if (addr) setShippingAddress(addr)
                   }}
                   onChange={({ lat, lng }) => {
                     setShippingLat(String(lat))
@@ -478,11 +460,7 @@ export function PurchasePage() {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">{t("purchase.selectedPayment", "طريقة الدفع المختارة")}</span>
-              <span className="font-semibold">
-                {paymentMethod === "cod"
-                  ? t("purchase.cod", "الدفع عند الاستلام")
-                  : t("purchase.escrow", "الدفع عبر المنصة")}
-              </span>
+              <span className="font-semibold">{paymentMethodLabel}</span>
             </div>
             <div className="flex items-center justify-between border-t border-border pt-2 text-base">
               <span className="font-semibold">{t("purchase.invoiceTotal", "إجمالي الفاتورة")}</span>
@@ -499,35 +477,66 @@ export function PurchasePage() {
           </CardHeader>
           <CardContent>
             <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-4">
-              <div className="flex items-start space-x-3 space-x-reverse rounded-lg border p-4 has-[[data-state=checked]]:border-primary">
-                <RadioGroupItem value="escrow" id="escrow" />
-                <Label htmlFor="escrow" className="flex-1 cursor-pointer">
-                  <div className="flex items-center gap-2 font-semibold">
-                    <Wallet className="size-5" />
-                    {t("purchase.escrow", "الدفع عبر المنصة")}
+              {checkoutOptions.map((opt) => {
+                const code = opt.legacy_code
+                const ui = PAYMENT_UI[code]
+                if (!ui) return null
+                const Icon = ui.Icon
+                const inputId = `pay-${code}`
+                return (
+                  <div
+                    key={code}
+                    className="flex items-start space-x-3 space-x-reverse rounded-lg border p-4 has-[[data-state=checked]]:border-primary"
+                  >
+                    <RadioGroupItem value={code} id={inputId} />
+                    <Label htmlFor={inputId} className="flex-1 cursor-pointer">
+                      <div className="flex items-center gap-2 font-semibold">
+                        <Icon className="size-5" />
+                        {opt.name || t(ui.titleKey, ui.titleDefault)}
+                      </div>
+                      <p className="mt-1 text-sm text-muted-foreground">{t(ui.descKey, ui.descDefault)}</p>
+                    </Label>
                   </div>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {t("purchase.escrowDescription", "يتم شحن الرصيد واحتفاظ المبلغ حتى استلام المنتج")}
-                  </p>
+                )
+              })}
+            </RadioGroup>
+            {paymentMethod === "direct_transfer" && sellerBank ? (
+              <SellerBankDetailsCard
+                sellerBank={sellerBank}
+                transferAmountLabel={
+                  lineTotal > 0
+                    ? t("purchase.transferAmount", "المبلغ المطلوب تحويله: {{amount}}", {
+                        amount: formatPrice(lineTotal, t),
+                      })
+                    : null
+                }
+              />
+            ) : null}
+            {paymentMethod === "cod" && codRequiresAccept ? (
+              <div className="mt-4 flex items-start gap-2 rounded-lg border p-3">
+                <Checkbox id="cod-accept" checked={codAccepted} onCheckedChange={(v) => setCodAccepted(Boolean(v))} />
+                <Label htmlFor="cod-accept" className="text-sm leading-relaxed">
+                  {t("purchase.codAcceptTerms", "I accept cash-on-delivery terms.")}
                 </Label>
               </div>
-              {allowCod ? (
-                <div className="flex items-start space-x-3 space-x-reverse rounded-lg border p-4 has-[[data-state=checked]]:border-primary">
-                  <RadioGroupItem value="cod" id="cod" />
-                  <Label htmlFor="cod" className="flex-1 cursor-pointer">
-                    <div className="flex items-center gap-2 font-semibold">
-                      <Package className="size-5" />
-                      {t("purchase.cod", "الدفع عند الاستلام")}
-                    </div>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {t("purchase.codDescription", "ادفع عند وصول المنتج — مثل أمازون أو مستقل")}
-                    </p>
-                  </Label>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">{t("purchase.codNotAllowed", "Cash on delivery is not offered for this listing.")}</p>
-              )}
-            </RadioGroup>
+            ) : null}
+            {paymentMethod === "direct_transfer" && orderPaymentFieldDefs.length > 0 ? (
+              <div className="mt-4">
+                <DynamicFormRenderer
+                  fields={orderPaymentFieldDefs}
+                  values={paymentFields}
+                  errors={{ ...paymentFieldErrors, ...orderPaymentErrors }}
+                  onChange={(key, value) => {
+                    setPaymentFields((prev) => ({ ...prev, [key]: value }))
+                    setPaymentFieldErrors((prev) => {
+                      const next = { ...prev }
+                      delete next[key]
+                      return next
+                    })
+                  }}
+                />
+              </div>
+            ) : null}
             {paymentMethod === "escrow" && (
               <div className="mt-4 rounded-lg border bg-muted/40 p-4 text-sm space-y-2">
                 <div className="flex items-center justify-between gap-2">
@@ -546,7 +555,7 @@ export function PurchasePage() {
                   <p className="text-destructive pt-1">
                     {t("purchase.insufficientBalance", "الرصيد غير كافٍ. شحن الرصيد من المحفظة ثم أعد المحاولة.")}{" "}
                     <Link
-                      to="/dashboard/balance"
+                      to="/dashboard/wallet"
                       className="font-medium underline underline-offset-2 text-primary"
                     >
                       {t("purchase.openWallet", "فتح المحفظة")}
@@ -606,14 +615,10 @@ export function PurchasePage() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t("purchase.confirmReceiptTitle", "تأكيد الطلب؟")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("purchase.invoiceIssued", "سيتم إصدار الفاتورة")} —{" "}
-              {paymentMethod === "cod"
-                ? t("purchase.cod", "الدفع عند الاستلام")
-                : t("purchase.escrow", "الدفع عبر المنصة")}
+              {t("purchase.confirmOrderIntro", "سيتم إصدار الفاتورة")} —{" "}
+              {getPurchasePaymentMethodLabel(paymentMethod, t)}
               {" "}
-              {paymentMethod === "escrow"
-                ? t("purchase.confirmDialogEscrowNote", "المبلغ يُحجز لدى المنصة حتى يشحن البائع وتؤكد الاستلام؛ عندها يُضاف للبائع.")
-                : null}
+              {getPurchaseConfirmDialogNote(paymentMethod, t)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

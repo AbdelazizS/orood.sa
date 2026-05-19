@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useSearchParams } from "react-router-dom"
 import { useTranslation } from "react-i18next"
@@ -9,10 +10,23 @@ export function useMyListings() {
   const [searchParams, setSearchParams] = useSearchParams()
   const queryClient = useQueryClient()
 
-  const status = searchParams.get("status") || "ALL"
+  const rawStatus = searchParams.get("status") || "ALL"
+  const status =
+    rawStatus === "ACTIVE" || rawStatus === "SOLD" || rawStatus === "NEEDS_ACTION"
+      ? "ALL"
+      : rawStatus
   const search = searchParams.get("search") || ""
   const sort = searchParams.get("sort") || "newest"
   const page = parseInt(searchParams.get("page") || "1", 10)
+
+  useEffect(() => {
+    const legacy = searchParams.get("status")
+    if (legacy === "NEEDS_ACTION" || legacy === "ACTIVE" || legacy === "SOLD") {
+      const next = new URLSearchParams(searchParams)
+      next.delete("status")
+      setSearchParams(next, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   const query = useQuery({
     queryKey: ["my-listings", { status, search, sort, page }],
@@ -103,7 +117,7 @@ export function useMyListings() {
 
   return {
     listings: query.data?.listings ?? [],
-    counts: query.data?.counts ?? { all: 0, active: 0, sold: 0, hidden: 0 },
+    counts: query.data?.counts ?? { all: 0, active: 0, sold: 0, hidden: 0, needs_action: 0 },
     pagination: query.data?.pagination ?? null,
     status,
     search,

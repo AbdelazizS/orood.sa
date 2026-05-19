@@ -3,7 +3,9 @@ import { Link, useParams } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import apiClient from "@/lib/apiClient"
 import { useAppDirection } from "@/providers/DirectionProvider"
-import { Loader2, MapPin } from "lucide-react"
+import { Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { CompanyLocationMap } from "@/components/maps/CompanyLocationMap.jsx"
 import { ProductCard } from "@/components/feed/cards/ProductCard"
 
 export function CompanyDetailPage() {
@@ -22,11 +24,7 @@ export function CompanyDetailPage() {
 
   const company = data?.company
   const products = data?.products ?? []
-  const mapUrl =
-    company?.lat != null && company?.lng != null
-      ? `https://www.google.com/maps?q=${company.lat},${company.lng}`
-      : null
-
+  const hasWholesaleListings = products.some((p) => Boolean(p?.is_wholesale))
   if (isLoading) {
     return (
       <div className="flex min-h-[300px] items-center justify-center text-muted-foreground" dir={direction}>
@@ -48,23 +46,20 @@ export function CompanyDetailPage() {
       <div className="mx-auto max-w-4xl">
         <h1 className="text-2xl font-bold text-foreground">{company.name}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {[company.city, company.region].filter(Boolean).join(" â€” ")}
+          {[company.city, company.region].filter(Boolean).join(" — ")}
         </p>
         {company.description ? (
           <p className="mt-4 text-foreground leading-relaxed whitespace-pre-wrap">{company.description}</p>
         ) : null}
-        {mapUrl ? (
-          <p className="mt-4">
-            <a
-              href={mapUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-primary font-medium hover:underline"
-            >
-              <MapPin className="size-4" />
-              {t("company.openMap")}
-            </a>
-          </p>
+        <CompanyLocationMap company={company} dir={direction} className="mt-6" />
+        {hasWholesaleListings ? (
+          <div className="mt-6 rounded-xl border border-primary/25 bg-primary/5 px-4 py-4 sm:px-5">
+            <p className="text-sm font-semibold text-foreground">{t("wholesale.retailBridge.title")}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{t("wholesale.retailBridge.body")}</p>
+            <Button className="mt-4" asChild>
+              <Link to={`/wholesale/company/${id}`}>{t("wholesale.retailBridge.cta")}</Link>
+            </Button>
+          </div>
         ) : null}
         <h2 className="mt-8 text-lg font-semibold">{t("company.listingsFromCompany")}</h2>
         <div className="mt-3 overflow-hidden rounded-lg border border-border">
