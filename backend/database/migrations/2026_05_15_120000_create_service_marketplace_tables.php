@@ -60,7 +60,10 @@ return new class extends Migration {
             $table->unsignedTinyInteger('rating');
             $table->text('comment')->nullable();
             $table->timestamps();
-            $table->unique(['service_provider_id', 'user_id', 'service_request_id']);
+            $table->unique(
+                ['service_provider_id', 'user_id', 'service_request_id'],
+                'svc_reviews_provider_user_req_uniq',
+            );
         });
 
         if (Schema::hasTable('service_categories') && DB::table('service_categories')->count() === 0) {
