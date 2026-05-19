@@ -19,6 +19,12 @@ return new class extends Migration {
             }
         });
 
+        // MySQL uses the composite unique index for FK columns — add standalone indexes first.
+        Schema::table('reviews', function (Blueprint $table) {
+            $table->index('reviewer_id', 'reviews_reviewer_id_index');
+            $table->index('reviewee_id', 'reviews_reviewee_id_index');
+        });
+
         Schema::table('reviews', function (Blueprint $table) {
             $table->dropUnique(['reviewer_id', 'reviewee_id', 'product_id']);
         });
@@ -32,11 +38,21 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::table('reviews', function (Blueprint $table) {
+            $table->index('reviewer_id', 'reviews_reviewer_id_index');
+            $table->index('reviewee_id', 'reviews_reviewee_id_index');
+        });
+
+        Schema::table('reviews', function (Blueprint $table) {
             $table->dropUnique(['reviewer_id', 'reviewee_id', 'purchase_id']);
         });
 
         Schema::table('reviews', function (Blueprint $table) {
             $table->unique(['reviewer_id', 'reviewee_id', 'product_id']);
+        });
+
+        Schema::table('reviews', function (Blueprint $table) {
+            $table->dropIndex('reviews_reviewer_id_index');
+            $table->dropIndex('reviews_reviewee_id_index');
         });
 
         Schema::table('reviews', function (Blueprint $table) {
