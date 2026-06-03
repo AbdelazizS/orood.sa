@@ -94,7 +94,7 @@ export function WholesaleProductCard({
   const formatMoney = (value) =>
     Number.isFinite(value) && value > 0
       ? money.format(value)
-      : t("feed.priceOnRequest")
+      : null
 
   const expiryLabel = formatExpiryLabel(product?.wholesale_expires_at, i18n.language)
 
@@ -338,11 +338,13 @@ export function WholesaleProductCard({
 
         <div className="space-y-2">
           <div className="flex min-w-0 flex-wrap items-end gap-x-3 gap-y-1">
-            <span className="min-w-0 truncate text-xl font-bold tracking-tight text-foreground sm:text-2xl md:text-[26px] md:tracking-[-0.02em]">
-              {formatMoney(wholesaleValue)}
-            </span>
+            {formatMoney(wholesaleValue) ? (
+              <span className="min-w-0 truncate text-xl font-bold tracking-tight text-foreground sm:text-2xl md:text-[26px] md:tracking-[-0.02em]">
+                {formatMoney(wholesaleValue)}
+              </span>
+            ) : null}
 
-            {Number.isFinite(priceValue) && priceValue > 0 ? (
+            {formatMoney(priceValue) ? (
               <span className="pb-0.5 text-xs text-muted-foreground line-through sm:text-sm">
                 {formatMoney(priceValue)}
               </span>

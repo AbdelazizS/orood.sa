@@ -12,13 +12,14 @@ class ProductionSeeder extends Seeder
             SaudiRegionsSeeder::class,
             PermissionSeeder::class,
             CategorySeeder::class,
+            CategoryListingSchemaSeeder::class,
             PaymentMethodSeeder::class,
             HelpCmsSeeder::class,
             ContactPageSeeder::class,
             CmsPagesSeeder::class,
-            CategoryListingSchemaSeeder::class,
             SeoDefaultsSeeder::class,
             ProductionAdminSeeder::class,
+            FinanceModulesSeeder::class,
         ]);
     }
 }

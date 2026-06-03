@@ -12,12 +12,16 @@ export function DynamicSchemaRenderer({
   onChange,
   errors = {},
   isLoading = false,
+  hiddenFieldKeys = new Set(),
 }) {
   const { direction } = useAppDirection()
 
+  const isHidden = (fieldKey) =>
+    HIDDEN_LISTING_CREATE_FIELD_KEYS.has(fieldKey) || hiddenFieldKeys.has(fieldKey)
+
   const sections = useMemo(() => {
     if (!schema?.sections?.length) {
-      const fields = (schema?.fields ?? []).filter((f) => !HIDDEN_LISTING_CREATE_FIELD_KEYS.has(f.field_key))
+      const fields = (schema?.fields ?? []).filter((f) => !isHidden(f.field_key))
       return [{ key: "default", title: "", fields }]
     }
     const built = [...schema.sections]
@@ -26,7 +30,7 @@ export function DynamicSchemaRenderer({
         ...section,
         fields: (schema.fields ?? [])
           .filter((f) => f.section_key === section.key || (!f.section_key && section.key === "default"))
-          .filter((f) => !HIDDEN_LISTING_CREATE_FIELD_KEYS.has(f.field_key))
+          .filter((f) => !isHidden(f.field_key))
           .filter((f) => {
             const layout = ["divider", "info", "warning", "instruction_block"]
             if (layout.includes(f.field_type)) return true
@@ -37,7 +41,7 @@ export function DynamicSchemaRenderer({
       .filter((s) => s.fields.length > 0)
 
     return sortListingAttributeSections(built)
-  }, [schema, attributes])
+  }, [schema, attributes, hiddenFieldKeys])
 
   if (isLoading) {
     return (

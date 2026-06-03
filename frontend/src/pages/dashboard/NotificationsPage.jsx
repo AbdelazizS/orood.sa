@@ -13,6 +13,7 @@ import {
   getNotificationTitle,
 } from "@/lib/notificationDisplay"
 import { useNotificationsInbox } from "@/hooks/useNotificationsInbox"
+import { useFinanceModules, isPaymentsUiVisible } from "@/hooks/useFinanceModules"
 import { useAccountSectionBasePath } from "@/lib/accountSectionPaths"
 import { Bell, Loader2 } from "lucide-react"
 
@@ -24,6 +25,8 @@ export function NotificationsPage({ embedded = false } = {}) {
     embedded ? `/dashboard/messages?hub=notifications&nid=${encodeURIComponent(String(id))}` : `${basePath}/notifications/${id}`
 
   const { data: inbox, isLoading } = useNotificationsInbox(50)
+  const { data: financeModules } = useFinanceModules()
+  const notificationOptions = { paymentsEnabled: isPaymentsUiVisible(financeModules) }
   const notifications = inbox?.items ?? []
 
   const markReadMutation = useMutation({
@@ -131,7 +134,7 @@ export function NotificationsPage({ embedded = false } = {}) {
                         </p>
                       </Link>
                       {(() => {
-                        const actions = getNotificationActions(n)
+                        const actions = getNotificationActions(n, notificationOptions)
                         if (actions.length === 0) return null
                         return (
                           <div className="mt-2 flex flex-wrap gap-2">

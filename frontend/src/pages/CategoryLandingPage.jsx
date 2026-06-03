@@ -89,6 +89,7 @@ export function CategoryLandingPage() {
         path={path}
         title={seo?.seo_title ?? category?.name}
         description={seo?.description}
+        image={seo?.og?.image}
         keywords={seo?.keywords}
         jsonLd={jsonLd}
         hreflang={seo?.hreflang}

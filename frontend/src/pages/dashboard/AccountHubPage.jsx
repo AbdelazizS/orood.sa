@@ -1,5 +1,5 @@
-import { useCallback, useMemo } from "react"
-import { useSearchParams } from "react-router-dom"
+import { useCallback, useEffect, useMemo } from "react"
+import { useSearchParams, Navigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { Link } from "react-router-dom"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -11,6 +11,7 @@ import { DashboardReportsPage } from "@/pages/dashboard/DashboardReportsPage"
 import { PaymentSetupPage } from "@/pages/dashboard/PaymentSetupPage"
 import { useAuthStore } from "@/store/useAuthStore"
 import { publicProfilePath } from "@/lib/profileRoutes"
+import { useFinanceModules, isBankAccountsUiVisible } from "@/hooks/useFinanceModules"
 import { ExternalLink } from "lucide-react"
 
 const ACCOUNT_TABS = new Set(["profile", "verification", "reports", "settings", "payments"])
@@ -18,11 +19,26 @@ const ACCOUNT_TABS = new Set(["profile", "verification", "reports", "settings", 
 export function AccountHubPage() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
+  const { data: financeModules } = useFinanceModules()
+  const paymentsTabVisible = isBankAccountsUiVisible(financeModules)
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = useMemo(() => {
     const raw = (searchParams.get("tab") || "profile").toLowerCase()
     return ACCOUNT_TABS.has(raw) ? raw : "profile"
   }, [searchParams])
+
+  useEffect(() => {
+    if (tab === "payments" && !paymentsTabVisible) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          next.delete("tab")
+          return next
+        },
+        { replace: true },
+      )
+    }
+  }, [tab, paymentsTabVisible, setSearchParams])
 
   const setTab = useCallback(
     (value) => {
@@ -38,6 +54,10 @@ export function AccountHubPage() {
     },
     [setSearchParams],
   )
+
+  if (tab === "payments" && !paymentsTabVisible) {
+    return <Navigate to="/dashboard/account" replace />
+  }
 
   const profileHref = publicProfilePath(user) ?? "/dashboard"
 
@@ -62,9 +82,11 @@ export function AccountHubPage() {
           <TabsTrigger value="settings" className="rounded-lg px-3 py-2 text-xs sm:text-sm">
             {t("dashboard.nav.accountTabSettings")}
           </TabsTrigger>
-          <TabsTrigger value="payments" className="rounded-lg px-3 py-2 text-xs sm:text-sm">
-            {t("dashboard.nav.accountTabPayments", "المدفوعات")}
-          </TabsTrigger>
+          {paymentsTabVisible ? (
+            <TabsTrigger value="payments" className="rounded-lg px-3 py-2 text-xs sm:text-sm">
+              {t("dashboard.nav.accountTabPayments", "المدفوعات")}
+            </TabsTrigger>
+          ) : null}
         </TabsList>
 
         <TabsContent value="profile" className="mt-6 outline-none">

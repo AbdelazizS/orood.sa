@@ -61,7 +61,7 @@ import { HelpPage } from "@/pages/dashboard/HelpPage"
 import { SellerBidsPage } from "@/pages/dashboard/SellerBidsPage"
 import { PublicProfilePage } from "@/pages/PublicProfilePage"
 import { WalletHubPage } from "@/pages/dashboard/WalletHubPage"
-import { PaymentSetupPage } from "@/pages/dashboard/PaymentSetupPage"
+import { PaymentSetupRoute } from "@/pages/dashboard/PaymentSetupRoute"
 import { AdminFinanceHubPage } from "@/pages/admin/AdminFinanceHubPage"
 import { AccountHubPage } from "@/pages/dashboard/AccountHubPage"
 import { WholesaleMarketPage } from "@/pages/WholesaleMarketPage"
@@ -238,7 +238,7 @@ export const router = createBrowserRouter([
       { path: "bids", element: <Navigate to="/dashboard/orders?section=bids" replace /> },
       { path: "seller-bids", element: <SellerBidsPage /> },
       { path: "wallet", element: <WalletHubPage /> },
-      { path: "payment-setup", element: <PaymentSetupPage /> },
+      { path: "payment-setup", element: <PaymentSetupRoute /> },
       { path: "balance", element: <Navigate to="/dashboard/wallet" replace /> },
       { path: "guarantee", element: <Navigate to="/dashboard/wallet?tab=guarantee" replace /> },
       { path: "listings", element: <MyListingsPage /> },

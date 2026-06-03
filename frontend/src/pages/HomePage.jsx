@@ -11,6 +11,7 @@ import { SeoHead } from "@/components/seo/SeoHead"
 import { usePageSeo } from "@/hooks/usePageSeo"
 import { useResolvedSeo } from "@/hooks/useResolvedSeo"
 import { mergeJsonLd, buildOrganizationSchema, buildWebSiteSchema } from "@/lib/seo/structuredData"
+import { seoHeadFromResolved } from "@/lib/seoHeadFromResolved"
 
 export function HomePage() {
   const { setCategory, setSubcategory, setSearchQuery } = useFiltersStore()
@@ -56,12 +57,11 @@ export function HomePage() {
     <section className="min-h-[400px] bg-background">
       <SeoHead
         path="/"
-        title={seo?.seo_title ?? fallbackSeo.title}
-        description={seo?.description ?? fallbackSeo.description}
-        keywords={seo?.keywords}
-        hreflang={seo?.hreflang}
-        jsonLd={seo?.json_ld?.length ? seo.json_ld : homeJsonLd}
-        useTitleAsFull={Boolean(seo?.title)}
+        {...seoHeadFromResolved(seo, {
+          title: seo?.seo_title ?? fallbackSeo.title,
+          description: seo?.description ?? fallbackSeo.description,
+          jsonLd: seo?.json_ld?.length ? seo.json_ld : homeJsonLd,
+        })}
       />
       {/* Section 1 — Categories first (skeleton when loading) */}
       <CategoryBar categories={categories} isLoading={categoriesLoading} />

@@ -2,9 +2,20 @@ import { useEffect } from "react"
 import { resolveImageUrl } from "@/lib/imageUrl"
 import { useBranding } from "@/hooks/useBranding"
 
+function cacheBustHref(href) {
+  if (!href || !href.includes("/storage/")) return href
+  const sep = href.includes("?") ? "&" : "?"
+  let hash = 0
+  for (let i = 0; i < href.length; i += 1) {
+    hash = (hash << 5) - hash + href.charCodeAt(i)
+    hash |= 0
+  }
+  return `${href}${sep}v=${Math.abs(hash)}`
+}
+
 function upsertLink(rel, href) {
   if (!href) return
-  const resolved = resolveImageUrl(href)
+  const resolved = cacheBustHref(resolveImageUrl(href))
   let el = document.querySelector(`link[rel="${rel}"]`)
   if (!el) {
     el = document.createElement("link")

@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\SellerPayoutProfile;
 use App\Models\SellerPayoutProfileValue;
 use App\Models\User;
+use App\Services\Finance\FinanceModuleSettings;
 use Illuminate\Support\Facades\DB;
 use Database\Seeders\PaymentMethodSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,6 +24,63 @@ class FinancialPlatformTest extends TestCase
     {
         parent::setUp();
         $this->seed(PaymentMethodSeeder::class);
+        $this->enableFinanceModules();
+    }
+
+    /**
+     * @param  array<string, bool>  $overrides
+     */
+    protected function enableFinanceModules(array $overrides = []): void
+    {
+        app(FinanceModuleSettings::class)->update(array_merge([
+            'payments_module' => true,
+            'escrow' => true,
+            'financial_guarantee' => true,
+            'bank_accounts' => true,
+            'cod' => true,
+            'wallet' => true,
+        ], $overrides));
+        FinanceModuleSettings::resetCache();
+    }
+
+    public function test_finance_modules_public_endpoint_defaults_off(): void
+    {
+        FinanceModuleSettings::resetCache();
+        \App\Models\AppSetting::query()->where('key', FinanceModuleSettings::KEY)->delete();
+        FinanceModuleSettings::resetCache();
+
+        $this->getJson('/api/v1/finance/modules')
+            ->assertOk()
+            ->assertJsonPath('data.payments_module', false)
+            ->assertJsonPath('data.wallet', false);
+
+        $this->enableFinanceModules();
+    }
+
+    public function test_listing_active_without_payout_when_payments_module_off(): void
+    {
+        $this->enableFinanceModules(['payments_module' => false, 'bank_accounts' => false]);
+
+        $seller = User::factory()->create();
+        $token = $this->issueApiToken($seller);
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson('/api/v1/products', [
+                'type' => 'offer',
+                'title' => 'MVP listing',
+                'description' => 'Description long enough for validation rules.',
+                'price' => 50,
+                'image_urls' => ['https://example.com/img.jpg'],
+                'contact_phone' => true,
+                'contact_phone_number' => '0512345678',
+                'contact_messages' => true,
+            ])
+            ->assertCreated();
+
+        $this->assertDatabaseHas('products', [
+            'user_id' => $seller->id,
+            'payout_activation_status' => 'active',
+        ]);
     }
 
     public function test_public_payment_methods_endpoint(): void

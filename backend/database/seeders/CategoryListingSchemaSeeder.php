@@ -17,7 +17,11 @@ class CategoryListingSchemaSeeder extends Seeder
 
     private const LAND_TYPES = ['land', 'farm'];
 
-    private const FLOOR_TYPES = ['apartment', 'floor'];
+    /** رقم الطابق — للـ «دور» فقط، وليس للشقة */
+    private const FLOOR_NUMBER_TYPES = ['floor'];
+
+    /** عدد طوابق المبنى — للـ «عمارة» فقط */
+    private const TOTAL_FLOORS_TYPES = ['building'];
 
     public function run(): void
     {
@@ -44,7 +48,8 @@ class CategoryListingSchemaSeeder extends Seeder
 
         $builtWhen = ['property_type' => self::BUILT_TYPES];
         $landWhen = ['property_type' => self::LAND_TYPES];
-        $floorWhen = ['property_type' => self::FLOOR_TYPES];
+        $floorNumberWhen = ['property_type' => self::FLOOR_NUMBER_TYPES];
+        $totalFloorsWhen = ['property_type' => self::TOTAL_FLOORS_TYPES];
         $furnishedWhen = ['purpose' => 'rent', 'property_type' => self::BUILT_TYPES];
 
         $this->syncFields($schema->id, $specsSection->id, [
@@ -61,24 +66,6 @@ class CategoryListingSchemaSeeder extends Seeder
                 null,
                 0,
             ],
-            [
-                'property_type',
-                'select',
-                'نوع العقار',
-                'Property type',
-                true,
-                [
-                    ['value' => 'apartment', 'label_ar' => 'شقة', 'label_en' => 'Apartment'],
-                    ['value' => 'villa', 'label_ar' => 'فيلا', 'label_en' => 'Villa'],
-                    ['value' => 'land', 'label_ar' => 'أرض', 'label_en' => 'Land'],
-                    ['value' => 'building', 'label_ar' => 'عمارة', 'label_en' => 'Building'],
-                    ['value' => 'floor', 'label_ar' => 'دور', 'label_en' => 'Floor'],
-                    ['value' => 'shop', 'label_ar' => 'محل', 'label_en' => 'Shop'],
-                    ['value' => 'farm', 'label_ar' => 'مزرعة', 'label_en' => 'Farm'],
-                ],
-                null,
-                1,
-            ],
             ['area_sqm', 'number', 'المساحة (م²)', 'Area (sqm)', true, [], $builtWhen, 2],
             ['land_width_m', 'number', 'عرض الأرض (م)', 'Land width (m)', true, [], $landWhen, 3],
             ['land_length_m', 'number', 'طول الأرض (م)', 'Land length (m)', true, [], $landWhen, 4],
@@ -87,8 +74,8 @@ class CategoryListingSchemaSeeder extends Seeder
             ['bathrooms', 'number', 'دورات المياه', 'Bathrooms', false, [], $builtWhen, 7],
             ['property_age_years', 'number', 'عمر العقار (سنة)', 'Property age (years)', false, [], null, 8],
             ['furnished', 'switch', 'مفروش', 'Furnished', false, [], $furnishedWhen, 9],
-            ['floor_number', 'number', 'رقم الطابق', 'Floor number', false, [], $floorWhen, 10],
-            ['total_floors', 'number', 'عدد الطوابق', 'Total floors', false, [], $floorWhen, 11],
+            ['floor_number', 'number', 'رقم الطابق', 'Floor number', false, [], $floorNumberWhen, 10],
+            ['total_floors', 'number', 'عدد الطوابق', 'Total floors', false, [], $totalFloorsWhen, 11],
             [
                 'property_direction',
                 'select',
@@ -129,7 +116,7 @@ class CategoryListingSchemaSeeder extends Seeder
         $this->upsertPolicy($schema->id, [
             'location_policy' => ['mode' => 'exact_map', 'required' => true],
             'price_policy' => ['modes' => ['fixed', 'negotiable', 'bid'], 'default' => 'fixed'],
-            'media_policy' => ['max_images' => 15, 'min_images' => 1, 'video' => false],
+            'media_policy' => ['max_images' => 15, 'min_images' => 0, 'video' => false],
             'communication_policy' => ['methods' => ['phone', 'messages', 'whatsapp']],
         ]);
 

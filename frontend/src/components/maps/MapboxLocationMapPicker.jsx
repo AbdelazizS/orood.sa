@@ -39,6 +39,7 @@ export function MapboxLocationMapPicker({
   showSearch = true,
   searchPlaceholder,
   searchValue,
+  markerVariant = "default",
   mapClassName: mapClassNameProp,
 }) {
   const { t, i18n } = useTranslation()
@@ -71,7 +72,7 @@ export function MapboxLocationMapPicker({
   const { requestLocation, error: geoError } = useGeolocationPick((la, ln) => {
     const api = mapApiRef.current
     if (api) {
-      api.setMarker(la, ln, { draggable: true })
+      api.setMarker(la, ln, { draggable: true, variant: markerVariant })
       api.setCenter(la, ln, 14)
     }
     notifyPick(la, ln)
@@ -112,14 +113,14 @@ export function MapboxLocationMapPicker({
         if (!readOnly) {
           cleanupDrag = api.onMarkerDragEnd((la, ln) => notifyPick(la, ln))
           cleanupClick = api.onMapClick((la, ln) => {
-            api.setMarker(la, ln, { draggable: true })
+            api.setMarker(la, ln, { draggable: true, variant: markerVariant })
             api.setCenter(la, ln, 14)
             notifyPick(la, ln)
           })
         }
 
         if (hasPin) {
-          api.setMarker(lat, lng, { draggable: !readOnly })
+          api.setMarker(lat, lng, { draggable: !readOnly, variant: markerVariant })
           api.setCenter(lat, lng, 14)
         }
 
@@ -174,9 +175,9 @@ export function MapboxLocationMapPicker({
   useEffect(() => {
     const api = mapApiRef.current
     if (!api || lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) return
-    api.setMarker(lat, lng, { draggable: !readOnly })
+    api.setMarker(lat, lng, { draggable: !readOnly, variant: markerVariant })
     api.setCenter(lat, lng, 14)
-  }, [lat, lng, readOnly])
+  }, [lat, lng, readOnly, markerVariant])
 
   useEffect(() => {
     if (readOnly) return undefined
@@ -227,7 +228,7 @@ export function MapboxLocationMapPicker({
       if (!first) return
       const api = mapApiRef.current
       if (api) {
-        api.setMarker(first.lat, first.lng, { draggable: true })
+        api.setMarker(first.lat, first.lng, { draggable: true, variant: markerVariant })
         api.setCenter(first.lat, first.lng, 14)
       }
       notifyPick(first.lat, first.lng)
@@ -241,7 +242,7 @@ export function MapboxLocationMapPicker({
   const handleSearchSelect = (item) => {
     const api = mapApiRef.current
     if (api) {
-      api.setMarker(item.lat, item.lng, { draggable: true })
+      api.setMarker(item.lat, item.lng, { draggable: true, variant: markerVariant })
       api.setCenter(item.lat, item.lng, 14)
     }
     skipReverseRef.current = true
@@ -283,7 +284,18 @@ export function MapboxLocationMapPicker({
         clipOverflow={false}
         className={cn(hideMapAttribution && "map-picker-clean")}
         mapClassName={mapClassNameProp ?? MAP_PICKER_MAP_CLASS}
-        header={null}
+        header={
+          showSearch && !readOnly ? (
+            <div className="border-b border-border/40 p-3">
+              <MapSearchBar
+                onSelect={handleSearchSelect}
+                language={lang}
+                placeholder={searchPlaceholder}
+                resolvedValue={searchValue}
+              />
+            </div>
+          ) : null
+        }
         footer={
           showConfirmBar && onConfirm ? (
             <MapConfirmBar onConfirm={onConfirm} disabled={lat == null || lng == null} />
@@ -292,18 +304,6 @@ export function MapboxLocationMapPicker({
           )
         }
       >
-        {showSearch && !readOnly ? (
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 p-2">
-            <div className="pointer-events-auto">
-              <MapSearchBar
-                onSelect={handleSearchSelect}
-                language={lang}
-                placeholder={searchPlaceholder}
-                resolvedValue={searchValue}
-              />
-            </div>
-          </div>
-        ) : null}
         <div
           ref={mapElRef}
           className={cn(

@@ -1,5 +1,7 @@
 import { realEstatePurposeLabel, realEstateTypeLabel } from "@/lib/realEstate/labels"
 
+import { resolvePropertyTypeFromSubcategory } from "@/lib/listings/subcategoryDerivedFields"
+
 const RE_ENUM_KEYS = {
   purpose: realEstatePurposeLabel,
   property_type: realEstateTypeLabel,
@@ -11,6 +13,14 @@ const YES_VALUES = new Set(["yes", "نعم", "true", "1"])
  * @param {{ field_key?: string, label?: string }} row
  * @param {import("i18next").TFunction} t
  */
+export function shouldHideRedundantListingField(row, product) {
+  if (row?.field_key !== "property_type") return false
+  const derived = resolvePropertyTypeFromSubcategory(product?.subcategory)
+  if (!derived) return false
+  const value = row?.value != null && row.value !== "" ? String(row.value) : ""
+  return value === derived
+}
+
 export function resolveFieldLabel(row, t) {
   const key = row?.field_key
   if (!key) return ""

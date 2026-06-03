@@ -164,9 +164,11 @@ export function getViewRequestNotificationHint(notification, t, language = "ar")
  * Deep-link actions from API `data.actions` (i18n label keys + href).
  *
  * @param {Record<string, unknown> | null | undefined} notification
+ * @param {{ paymentsEnabled?: boolean }} [options]
  * @returns {Array<{ i18n_label_key: string; href: string; intent?: string; primary?: boolean }>}
  */
-export function getNotificationActions(notification) {
+export function getNotificationActions(notification, options = {}) {
+  const paymentsEnabled = options.paymentsEnabled !== false
   const d = notification?.data
   const type = notification?.type
   const bidId = Number(d?.bid_id)
@@ -346,18 +348,21 @@ export function getNotificationActions(notification) {
 
   if (type === "listing_pending_activation") {
     const pid = Number(d?.product_id)
-    return [
-      {
-        i18n_label_key: "listingActions.setupPayments",
-        href: "/dashboard/account?tab=payments",
-        intent: "go_to_payment_setup",
-      },
+    const actions = [
+      ...(paymentsEnabled
+        ? [{
+            i18n_label_key: "listingActions.setupPayments",
+            href: "/dashboard/account?tab=payments",
+            intent: "go_to_payment_setup",
+          }]
+        : []),
       {
         i18n_label_key: "listingActions.editListing",
         href: pid ? `/products/${pid}/edit` : "/dashboard/listings",
         intent: "edit_listing",
       },
     ]
+    return actions
   }
 
   if (type === "payout_profile_verified") {
@@ -367,15 +372,24 @@ export function getNotificationActions(notification) {
         href: "/dashboard/listings",
         intent: "view_listings",
       },
-      {
-        i18n_label_key: "listingActions.setupPayments",
-        href: "/dashboard/account?tab=payments",
-        intent: "go_to_payment_setup",
-      },
+      ...(paymentsEnabled
+        ? [{
+            i18n_label_key: "listingActions.setupPayments",
+            href: "/dashboard/account?tab=payments",
+            intent: "go_to_payment_setup",
+          }]
+        : []),
     ]
   }
 
   if (type === "payout_profile_rejected") {
+    if (!paymentsEnabled) {
+      return [{
+        i18n_label_key: "listingActions.viewListings",
+        href: "/dashboard/listings",
+        intent: "view_listings",
+      }]
+    }
     return [
       {
         i18n_label_key: "listingActions.setupPayments",

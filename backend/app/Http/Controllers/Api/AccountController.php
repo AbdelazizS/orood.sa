@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\ChecksFinanceModules;
 use App\Models\Balance;
 use App\Models\ChargeRequest;
 use App\Models\PaymentMethod;
@@ -18,6 +19,7 @@ use App\Models\Permission;
 use App\Models\WithdrawalRequest;
 use App\Support\InAppNotificationPayload;
 use App\Services\GuaranteeWallet;
+use App\Services\Finance\FinanceModuleSettings;
 use App\Services\PurchaseFulfillment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,6 +30,8 @@ use Illuminate\Support\Str;
 
 class AccountController extends Controller
 {
+    use ChecksFinanceModules;
+
     /**
      * Upload document for verification (ID card or company license).
      * Rate limit: 5 attempts per hour.
@@ -147,6 +151,10 @@ class AccountController extends Controller
      */
     public function guaranteeRequestsIndex(Request $request): JsonResponse
     {
+        if ($response = $this->ensureFinancialGuarantee(app(FinanceModuleSettings::class))) {
+            return $response;
+        }
+
         $rows = GuaranteeRequest::query()
             ->where('user_id', $request->user()->id)
             ->orderByDesc('id')
@@ -161,6 +169,10 @@ class AccountController extends Controller
      */
     public function guaranteeRequestsStore(Request $request): JsonResponse
     {
+        if ($response = $this->ensureFinancialGuarantee(app(FinanceModuleSettings::class))) {
+            return $response;
+        }
+
         $validated = $request->validate([
             'type' => ['required', 'string', 'in:deposit,refund'],
             'amount' => ['required_if:type,deposit', 'nullable', 'numeric', 'min:100'],
@@ -229,6 +241,10 @@ class AccountController extends Controller
      */
     public function guaranteeStatus(Request $request): JsonResponse
     {
+        if ($response = $this->ensureFinancialGuarantee(app(FinanceModuleSettings::class))) {
+            return $response;
+        }
+
         $user = $request->user();
         $amount = (float) ($user->financial_guarantee ?? 0);
         $pendingAsSeller = Purchase::where('seller_id', $user->id)
@@ -249,6 +265,10 @@ class AccountController extends Controller
      */
     public function balance(Request $request): JsonResponse
     {
+        if ($response = $this->ensureWallet(app(FinanceModuleSettings::class))) {
+            return $response;
+        }
+
         $user = $request->user();
         $balance = Balance::getOrCreateForUser($user->id);
         $guarantee = (float) ($user->financial_guarantee ?? 0);
@@ -279,6 +299,10 @@ class AccountController extends Controller
      */
     public function charge(Request $request): JsonResponse
     {
+        if ($response = $this->ensureWallet(app(FinanceModuleSettings::class))) {
+            return $response;
+        }
+
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'min:10'],
             'payment_method' => ['nullable', 'string', 'in:card,mada,apple_pay,voucher'],
@@ -771,6 +795,10 @@ class AccountController extends Controller
      */
     public function withdraw(Request $request): JsonResponse
     {
+        if ($response = $this->ensureWallet(app(FinanceModuleSettings::class))) {
+            return $response;
+        }
+
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'min:10'],
             'bank_iban' => ['required', 'string', 'max:50'],
@@ -816,6 +844,10 @@ class AccountController extends Controller
      */
     public function chargeRequests(Request $request): JsonResponse
     {
+        if ($response = $this->ensureWallet(app(FinanceModuleSettings::class))) {
+            return $response;
+        }
+
         $rows = ChargeRequest::where('user_id', $request->user()->id)
             ->with('reviewer:id,name')
             ->orderByDesc('created_at')
@@ -830,6 +862,10 @@ class AccountController extends Controller
      */
     public function withdrawalRequests(Request $request): JsonResponse
     {
+        if ($response = $this->ensureWallet(app(FinanceModuleSettings::class))) {
+            return $response;
+        }
+
         $rows = WithdrawalRequest::where('user_id', $request->user()->id)
             ->orderByDesc('created_at')
             ->limit(50)

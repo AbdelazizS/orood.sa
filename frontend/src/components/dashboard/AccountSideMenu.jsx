@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom"
 import { LogOut } from "lucide-react"
 import { resolveImageUrl } from "@/lib/imageUrl"
 import { getMemberDashboardNavFlat, isMemberNavItemActive } from "@/navigation/memberDashboardNav"
+import { useFinanceModules } from "@/hooks/useFinanceModules"
 
 /** @deprecated Use getMemberDashboardNavFlat from @/navigation/memberDashboardNav */
 export const sidebarLinks = []
@@ -18,6 +19,7 @@ export function AccountSideMenu({ className, onNavClick }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { user } = useAuthStore()
+  const { data: financeModules } = useFinanceModules()
 
   const memberSince =
     user?.created_at != null
@@ -57,7 +59,7 @@ export function AccountSideMenu({ className, onNavClick }) {
       </div>
 
       <div className="space-y-2">
-        {getMemberDashboardNavFlat(user).map((link) => {
+        {getMemberDashboardNavFlat(user, { financeModules }).map((link) => {
           const isActive = isMemberNavItemActive(link, location)
           return (
             <Link

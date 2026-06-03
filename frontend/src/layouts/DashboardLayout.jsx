@@ -65,6 +65,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react"
 import { getMemberDashboardNavSections, isMemberNavItemActive } from "@/navigation/memberDashboardNav"
+import { useFinanceModules } from "@/hooks/useFinanceModules"
 import { adminNavSections, isAdminNavItemActive } from "@/navigation/adminDashboardNav"
 import { publicProfilePath } from "@/lib/profileRoutes"
 import { AppLogo } from "@/components/common/AppLogo"
@@ -109,7 +110,8 @@ export function DashboardLayout({ adminLinks: isAdmin = false, children }) {
         }))
         .filter((section) => section.items.length > 0)
     : []
-  const memberSections = !isAdmin ? getMemberDashboardNavSections(user) : []
+  const { data: financeModules } = useFinanceModules()
+  const memberSections = !isAdmin ? getMemberDashboardNavSections(user, { financeModules }) : []
   const isCollapsed = state === "collapsed"
 
   const iconRailNavButtonClass = cn(

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import apiClient from "@/lib/apiClient"
+import { isOtherSubcategorySelection } from "@/lib/listings/subcategoryDerivedFields"
 
 /**
  * @typedef {object} ListingSchemaField
@@ -34,12 +35,14 @@ import apiClient from "@/lib/apiClient"
  */
 export function useListingSchema(categoryId, subcategoryId, listingType = "offer") {
   const { i18n } = useTranslation()
+  const apiSubcategoryId =
+    subcategoryId && !isOtherSubcategorySelection(subcategoryId) ? subcategoryId : null
 
   return useQuery({
-    queryKey: ["listing-schema", categoryId, subcategoryId, listingType, i18n.language],
+    queryKey: ["listing-schema", categoryId, apiSubcategoryId, listingType, i18n.language],
     queryFn: async () => {
       const params = new URLSearchParams({ type: listingType })
-      if (subcategoryId) params.set("subcategory_id", String(subcategoryId))
+      if (apiSubcategoryId) params.set("subcategory_id", String(apiSubcategoryId))
       const { data } = await apiClient.get(`/categories/${categoryId}/listing-schema?${params}`)
       return {
         enabled: Boolean(data?.dynamic_schema_enabled),

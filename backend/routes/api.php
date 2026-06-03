@@ -127,6 +127,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/providers', [ServiceMarketController::class, 'providers']);
         Route::get('/providers/{provider}', [ServiceMarketController::class, 'show'])->whereNumber('provider');
     });
+    Route::get('/finance/modules', [\App\Http\Controllers\Api\Finance\FinanceModuleController::class, 'index']);
     Route::get('/payment-methods', [\App\Http\Controllers\Api\Finance\PaymentConfigController::class, 'methods']);
     Route::get('/payment-methods/fields', [\App\Http\Controllers\Api\Finance\PaymentConfigController::class, 'fields']);
     Route::get('/finance/wallet/charge-schema', [\App\Http\Controllers\Api\Finance\WalletSchemaController::class, 'chargeSchema']);

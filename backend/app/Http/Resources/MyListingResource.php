@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Services\Listings\ListingActionResolver;
+use App\Support\DateTimeFormat;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -41,8 +42,9 @@ class MyListingResource extends JsonResource
             ],
             'sub_category' => [
                 'id' => $this->subcategory?->id,
-                'name' => $this->subcategory?->name_ar ?? $this->subcategory?->name,
+                'name' => $this->subcategory?->name_ar ?? $this->subcategory?->name ?? $this->subcategory_other,
             ],
+            'subcategory_other' => $this->subcategory_other,
             'region' => [
                 'id' => $this->region?->id,
                 'name' => $this->region?->name_ar ?? $this->region?->name,
@@ -99,9 +101,9 @@ class MyListingResource extends JsonResource
                     'amenities' => $d->amenities ?? [],
                 ];
             }),
-            'bumped_at' => $this->bumped_at?->toIso8601String(),
-            'created_at' => $this->created_at->toIso8601String(),
-            'updated_at' => $this->updated_at->toIso8601String(),
+            'bumped_at' => DateTimeFormat::toIso8601($this->bumped_at),
+            'created_at' => DateTimeFormat::toIso8601($this->created_at),
+            'updated_at' => DateTimeFormat::toIso8601($this->updated_at),
         ];
     }
 

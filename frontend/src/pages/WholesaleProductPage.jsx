@@ -308,8 +308,8 @@ export function WholesaleProductPage() {
 
           <WholesaleDetailHeroSection product={product} />
           <ListingTitle product={product} />
-          <ListingImages product={product} />
           <ListingDescription product={product} />
+          <ListingImages product={product} />
           <PublisherInfoNote product={product} />
 
           <WholesaleListingActions

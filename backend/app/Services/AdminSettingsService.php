@@ -8,6 +8,7 @@ use App\Models\FinancialRequest;
 use App\Models\OrderPaymentRequest;
 use App\Models\PaymentMethod;
 use App\Models\SellerPayoutProfile;
+use App\Services\Finance\FinanceModuleSettings;
 
 class AdminSettingsService
 {
@@ -92,6 +93,7 @@ class AdminSettingsService
         $bankTransfer = $methods->firstWhere('code', PaymentMethod::CODE_BANK_TRANSFER);
 
         return [
+            'finance_modules' => app(FinanceModuleSettings::class)->all(),
             'payment_methods' => $methods,
             'cod_global' => [
                 'enabled' => (bool) ($globalCod?->enabled ?? false),
@@ -119,6 +121,10 @@ class AdminSettingsService
      */
     public function updatePayments(array $data, ?int $updatedBy = null): array
     {
+        if (isset($data['finance_modules']) && is_array($data['finance_modules'])) {
+            app(FinanceModuleSettings::class)->update($data['finance_modules'], $updatedBy);
+        }
+
         if (isset($data['payment_methods']) && is_array($data['payment_methods'])) {
             foreach ($data['payment_methods'] as $row) {
                 if (! isset($row['id'])) {

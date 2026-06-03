@@ -19,6 +19,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import apiClient from "@/lib/apiClient"
 import { useNotificationsInbox } from "@/hooks/useNotificationsInbox"
+import { useFinanceModules, isPaymentsUiVisible } from "@/hooks/useFinanceModules"
 
 function NotificationBell() {
   const { t } = useTranslation()
@@ -27,6 +28,8 @@ function NotificationBell() {
   const basePath = useAccountSectionBasePath()
 
   const { data, isLoading } = useNotificationsInbox(15, { refetchInterval: 30_000 })
+  const { data: financeModules } = useFinanceModules()
+  const notificationOptions = { paymentsEnabled: isPaymentsUiVisible(financeModules) }
 
   const markReadMutation = useMutation({
     mutationFn: (id) => apiClient.post(`/notifications/${id}/read`),
@@ -88,7 +91,7 @@ function NotificationBell() {
           ) : (
             <div className="space-y-0">
               {notifications.map((n) => {
-                const actions = getNotificationActions(n)
+                const actions = getNotificationActions(n, notificationOptions)
                 const primary = actions[0]
                 return (
                 <div

@@ -9,12 +9,25 @@ import { Badge } from "@/components/ui/badge"
 import { useUpdatePaymentSettings } from "@/hooks/useAdminSettings"
 import { ExternalLink } from "lucide-react"
 
+const MODULE_KEYS = [
+  { key: "payments_module", labelKey: "admin.financeModulePayments", descKey: "admin.financeModulePaymentsDesc" },
+  { key: "escrow", labelKey: "admin.financeModuleEscrow", descKey: "admin.financeModuleEscrowDesc" },
+  { key: "financial_guarantee", labelKey: "admin.financeModuleGuarantee", descKey: "admin.financeModuleGuaranteeDesc" },
+  { key: "bank_accounts", labelKey: "admin.financeModuleBank", descKey: "admin.financeModuleBankDesc" },
+  { key: "cod", labelKey: "admin.financeModuleCod", descKey: "admin.financeModuleCodDesc" },
+  { key: "wallet", labelKey: "admin.financeModuleWallet", descKey: "admin.financeModuleWalletDesc" },
+]
+
 export function PaymentSettingsSection({ settings }) {
   const { t } = useTranslation()
   const mutation = useUpdatePaymentSettings()
   const payments = settings?.payments ?? {}
   const methods = payments.payment_methods ?? []
+  const initialModules = payments.finance_modules ?? {}
 
+  const [moduleStates, setModuleStates] = useState(() =>
+    Object.fromEntries(MODULE_KEYS.map(({ key }) => [key, Boolean(initialModules[key])])),
+  )
   const [codEnabled, setCodEnabled] = useState(Boolean(payments.cod_global?.enabled))
   const [codAccept, setCodAccept] = useState(Boolean(payments.cod_global?.buyer_must_accept ?? true))
   const [codSellerToggle, setCodSellerToggle] = useState(
@@ -24,8 +37,13 @@ export function PaymentSettingsSection({ settings }) {
     Object.fromEntries(methods.map((m) => [m.id, { enabled: m.enabled, instructions: m.instructions ?? {} }])),
   )
 
+  const paymentsModuleOn = moduleStates.payments_module
+
   const payload = useMemo(
     () => ({
+      finance_modules: Object.fromEntries(
+        MODULE_KEYS.map(({ key }) => [key, Boolean(moduleStates[key])]),
+      ),
       payment_methods: methods.map((m) => ({
         id: m.id,
         enabled: methodStates[m.id]?.enabled ?? m.enabled,
@@ -37,12 +55,49 @@ export function PaymentSettingsSection({ settings }) {
         seller_can_toggle: codSellerToggle,
       },
     }),
-    [methods, methodStates, codEnabled, codAccept, codSellerToggle],
+    [methods, methodStates, codEnabled, codAccept, codSellerToggle, moduleStates],
   )
 
   return (
     <div className="space-y-6">
       <Card>
+        <CardHeader>
+          <CardTitle>{t("admin.financeModulesTitle", "Payment modules")}</CardTitle>
+          <CardDescription>{t("admin.financeModulesDesc", "Enable platform payments for members. All off for MVP — deals via private messages.")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {MODULE_KEYS.map(({ key, labelKey, descKey }) => {
+            const isMaster = key === "payments_module"
+            const disabled = !isMaster && !paymentsModuleOn
+
+            return (
+              <div
+                key={key}
+                className={`flex items-center justify-between rounded-lg border p-3 ${disabled ? "opacity-60" : ""}`}
+              >
+                <div className="pe-4">
+                  <Label>{t(labelKey)}</Label>
+                  <p className="text-xs text-muted-foreground mt-1">{t(descKey)}</p>
+                </div>
+                <Switch
+                  checked={moduleStates[key]}
+                  disabled={disabled}
+                  onCheckedChange={(v) =>
+                    setModuleStates((prev) => ({ ...prev, [key]: Boolean(v) }))
+                  }
+                />
+              </div>
+            )
+          })}
+          {!paymentsModuleOn ? (
+            <p className="text-sm text-muted-foreground rounded-lg bg-muted/50 p-3">
+              {t("admin.financeModulesMvpHint", "With Payments Module off, members use private messages to complete deals. Payment settings below apply when you enable the module.")}
+            </p>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card className={!paymentsModuleOn ? "opacity-75" : undefined}>
         <CardHeader>
           <CardTitle>{t("admin.settingsPaymentsQueues", "Approval queues")}</CardTitle>
           <CardDescription>{t("admin.settingsPaymentsQueuesDesc", "Pending financial operations")}</CardDescription>
@@ -72,7 +127,7 @@ export function PaymentSettingsSection({ settings }) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className={!paymentsModuleOn ? "opacity-75" : undefined}>
         <CardHeader>
           <CardTitle>{t("admin.settingsPaymentsMethods", "Payment methods")}</CardTitle>
           <CardDescription>{t("admin.settingsPaymentsMethodsBankHint")}</CardDescription>
@@ -86,6 +141,7 @@ export function PaymentSettingsSection({ settings }) {
               </div>
               <Switch
                 checked={methodStates[m.id]?.enabled ?? m.enabled}
+                disabled={!paymentsModuleOn}
                 onCheckedChange={(v) =>
                   setMethodStates((prev) => ({ ...prev, [m.id]: { ...prev[m.id], enabled: Boolean(v) } }))
                 }
@@ -101,18 +157,18 @@ export function PaymentSettingsSection({ settings }) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className={!paymentsModuleOn ? "opacity-75" : undefined}>
         <CardHeader>
           <CardTitle>{t("admin.settingsPaymentsCod", "Cash on delivery (global)")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between rounded-lg border p-3">
             <Label>{t("admin.codGlobalEnabled", "COD enabled platform-wide")}</Label>
-            <Switch checked={codEnabled} onCheckedChange={setCodEnabled} />
+            <Switch checked={codEnabled} disabled={!paymentsModuleOn} onCheckedChange={setCodEnabled} />
           </div>
           <div className="flex items-center justify-between rounded-lg border p-3">
             <Label>{t("admin.codBuyerMustAccept", "Buyer must accept terms at checkout")}</Label>
-            <Switch checked={codAccept} onCheckedChange={setCodAccept} />
+            <Switch checked={codAccept} disabled={!paymentsModuleOn} onCheckedChange={setCodAccept} />
           </div>
           <div className="flex items-center justify-between rounded-lg border p-3">
             <div>
@@ -121,7 +177,7 @@ export function PaymentSettingsSection({ settings }) {
                 {t("admin.codSellerCanToggleDesc", "When off, sellers cannot enable COD on their listings.")}
               </p>
             </div>
-            <Switch checked={codSellerToggle} onCheckedChange={setCodSellerToggle} />
+            <Switch checked={codSellerToggle} disabled={!paymentsModuleOn} onCheckedChange={setCodSellerToggle} />
           </div>
         </CardContent>
       </Card>

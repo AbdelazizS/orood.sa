@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Region;
 use App\Models\Subcategory;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class CategorySeeder extends Seeder
@@ -21,9 +22,13 @@ class CategorySeeder extends Seeder
                 'name_ar' => 'العقارات',
                 'icon' => 'Home',
                 'subcats' => [
-                    ['en' => 'Apartments', 'ar' => 'شقق'],
-                    ['en' => 'Villas', 'ar' => 'فلل'],
-                    ['en' => 'Land', 'ar' => 'أراضي'],
+                    ['en' => 'Apartments', 'ar' => 'شقق', 'listing_property_type' => 'apartment'],
+                    ['en' => 'Villas', 'ar' => 'فلل', 'listing_property_type' => 'villa'],
+                    ['en' => 'Land', 'ar' => 'أراضي', 'listing_property_type' => 'land'],
+                    ['en' => 'Building', 'ar' => 'عمارة', 'listing_property_type' => 'building'],
+                    ['en' => 'Floor', 'ar' => 'دور', 'listing_property_type' => 'floor'],
+                    ['en' => 'Shop', 'ar' => 'محل', 'listing_property_type' => 'shop'],
+                    ['en' => 'Farm', 'ar' => 'مزرعة', 'listing_property_type' => 'farm'],
                 ],
             ],
             'Electronics' => [
@@ -160,6 +165,7 @@ class CategorySeeder extends Seeder
             foreach ($data['subcats'] as $subcat) {
                 $subName = is_array($subcat) ? $subcat['en'] : $subcat;
                 $subAr = is_array($subcat) ? ($subcat['ar'] ?? null) : null;
+                $listingPropertyType = is_array($subcat) ? ($subcat['listing_property_type'] ?? null) : null;
                 Subcategory::updateOrCreate(
                     [
                         'category_id' => $category->id,
@@ -169,6 +175,7 @@ class CategorySeeder extends Seeder
                         'name' => $subName,
                         'name_ar' => $subAr,
                         'name_en' => $subName,
+                        'listing_property_type' => $listingPropertyType,
                         'is_active' => true,
                     ],
                 );
@@ -184,5 +191,7 @@ class CategorySeeder extends Seeder
                 ]);
             }
         }
+
+        Cache::forget('api.categories');
     }
 }

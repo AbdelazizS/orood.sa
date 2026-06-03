@@ -51,6 +51,7 @@ export function OptionsCheckboxes({
   contactPhoneNumber,
   termsAccepted,
   hideLegal = false,
+  isRequest = false,
   fieldErrors = {},
   defaultPhone = "",
   onChange,
@@ -71,110 +72,114 @@ export function OptionsCheckboxes({
       </h3>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-        <OptionTile>
-          <SimpleCheck
-            id="opt-free-shipping"
-            checked={freeShipping}
-            onCheckedChange={(v) => toggle({ freeShipping: !!v })}
-            label={t("addListing.freeShipping")}
-          />
-        </OptionTile>
+        {!isRequest ? (
+          <>
+            <OptionTile>
+              <SimpleCheck
+                id="opt-free-shipping"
+                checked={freeShipping}
+                onCheckedChange={(v) => toggle({ freeShipping: !!v })}
+                label={t("addListing.freeShipping")}
+              />
+            </OptionTile>
 
-        <OptionTile fullWidth>
-          <label className="flex w-full cursor-pointer items-start gap-3">
-            <Checkbox
-              id="opt-free-return"
-              checked={freeReturn}
-              onCheckedChange={(v) => toggle({ freeReturn: !!v })}
-              className="mt-0.5 size-[18px] shrink-0 rounded-[3px]"
-            />
-            <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-1 text-sm leading-snug text-foreground sm:text-[14px]">
-              <span>{t("addListing.freeReturnPrefix")}</span>
-              {freeReturn ? (
-                <Input
-                  type="number"
-                  min={0}
-                  max={365}
-                  value={returnDays ?? ""}
-                  onClick={(e) => e.stopPropagation()}
-                  onChange={(e) => toggle({ returnDays: e.target.value })}
-                  className="h-8 w-16 shrink-0 px-2 text-center text-sm"
-                  aria-label={t("addListing.returnDaysLabel")}
+            <OptionTile fullWidth>
+              <label className="flex w-full cursor-pointer items-start gap-3">
+                <Checkbox
+                  id="opt-free-return"
+                  checked={freeReturn}
+                  onCheckedChange={(v) => toggle({ freeReturn: !!v })}
+                  className="mt-0.5 size-[18px] shrink-0 rounded-[3px]"
                 />
-              ) : (
-                <span className="inline-block w-8 text-center text-muted-foreground">—</span>
-              )}
-              <span>{t("addListing.freeReturnSuffix")}</span>
-            </span>
-          </label>
-        </OptionTile>
-
-        <OptionTile fullWidth>
-          <label htmlFor="opt-view-client" className="flex w-full cursor-pointer items-start gap-3">
-            <Checkbox
-              id="opt-view-client"
-              checked={allowViewLocation}
-              onCheckedChange={(v) => toggle({ allowViewLocation: !!v })}
-              className="mt-0.5 size-[18px] shrink-0 rounded-[3px]"
-            />
-            <span className="min-w-0 text-sm leading-snug text-foreground sm:text-[14px]">
-              {t("addListing.viewAtClient")}
-              {allowViewLocation ? (
-                <span className="mt-1.5 block text-xs font-normal text-muted-foreground">
-                  {t("addListing.viewAtClientHint")}
+                <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-1 text-sm leading-snug text-foreground sm:text-[14px]">
+                  <span>{t("addListing.freeReturnPrefix")}</span>
+                  {freeReturn ? (
+                    <Input
+                      type="number"
+                      min={0}
+                      max={365}
+                      value={returnDays ?? ""}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => toggle({ returnDays: e.target.value })}
+                      className="h-8 w-16 shrink-0 px-2 text-center text-sm"
+                      aria-label={t("addListing.returnDaysLabel")}
+                    />
+                  ) : (
+                    <span className="inline-block w-8 text-center text-muted-foreground">—</span>
+                  )}
+                  <span>{t("addListing.freeReturnSuffix")}</span>
                 </span>
-              ) : null}
-            </span>
-          </label>
-        </OptionTile>
+              </label>
+            </OptionTile>
 
-        <OptionTile fullWidth>
-          <label htmlFor="opt-bids" className="flex w-full cursor-pointer items-start gap-3">
-            <Checkbox
-              id="opt-bids"
-              checked={bidEnabled}
-              onCheckedChange={(v) => toggle({ bidEnabled: !!v, bidVisible: v ? bidVisible : true })}
-              className="mt-0.5 size-[18px] shrink-0 rounded-[3px]"
-            />
-            <span className="min-w-0 flex-1 text-sm leading-snug text-foreground sm:text-[14px]">
-              {t("addListing.bidLabel")}
-              {bidEnabled ? (
-                <span className="mt-2 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    className={cn(
-                      "rounded-md border px-2.5 py-1 text-xs transition-colors",
-                      bidVisible
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-muted-foreground hover:bg-muted/50",
-                    )}
-                    onClick={(e) => {
-                      e.preventDefault()
-                      toggle({ bidVisible: true })
-                    }}
-                  >
-                    {t("addListing.bidVisible")}
-                  </button>
-                  <button
-                    type="button"
-                    className={cn(
-                      "rounded-md border px-2.5 py-1 text-xs transition-colors",
-                      !bidVisible
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-muted-foreground hover:bg-muted/50",
-                    )}
-                    onClick={(e) => {
-                      e.preventDefault()
-                      toggle({ bidVisible: false })
-                    }}
-                  >
-                    {t("addListing.bidHidden")}
-                  </button>
+            <OptionTile fullWidth>
+              <label htmlFor="opt-view-client" className="flex w-full cursor-pointer items-start gap-3">
+                <Checkbox
+                  id="opt-view-client"
+                  checked={allowViewLocation}
+                  onCheckedChange={(v) => toggle({ allowViewLocation: !!v })}
+                  className="mt-0.5 size-[18px] shrink-0 rounded-[3px]"
+                />
+                <span className="min-w-0 text-sm leading-snug text-foreground sm:text-[14px]">
+                  {t("addListing.viewAtClient")}
+                  {allowViewLocation ? (
+                    <span className="mt-1.5 block text-xs font-normal text-muted-foreground">
+                      {t("addListing.viewAtClientHint")}
+                    </span>
+                  ) : null}
                 </span>
-              ) : null}
-            </span>
-          </label>
-        </OptionTile>
+              </label>
+            </OptionTile>
+
+            <OptionTile fullWidth>
+              <label htmlFor="opt-bids" className="flex w-full cursor-pointer items-start gap-3">
+                <Checkbox
+                  id="opt-bids"
+                  checked={bidEnabled}
+                  onCheckedChange={(v) => toggle({ bidEnabled: !!v, bidVisible: v ? bidVisible : true })}
+                  className="mt-0.5 size-[18px] shrink-0 rounded-[3px]"
+                />
+                <span className="min-w-0 flex-1 text-sm leading-snug text-foreground sm:text-[14px]">
+                  {t("addListing.bidLabel")}
+                  {bidEnabled ? (
+                    <span className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className={cn(
+                          "rounded-md border px-2.5 py-1 text-xs transition-colors",
+                          bidVisible
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border text-muted-foreground hover:bg-muted/50",
+                        )}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          toggle({ bidVisible: true })
+                        }}
+                      >
+                        {t("addListing.bidVisible")}
+                      </button>
+                      <button
+                        type="button"
+                        className={cn(
+                          "rounded-md border px-2.5 py-1 text-xs transition-colors",
+                          !bidVisible
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border text-muted-foreground hover:bg-muted/50",
+                        )}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          toggle({ bidVisible: false })
+                        }}
+                      >
+                        {t("addListing.bidHidden")}
+                      </button>
+                    </span>
+                  ) : null}
+                </span>
+              </label>
+            </OptionTile>
+          </>
+        ) : null}
 
         <OptionTile>
           <SimpleCheck

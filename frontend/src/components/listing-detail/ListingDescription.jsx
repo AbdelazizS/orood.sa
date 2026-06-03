@@ -4,10 +4,9 @@ import { useAppDirection } from "@/providers/DirectionProvider"
 import { Separator } from "@/components/ui/separator"
 
 /**
- * Section 5 — Listing Description.
- * px-4 py-3. Expandable at 280 chars.
+ * Listing description — shown before images (Haraj order).
  */
-const TRUNCATE_LENGTH = 280
+const TRUNCATE_LENGTH = 320
 
 export function ListingDescription({ product }) {
   const { t } = useTranslation()
@@ -23,13 +22,13 @@ export function ListingDescription({ product }) {
   return (
     <>
       <div dir={direction} className="px-4 py-4 sm:px-6">
-        <div className="whitespace-pre-line text-start text-sm leading-loose text-foreground">
+        <div className="whitespace-pre-line text-start text-base leading-loose text-foreground sm:text-lg">
           {displayText}
           {isLong && (
             <button
               type="button"
               onClick={() => setExpanded((e) => !e)}
-              className="me-1 rounded-sm text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              className="me-1 rounded-sm text-base font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               {expanded ? t("listingDetail.readLess", "... أقل") : t("listingDetail.readMore", "... اقرأ المزيد")}
             </button>

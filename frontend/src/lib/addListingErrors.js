@@ -12,6 +12,7 @@ const FIELD_MAP = {
   "image_urls.*": "imageUrls",
   category_id: "categoryId",
   subcategory_id: "subcategoryId",
+  subcategory_other: "subcategoryOther",
   region_id: "regionId",
   city_id: "cityId",
   contact_phone: "contactMethods",
@@ -47,6 +48,10 @@ export function parseAddListingErrors(apiError, t) {
     const msg = Array.isArray(messages) ? messages[0] : messages
     const field = resolveErrorFieldKey(key)
     const tKey = MESSAGE_MAP[msg] ?? null
+    if (!tKey && field === "imageUrls" && typeof msg === "string" && /at least|minimum|min/i.test(msg)) {
+      fieldErrors[field] = t("addListing.errors.imagesRequired", "الصور اختيارية")
+      continue
+    }
     fieldErrors[field] = tKey ? t(tKey) : msg
   }
   return fieldErrors

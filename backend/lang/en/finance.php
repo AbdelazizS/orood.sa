@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'module_disabled' => 'Platform payments are not enabled yet. Contact the seller via messages to complete the deal.',
     'complete_payout_setup' => 'Complete your payout setup to activate listings and receive orders.',
     'cod_not_available' => 'Cash on delivery is not enabled on the platform.',
     'direct_bank_not_available' => 'Direct bank transfer is not available at this time.',

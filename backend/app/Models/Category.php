@@ -58,6 +58,11 @@ class Category extends Model
         return $this->hasMany(Subcategory::class);
     }
 
+    public function rootSubcategories()
+    {
+        return $this->hasMany(Subcategory::class)->whereNull('parent_id');
+    }
+
     public function products()
     {
         return $this->hasMany(Product::class);

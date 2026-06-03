@@ -3,24 +3,33 @@
 namespace App\Http\Controllers\Api\Finance;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\ChecksFinanceModules;
 use App\Models\Balance;
 use App\Models\ChargeRequest;
 use App\Models\FinancialRequest;
 use App\Models\WithdrawalRequest;
 use App\Services\Finance\FinancialRequestService;
+use App\Services\Finance\FinanceModuleSettings;
 use App\Services\Finance\PaymentMethodService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class WalletFinancialRequestController extends Controller
 {
+    use ChecksFinanceModules;
+
     public function __construct(
         private readonly FinancialRequestService $financialRequests,
         private readonly PaymentMethodService $paymentMethods,
+        private readonly FinanceModuleSettings $financeModules,
     ) {}
 
     public function charge(Request $request): JsonResponse
     {
+        if ($response = $this->ensureWallet($this->financeModules)) {
+            return $response;
+        }
+
         $user = $request->user();
         $validated = $request->validate([
             'payment_method_id' => ['nullable', 'integer', 'exists:payment_methods,id'],
@@ -100,6 +109,10 @@ class WalletFinancialRequestController extends Controller
 
     public function withdraw(Request $request): JsonResponse
     {
+        if ($response = $this->ensureWallet($this->financeModules)) {
+            return $response;
+        }
+
         $user = $request->user();
         $validated = $request->validate([
             'payment_method_id' => ['nullable', 'integer', 'exists:payment_methods,id'],
@@ -163,6 +176,10 @@ class WalletFinancialRequestController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        if ($response = $this->ensureWallet($this->financeModules)) {
+            return $response;
+        }
+
         $type = $request->query('type');
         $rows = FinancialRequest::query()
             ->where('user_id', $request->user()->id)

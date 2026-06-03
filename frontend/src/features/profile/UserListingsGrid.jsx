@@ -107,7 +107,7 @@ export function UserListingsGrid({ listings = [], isOwner = false, hideTitle = f
           <div className="overflow-hidden rounded-lg border border-border bg-card">
             {filtered.map((product) => (
               <div key={product.id} className="relative">
-                <ProductCard product={product} />
+                <ProductCard product={product} overlayAction={isOwner} />
                 {isOwner && (
                   <div
                     className="absolute end-2 top-2 z-10"

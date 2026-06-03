@@ -21,6 +21,12 @@ import { evaluateVisibleWhen } from "@/lib/listings/schemaUtils"
 import { buildListingAttributesPayload } from "@/lib/listings/buildListingAttributesPayload"
 import { hydrateListingFormState, listingAttributesFromProduct } from "@/lib/listings/hydrateListingFormFromApi"
 import { isRealEstateCategorySelection } from "@/lib/listings/isRealEstateListing"
+import {
+  OTHER_SUBCATEGORY_KEY,
+  getHiddenSchemaFieldKeys,
+  isOtherSubcategorySelection,
+  resolvePropertyTypeFromSubcategory,
+} from "@/lib/listings/subcategoryDerivedFields"
 import { contactPhoneFieldError, normalizeSaudiPhone } from "@/lib/phone/saudiPhone"
 import { ListingDetailsForm } from "@/components/add-listing/ListingDetailsForm"
 import { OptionsCheckboxes } from "@/components/add-listing/OptionsCheckboxes"
@@ -49,6 +55,7 @@ export function AddOfferPage() {
   const [type, setType] = useState("offer")
   const [categoryId, setCategoryId] = useState(null)
   const [subcategoryId, setSubcategoryId] = useState(null)
+  const [subcategoryOther, setSubcategoryOther] = useState("")
   const [regionId, setRegionId] = useState(null)
   const [cityId, setCityId] = useState(null)
   const [title, setTitle] = useState("")
@@ -113,6 +120,7 @@ export function AddOfferPage() {
     setPrice(hydrated.price)
     setCategoryId(hydrated.categoryId)
     setSubcategoryId(hydrated.subcategoryId)
+    setSubcategoryOther(hydrated.subcategoryOther ?? "")
     setRegionId(hydrated.regionId)
     setCityId(hydrated.cityId)
     setBidEnabled(hydrated.bidEnabled)
@@ -143,10 +151,13 @@ export function AddOfferPage() {
     () => mainCategories.find((c) => String(c.id) === String(categoryId)),
     [mainCategories, categoryId],
   )
-  const categorySchemaEnabled = Boolean(selectedCategory?.dynamic_schema_enabled ?? schemaResult?.enabled)
+  const isRequest = type === "request"
+  const categorySchemaEnabled =
+    !isRequest && Boolean(selectedCategory?.dynamic_schema_enabled ?? schemaResult?.enabled)
   const activeSchema = categorySchemaEnabled && schemaResult?.schema ? schemaResult.schema : null
   const usesDynamicSchema = Boolean(activeSchema)
   const schemaMissing =
+    !isRequest &&
     categorySchemaEnabled &&
     Boolean(categoryId) &&
     !schemaLoading &&
@@ -165,6 +176,34 @@ export function AddOfferPage() {
   )
   const subsForValidation =
     inlineSubsForValidation !== null ? inlineSubsForValidation : remoteSubsForValidation
+  const selectedSubcategory = useMemo(
+    () =>
+      isOtherSubcategorySelection(subcategoryId)
+        ? null
+        : subsForValidation.find((s) => String(s.id) === String(subcategoryId)) ?? null,
+    [subcategoryId, subsForValidation]
+  )
+  const hiddenSchemaFieldKeys = useMemo(
+    () =>
+      new Set(
+        getHiddenSchemaFieldKeys({
+          isRealEstate: isRealEstateCategory,
+          subcategoryId,
+        subcategoryOther,
+          subcategory: selectedSubcategory,
+        })
+      ),
+    [isRealEstateCategory, subcategoryId, subcategoryOther, selectedSubcategory]
+  )
+
+  useEffect(() => {
+    if (!isRealEstateCategory || isOtherSubcategorySelection(subcategoryId)) return
+    const propertyType = resolvePropertyTypeFromSubcategory(selectedSubcategory)
+    if (!propertyType) return
+    setListingAttributes((prev) =>
+      prev.property_type === propertyType ? prev : { ...prev, property_type: propertyType }
+    )
+  }, [isRealEstateCategory, subcategoryId, selectedSubcategory])
 
   useEffect(() => {
     if (isRealEstateCategory) return
@@ -260,6 +299,7 @@ export function AddOfferPage() {
     if (d.type) setType(d.type)
     if (d.categoryId != null) setCategoryId(d.categoryId)
     if (d.subcategoryId != null) setSubcategoryId(d.subcategoryId)
+    if (typeof d.subcategoryOther === "string") setSubcategoryOther(d.subcategoryOther)
     if (d.regionId != null) setRegionId(d.regionId)
     if (d.cityId != null) setCityId(d.cityId)
     if (d.title != null) setTitle(d.title)
@@ -289,7 +329,8 @@ export function AddOfferPage() {
       isEditMode
         ? apiClient.put(`/products/${editListingId}`, payload)
         : apiClient.post("/products", payload),
-    onSuccess: () => {
+    onSuccess: (response) => {
+      const newId = response?.data?.data?.id
       if (isEditMode) {
         queryClient.invalidateQueries({ queryKey: ["listing", editListingId] })
         queryClient.invalidateQueries({ queryKey: ["product", editListingId] })
@@ -297,7 +338,8 @@ export function AddOfferPage() {
         navigate(`/products/${editListingId}`, { replace: true })
       } else {
         clearAddOfferDraft()
-        navigate("/", { replace: true })
+        queryClient.invalidateQueries({ queryKey: ["products", "mine"] })
+        navigate(newId ? `/products/${newId}` : "/", { replace: true })
       }
     },
     onError: (err) => {
@@ -313,16 +355,17 @@ export function AddOfferPage() {
     if (!categoryId) err.category = t("addListing.errors.categoryRequired")
     else if (inlineSubsForValidation === null && categoryId && remoteSubsPending) {
       err.category = t("addListing.errors.subcategoriesLoading")
+    } else if (subsForValidation.length > 0 && isOtherSubcategorySelection(subcategoryId)) {
+      if (!subcategoryOther?.trim()) {
+        err.subcategoryOther = t("addListing.subcategoryOtherRequired")
+      }
     } else if (subsForValidation.length > 0 && !subcategoryId) {
       err.category = t("addListing.errors.subcategoryRequired")
     }
-    if (!usesDynamicSchema && (!regionId || !cityId)) err.location = t("addListing.errors.locationRequired")
+    if (!usesDynamicSchema && !isRequest && (!regionId || !cityId)) err.location = t("addListing.errors.locationRequired")
     if (!title?.trim()) err.title = t("addListing.errors.titleRequired")
     if (!description?.trim()) err.description = t("addListing.errors.descriptionRequired")
     const validUrls = (imageUrls || []).filter(isValidUrl)
-    if (type === "offer" && validUrls.length === 0) {
-      err.imageUrls = t("addListing.errors.imagesRequired")
-    }
     if (priceEnabled) {
       const n = parseFloat(String(price).replace(",", "."))
       if (!Number.isFinite(n) || n <= 0) err.price = t("addListing.errors.priceInvalid")
@@ -334,6 +377,7 @@ export function AddOfferPage() {
     }
     if (usesDynamicSchema && activeSchema) {
       for (const field of activeSchema.fields ?? []) {
+        if (hiddenSchemaFieldKeys.has(field.field_key)) continue
         if (["divider", "info", "warning", "instruction_block"].includes(field.field_type)) continue
         if (!evaluateVisibleWhen(field.visible_when, listingAttributes)) continue
         if (field.required) {
@@ -368,7 +412,7 @@ export function AddOfferPage() {
     } else if (!termsAccepted && !isEditMode) {
       err.termsAccepted = t("addListing.oathRequired")
     }
-    if (schemaMissing) {
+    if (schemaMissing && !isRequest) {
       err.schema = t("addListing.errors.schemaMissing", "لا يوجد مخطط منشور لهذا القسم. تواصل مع الإدارة.")
     }
     setFieldErrors(err)
@@ -394,6 +438,7 @@ export function AddOfferPage() {
         type,
         categoryId,
         subcategoryId,
+        subcategoryOther,
         regionId,
         cityId,
         title,
@@ -429,7 +474,8 @@ export function AddOfferPage() {
       description: description.trim(),
       price: priceEnabled && priceNum != null && Number.isFinite(priceNum) && priceNum > 0 ? priceNum : null,
       category_id: categoryId ?? null,
-      subcategory_id: subcategoryId ?? null,
+      subcategory_id: isOtherSubcategorySelection(subcategoryId) ? null : (subcategoryId ?? null),
+      subcategory_other: isOtherSubcategorySelection(subcategoryId) ? subcategoryOther.trim() : null,
       region_id: regionId ?? null,
       city_id: cityId ?? null,
       image_url: validUrls[0] || null,
@@ -495,6 +541,7 @@ export function AddOfferPage() {
         path="/add"
         title={seo?.seo_title}
         description={seo?.description}
+        image={seo?.og?.image}
         hreflang={seo?.hreflang}
         robots={seo?.robots}
         useTitleAsFull={Boolean(seo?.seo_title)}
@@ -534,17 +581,27 @@ export function AddOfferPage() {
         <CategorySelector
           categoryId={categoryId}
           subcategoryId={subcategoryId}
+          subcategoryOther={subcategoryOther}
+          subcategoryOtherError={fieldErrors.subcategoryOther}
           error={fieldErrors.category}
           onChange={(catId, subId) => {
             setCategoryId(catId)
             setSubcategoryId(subId ?? null)
+            if (!isOtherSubcategorySelection(subId)) {
+              setSubcategoryOther("")
+            }
             setListingAttributes({})
             setAcceptedAgreementIds([])
             clearFieldError("category")
+            clearFieldError("subcategoryOther")
+          }}
+          onSubcategoryOtherChange={(value) => {
+            setSubcategoryOther(value)
+            clearFieldError("subcategoryOther")
           }}
         />
 
-        {schemaMissing ? (
+        {schemaMissing && !isRequest ? (
           <Alert className="mb-4 border-amber-500/40 bg-amber-500/10">
             <AlertDescription className="text-sm">
               {t("addListing.errors.schemaMissing", "لا يوجد مخطط إعلان منشور لهذا القسم. يمكن للإدارة إنشاؤه من إدارة الأقسام → مخطط الإعلان.")}
@@ -560,6 +617,7 @@ export function AddOfferPage() {
               onChange={setListingAttributes}
               errors={fieldErrors}
               isLoading={schemaLoading || schemaFetching}
+              hiddenFieldKeys={hiddenSchemaFieldKeys}
             />
             <DynamicLocationField
               locationPolicy={locationPolicy}
@@ -584,7 +642,7 @@ export function AddOfferPage() {
               mapError={fieldErrors.propertyLocation}
             />
           </>
-        ) : (
+        ) : !isRequest ? (
           <>
             <LocationSelector
               regionId={regionId}
@@ -597,7 +655,7 @@ export function AddOfferPage() {
               }}
             />
           </>
-        )}
+        ) : null}
 
         <ListingDetailsForm
           title={title}
@@ -654,6 +712,7 @@ export function AddOfferPage() {
           defaultPhone={user?.phone ?? ""}
           termsAccepted={termsAccepted}
           hideLegal={usesDynamicSchema}
+          isRequest={isRequest}
           fieldErrors={{
             contactPhoneNumber: fieldErrors.contactPhoneNumber,
             termsAccepted: fieldErrors.termsAccepted,

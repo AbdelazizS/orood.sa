@@ -33,8 +33,7 @@ import { buildBreadcrumbSchema, buildProductSchema, mergeJsonLd } from "@/lib/se
 
 /**
  * Product/Listing detail page — exact layout per PDF pages 7-11.
- * Section order: 1–2 Hero (seller + price/stats) → 3 Title → 4 Images → 5 Description
- * → 6 Publisher note → 7 Actions → 8 Comments → 9 Stats → 10 Shipping → 11 Trust
+ * Section order (Haraj): Hero → Description → Images → attributes → actions → comments
  */
 export function ProductDetailsPage() {
   const { id } = useParams()
@@ -96,15 +95,13 @@ export function ProductDetailsPage() {
               </div>
             </div>
 
-            {/* Title + media */}
+            {/* Description then images (Haraj order) */}
             <div className="space-y-4 border-b border-border px-4 py-4">
-              <Skeleton className="h-7 w-3/4" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-4 w-2/3" />
               <Skeleton className="aspect-[4/3] w-full rounded-lg" />
-              <div className="flex gap-2">
-                <Skeleton className="h-16 w-16 rounded-md" />
-                <Skeleton className="h-16 w-16 rounded-md" />
-                <Skeleton className="h-16 w-16 rounded-md" />
-              </div>
+              <Skeleton className="aspect-[4/3] w-full rounded-lg" />
             </div>
 
             {/* Remaining sections */}
@@ -186,13 +183,14 @@ export function ProductDetailsPage() {
             </Button>
           </div>
           <ListingDetailHarajHeader product={product} />
-          <ListingImages product={product} />
           <ListingDescription product={product} />
+          <ListingImages product={product} />
           {showAttributesGrid ? (
             <ListingAttributesGrid
               sections={product?.listing_attribute_sections}
               attributes={listingAttrs}
               variant={isRE ? "elevated" : "plain"}
+              product={product}
             />
           ) : isRE && product?.real_estate ? (
             <>

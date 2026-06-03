@@ -13,6 +13,8 @@ use App\Services\Listings\ListingAttributeSchemaService;
 use App\Services\Listings\ListingSchemaService;
 use App\Services\Listings\ListingSchemaValidator;
 use App\Services\Listings\RealEstateAttributeAdapter;
+use App\Models\Subcategory;
+use App\Services\Listings\SubcategoryPropertyTypeResolver;
 use App\Services\ProductRealEstateService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -55,6 +57,7 @@ class ProductController extends Controller
         );
         $payoutActivation = app(\App\Services\Finance\PaymentEligibilityEngine::class)
             ->resolveListingActivationStatus($user, $autoPublish);
+        $willPublish = $autoPublish;
         $defaultBidsVisible = $this->settings->getBool(AdminSettingsService::KEY_DEFAULT_BIDS_VISIBLE, true);
         $defaultCommentsVisible = $this->settings->getBool(AdminSettingsService::KEY_DEFAULT_COMMENTS_VISIBLE, true);
         $now = now();
@@ -77,6 +80,7 @@ class ProductController extends Controller
             'type' => $validated['type'],
             'category_id' => $validated['category_id'] ?? null,
             'subcategory_id' => $validated['subcategory_id'] ?? null,
+            'subcategory_other' => $validated['subcategory_other'] ?? null,
             'region_id' => $validated['region_id'] ?? null,
             'city_id' => $validated['city_id'] ?? null,
             'image_url' => $mainImage,
@@ -103,22 +107,22 @@ class ProductController extends Controller
             'location_lat' => $validated['location_lat'] ?? null,
             'location_lng' => $validated['location_lng'] ?? null,
             'location_address' => $validated['location_address'] ?? null,
-            'status' => ($autoPublish && $payoutActivation === 'active') ? 'published' : 'pending_review',
-            'moderation_status' => $autoPublish ? 'approved' : 'pending',
-            'payout_activation_status' => $payoutActivation,
-            'published_at' => ($autoPublish && $payoutActivation === 'active') ? $now : null,
-            'bumped_at' => ($autoPublish && $payoutActivation === 'active') ? $now : null,
+            'status' => $willPublish ? 'published' : 'pending_review',
+            'moderation_status' => $willPublish ? 'approved' : 'pending',
+            'payout_activation_status' => $willPublish ? 'active' : $payoutActivation,
+            'published_at' => $willPublish ? $now : null,
+            'bumped_at' => $willPublish ? $now : null,
         ]);
 
         $this->syncListingAttributes($request, $product, $validated);
 
-        if ($payoutActivation !== 'active') {
+        if (! $willPublish && $payoutActivation !== 'active') {
             app(\App\Services\Finance\FinancialNotificationDispatcher::class)
                 ->listingPendingActivation($user, $product);
         }
 
         return response()->json([
-            'message' => $autoPublish
+            'message' => $willPublish
                 ? 'تم نشر إعلانك بنجاح'
                 : 'تم إضافة إعلانك وسيتم مراجعته قريباً',
             'data' => new ProductResource($product->load(['category', 'subcategory.category', 'region', 'city', 'seller', 'realEstateDetail'])),
@@ -155,7 +159,8 @@ class ProductController extends Controller
             'accept_bids' => $validated['accept_bids'] ?? $product->accept_bids,
             'bids_visible' => $validated['bids_visible'] ?? $product->bids_visible,
             'category_id' => $validated['category_id'] ?? $product->category_id,
-            'subcategory_id' => $validated['subcategory_id'] ?? $product->subcategory_id,
+            'subcategory_id' => array_key_exists('subcategory_id', $validated) ? $validated['subcategory_id'] : $product->subcategory_id,
+            'subcategory_other' => array_key_exists('subcategory_other', $validated) ? ($validated['subcategory_other'] ?? null) : $product->subcategory_other,
             'region_id' => $validated['region_id'] ?? $product->region_id,
             'city_id' => $validated['city_id'] ?? $product->city_id,
             'image_url' => $mainImage,
@@ -196,6 +201,13 @@ class ProductController extends Controller
         $category = Category::query()->find($product->category_id);
         $usesSchema = $category && $this->listingSchemas->isDynamicSchemaEnabled($category);
         $attrs = is_array($validated['listing_attributes'] ?? null) ? $validated['listing_attributes'] : [];
+        if ($product->subcategory_id) {
+            $sub = Subcategory::query()->find($product->subcategory_id);
+            $derivedType = app(SubcategoryPropertyTypeResolver::class)->resolve($sub);
+            if ($derivedType && empty($attrs['property_type'])) {
+                $attrs['property_type'] = $derivedType;
+            }
+        }
 
         if ($usesSchema && $attrs !== []) {
             $schema = $this->listingSchemas->resolvePublishedSchema(

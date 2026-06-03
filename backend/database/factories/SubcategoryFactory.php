@@ -17,8 +17,10 @@ class SubcategoryFactory extends Factory
 
         return [
             'category_id' => Category::factory(),
+            'parent_id' => null,
             'name' => ucfirst($name),
             'slug' => Str::slug($name) . '-' . $this->faker->numberBetween(100, 999),
+            'sort_order' => 0,
             'is_active' => true,
         ];
     }

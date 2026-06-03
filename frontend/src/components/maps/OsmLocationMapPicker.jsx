@@ -97,6 +97,7 @@ export function OsmLocationMapPicker({
   mapActive = true,
   readOnly = false,
   hintInFooter = false,
+  markerVariant = "default",
   mapClassName: mapClassNameProp,
 }) {
   const { t } = useTranslation()
@@ -196,27 +197,35 @@ export function OsmLocationMapPicker({
     [handlePick, onReverseGeocode]
   )
 
+  const propertyPinIcon = useMemo(() => {
+    if (markerVariant !== "property") return null
+    return L.divIcon({
+      className: "map-marker map-marker--property",
+      html: '<span class="map-marker-pin map-marker-pin--property" aria-hidden="true"></span>',
+      iconSize: [18, 18],
+      iconAnchor: [9, 9],
+    })
+  }, [markerVariant])
+
   return (
     <div className={cn("space-y-2", className)}>
       <div
         className={cn(
-          "overflow-hidden rounded-2xl bg-muted/20 shadow-md ring-1 ring-border/50",
+          "overflow-visible rounded-2xl bg-muted/20 shadow-md ring-1 ring-border/50",
           hideMapAttribution && "map-picker-clean"
         )}
       >
-        <div className={cn("relative z-0", mapClassNameProp ?? MAP_PICKER_MAP_CLASS)}>
-          {showSearch && !readOnly ? (
-            <div className="pointer-events-none absolute inset-x-0 top-0 z-20 p-2">
-              <div className="pointer-events-auto">
-                <MapSearchBar
-                  debounceMs={500}
-                  placeholder={searchPlaceholder}
-                  resolvedValue={searchValue}
-                  onSelect={handleSearchSelect}
-                />
-              </div>
-            </div>
-          ) : null}
+        {showSearch && !readOnly ? (
+          <div className="relative z-20 border-b border-border/40 p-3">
+            <MapSearchBar
+              debounceMs={500}
+              placeholder={searchPlaceholder}
+              resolvedValue={searchValue}
+              onSelect={handleSearchSelect}
+            />
+          </div>
+        ) : null}
+        <div className={cn("relative z-0 overflow-hidden", mapClassNameProp ?? MAP_PICKER_MAP_CLASS)}>
           <MapContainer
             center={initialCenter}
             zoom={initialZoom}
@@ -237,6 +246,7 @@ export function OsmLocationMapPicker({
             {position ? (
               <Marker
                 position={position}
+                icon={propertyPinIcon ?? undefined}
                 draggable={!readOnly}
                 eventHandlers={
                   readOnly

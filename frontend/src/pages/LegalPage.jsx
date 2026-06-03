@@ -73,8 +73,7 @@ export function LegalPage({ slug: slugProp }) {
         path={cmsSlug === "help" ? "/help" : `/${cmsSlug === "privacy-policy" ? "privacy-policy" : cmsSlug}`}
         title={title}
         description={description}
-        canonical={page.canonical}
-        ogImage={page.og_image}
+        image={apiSeo?.og?.image ?? page.og_image}
         hreflang={apiSeo?.hreflang}
         robots={apiSeo?.robots}
         useTitleAsFull={Boolean(apiSeo?.seo_title)}

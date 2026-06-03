@@ -1,5 +1,17 @@
 import apiClient from "@/lib/apiClient"
 
+export async function fetchFinanceModules() {
+  const { data } = await apiClient.get("/finance/modules")
+  return data?.data ?? {
+    payments_module: false,
+    escrow: false,
+    financial_guarantee: false,
+    bank_accounts: false,
+    cod: false,
+    wallet: false,
+  }
+}
+
 export async function fetchPaymentMethods(context = "checkout", audience) {
   const { data } = await apiClient.get("/payment-methods", {
     params: { context, audience },

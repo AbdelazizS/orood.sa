@@ -32,7 +32,7 @@ export function ListingDetailsForm({
   const isValidUrl = (url) =>
     typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/"))
   const validUrls = (imageUrls || []).filter(isValidUrl)
-  const minImages = type === "offer" ? 1 : 0
+  const minImages = 0
   const showPriceFields = showPriceToggle ? priceEnabled : true
 
   return (
@@ -104,7 +104,6 @@ export function ListingDetailsForm({
         <div className={BOX_STYLE}>
           <span className="text-[14px] font-bold text-foreground">
             {t("addListing.imagesLabel")}
-            {type === "offer" && <span className="text-destructive">*</span>}
           </span>
           <ImageUpload value={validUrls} onChange={(urls) => onChange({ imageUrls: urls })} minImages={minImages} />
           {errors.imageUrls && (

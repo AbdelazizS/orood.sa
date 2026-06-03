@@ -71,6 +71,7 @@ export function ContactPage() {
         path="/contact"
         title={seo?.seo_title ?? seo?.title}
         description={seo?.description}
+        image={seo?.og?.image}
         hreflang={seo?.hreflang}
         useTitleAsFull={Boolean(seo?.seo_title)}
       />

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api\Finance;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\ChecksFinanceModules;
 use App\Models\SellerPayoutProfile;
+use App\Services\Finance\FinanceModuleSettings;
 use App\Services\Finance\PaymentEligibilityEngine;
 use App\Services\Finance\PaymentMethodService;
 use App\Services\Finance\SellerPayoutCapabilities;
@@ -14,15 +16,22 @@ use InvalidArgumentException;
 
 class SellerPayoutProfileController extends Controller
 {
+    use ChecksFinanceModules;
+
     public function __construct(
         private readonly SellerPayoutProfileService $profiles,
         private readonly PaymentEligibilityEngine $eligibility,
         private readonly PaymentMethodService $paymentMethods,
         private readonly SellerPayoutCapabilities $capabilities,
+        private readonly FinanceModuleSettings $financeModules,
     ) {}
 
     public function show(Request $request): JsonResponse
     {
+        if ($response = $this->ensureBankAccounts($this->financeModules)) {
+            return $response;
+        }
+
         $user = $request->user();
         $profile = $this->profiles->getOrCreate($user);
         $setup = $this->eligibility->sellerSetupStatus($user);
@@ -44,6 +53,7 @@ class SellerPayoutProfileController extends Controller
                 'profile' => $profile,
                 'setup' => $setup,
                 'capabilities' => $caps,
+                'finance_modules' => $this->financeModules->all(),
                 'accept_cod' => (bool) $profile->accept_cod,
                 'enable_direct_bank' => $profile->primary_mode === SellerPayoutProfile::MODE_DIRECT_BANK,
                 'field_definitions' => $fields->map(fn ($f) => [
@@ -60,6 +70,10 @@ class SellerPayoutProfileController extends Controller
 
     public function update(Request $request): JsonResponse
     {
+        if ($response = $this->ensureBankAccounts($this->financeModules)) {
+            return $response;
+        }
+
         $validated = $request->validate([
             'enable_direct_bank' => ['required', 'boolean'],
             'accept_cod' => ['nullable', 'boolean'],
@@ -87,7 +101,10 @@ class SellerPayoutProfileController extends Controller
     public function setupStatus(Request $request): JsonResponse
     {
         return response()->json([
-            'data' => $this->eligibility->sellerSetupStatus($request->user()),
+            'data' => array_merge(
+                $this->eligibility->sellerSetupStatus($request->user()),
+                ['finance_modules' => $this->financeModules->all()],
+            ),
         ]);
     }
 }

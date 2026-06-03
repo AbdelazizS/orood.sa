@@ -12,7 +12,10 @@ export function ListingReHeroMedia({ product }) {
     product?.media?.image_url ??
     (Array.isArray(product?.media?.gallery) ? product.media.gallery[0] : null)
 
-  const typeLabel = re?.property_type ? realEstateTypeLabel(re.property_type, t) : null
+  const subLabel = product?.subcategory?.name ?? product?.subcategory_other
+  const typeLabel =
+    subLabel ||
+    (re?.property_type ? realEstateTypeLabel(re.property_type, t) : null)
 
   return (
     <div dir={direction} className="bg-card px-4 pb-3">

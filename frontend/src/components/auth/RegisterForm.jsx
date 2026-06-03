@@ -329,7 +329,10 @@ export function RegisterForm() {
 
         {registerMutation.isError && !registerMutation.error?.response?.data?.errors && (
           <p className="text-xs text-destructive">
-            {registerMutation.error?.response?.data?.message ?? t("auth.registerError")}
+            {registerMutation.error?.response?.status === 500
+              ? registerMutation.error?.response?.data?.message ||
+                t("auth.registerServerError", "Server error during sign-up.")
+              : registerMutation.error?.response?.data?.message || t("auth.registerError")}
           </p>
         )}
 

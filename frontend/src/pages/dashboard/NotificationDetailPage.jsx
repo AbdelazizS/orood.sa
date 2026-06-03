@@ -15,6 +15,7 @@ import {
   getNotificationTitle,
   getViewRequestNotificationHint,
 } from "@/lib/notificationDisplay"
+import { useFinanceModules, isPaymentsUiVisible } from "@/hooks/useFinanceModules"
 
 /**
  * @param {{ notificationId: string | undefined, backHref: string }} props
@@ -22,6 +23,8 @@ import {
 export function NotificationDetailInner({ notificationId, backHref }) {
   const { t, i18n } = useTranslation()
   const queryClient = useQueryClient()
+  const { data: financeModules } = useFinanceModules()
+  const notificationOptions = { paymentsEnabled: isPaymentsUiVisible(financeModules) }
 
   const {
     data: notification,
@@ -51,7 +54,7 @@ export function NotificationDetailInner({ notificationId, backHref }) {
     notification?.data && typeof notification.data === "object" && notification.data.link
       ? String(notification.data.link)
       : null
-  const notificationActions = notification ? getNotificationActions(notification) : []
+  const notificationActions = notification ? getNotificationActions(notification, notificationOptions) : []
 
   return (
     <div className="space-y-6">

@@ -20,7 +20,14 @@ class AdminCategoryController extends Controller
 
     public function index(): JsonResponse
     {
-        $categories = Category::with('subcategories', 'regions')->orderBy('name')->get();
+        $categories = Category::with([
+            'rootSubcategories' => fn ($q) => $q
+                ->withCount('children')
+                ->with(['childrenRecursive'])
+                ->orderBy('sort_order')
+                ->orderBy('id'),
+            'regions',
+        ])->orderBy('name')->get();
 
         // Ensure all categories have region visibility entries (fix for legacy or newly created)
         $allRegions = Region::all();
@@ -33,6 +40,10 @@ class AdminCategoryController extends Controller
                 $category->regions()->sync($sync);
                 $category->load('regions');
             }
+            $category->setRelation(
+                'subcategories',
+                $this->normalizeSubcategoryTree($category->rootSubcategories)
+            );
         }
 
         return response()->json(['data' => $categories]);
@@ -122,17 +133,29 @@ class AdminCategoryController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'name_ar' => ['nullable', 'string', 'max:255'],
             'name_en' => ['nullable', 'string', 'max:255'],
+            'parent_id' => ['nullable', 'integer', 'exists:subcategories,id'],
+            'sort_order' => ['sometimes', 'integer', 'min:0'],
             'is_active' => ['sometimes', 'boolean'],
+            'listing_property_type' => ['nullable', 'string', 'max:32'],
         ]);
+
+        if (! empty($validated['parent_id'])) {
+            $parent = Subcategory::query()->findOrFail($validated['parent_id']);
+            if ((int) $parent->category_id !== (int) $category->id) {
+                return response()->json(['message' => 'Parent subcategory does not belong to category'], 422);
+            }
+        }
+
         $validated['category_id'] = $category->id;
-        $validated['slug'] = Str::slug($validated['name']) . '-' . Str::random(4);
+        $validated['slug'] = $this->uniqueSubcategorySlug($category->id, $validated['name']);
         $validated['is_active'] = $validated['is_active'] ?? true;
+        $validated['sort_order'] = $validated['sort_order'] ?? 0;
 
         $subcategory = Subcategory::create($validated);
         $this->audit->log('subcategory.created', $subcategory, null, $validated);
         Cache::forget('api.categories');
 
-        return response()->json(['data' => $subcategory], 201);
+        return response()->json(['data' => $subcategory->loadCount('children')], 201);
     }
 
     public function updateSubcategory(Request $request, Category $category, Subcategory $subcategory): JsonResponse
@@ -144,16 +167,30 @@ class AdminCategoryController extends Controller
             'name' => ['sometimes', 'string', 'max:255'],
             'name_ar' => ['nullable', 'string', 'max:255'],
             'name_en' => ['nullable', 'string', 'max:255'],
+            'parent_id' => ['nullable', 'integer', 'exists:subcategories,id'],
+            'sort_order' => ['sometimes', 'integer', 'min:0'],
             'is_active' => ['sometimes', 'boolean'],
+            'listing_property_type' => ['nullable', 'string', 'max:32'],
         ]);
+
+        if (array_key_exists('parent_id', $validated) && ! empty($validated['parent_id'])) {
+            $parent = Subcategory::query()->findOrFail($validated['parent_id']);
+            if ((int) $parent->category_id !== (int) $category->id) {
+                return response()->json(['message' => 'Parent subcategory does not belong to category'], 422);
+            }
+            if ($subcategory->wouldCreateCycle((int) $validated['parent_id'])) {
+                return response()->json(['message' => 'Invalid parent subcategory (cycle detected)'], 422);
+            }
+        }
+
         if (isset($validated['name'])) {
-            $validated['slug'] = Str::slug($validated['name']) . '-' . Str::random(4);
+            $validated['slug'] = $this->uniqueSubcategorySlug($category->id, $validated['name'], $subcategory->id);
         }
         $oldValues = $subcategory->getOriginal();
         $subcategory->update($validated);
         $this->audit->log('subcategory.updated', $subcategory, $oldValues, $validated);
         Cache::forget('api.categories');
-        return response()->json(['data' => $subcategory->fresh()]);
+        return response()->json(['data' => $subcategory->fresh()->loadCount('children')]);
     }
 
     public function destroySubcategory(Category $category, Subcategory $subcategory): JsonResponse
@@ -161,10 +198,47 @@ class AdminCategoryController extends Controller
         if ($subcategory->category_id !== $category->id) {
             return response()->json(['message' => 'Subcategory does not belong to category'], 422);
         }
+        if ($subcategory->children()->exists()) {
+            return response()->json(['message' => 'Cannot delete subcategory with children'], 422);
+        }
+        if ($subcategory->products()->exists()) {
+            return response()->json(['message' => 'Cannot delete subcategory with listings'], 422);
+        }
         $this->audit->log('subcategory.deleted', $subcategory, $subcategory->toArray());
         $subcategory->delete();
         Cache::forget('api.categories');
         return response()->json(['message' => 'Subcategory deleted']);
+    }
+
+    private function uniqueSubcategorySlug(int $categoryId, string $name, ?int $exceptId = null): string
+    {
+        $base = Str::slug($name);
+        do {
+            $slug = $base . '-' . Str::random(4);
+            $exists = Subcategory::query()
+                ->where('category_id', $categoryId)
+                ->where('slug', $slug)
+                ->when($exceptId, fn ($q) => $q->where('id', '!=', $exceptId))
+                ->exists();
+        } while ($exists);
+
+        return $slug;
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, Subcategory>  $subcategories
+     * @return \Illuminate\Support\Collection<int, Subcategory>
+     */
+    private function normalizeSubcategoryTree($subcategories)
+    {
+        return $subcategories->map(function (Subcategory $sub) {
+            $nested = $sub->relationLoaded('childrenRecursive')
+                ? $sub->childrenRecursive
+                : collect();
+            $sub->setRelation('children', $this->normalizeSubcategoryTree($nested));
+
+            return $sub;
+        });
     }
 
     public function toggleRegion(Request $request, Category $category, Region $region): JsonResponse

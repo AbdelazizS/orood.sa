@@ -19,8 +19,8 @@ import {
 } from "@/lib/wholesaleAccess"
 import { WholesaleQtyStepper } from "@/components/wholesale/WholesaleQtyStepper"
 
-function formatSarPrice(price, t) {
-  if (price === null || price === undefined) return t("feed.priceOnRequest")
+function formatSarPrice(price) {
+  if (price === null || price === undefined) return null
   return new Intl.NumberFormat("ar-SA", {
     style: "currency",
     currency: "SAR",
@@ -62,7 +62,7 @@ export function WholesaleFeedRow({
   const discount = Number(product?.discount_percent ?? 0)
 
   const formatMoney = (value) =>
-    Number.isFinite(value) && value > 0 ? formatSarPrice(value, tBase) : tBase("feed.priceOnRequest")
+    Number.isFinite(value) && value > 0 ? formatSarPrice(value) : null
 
   const ctaBase =
     "w-full min-w-0 max-w-full justify-center gap-1.5 whitespace-normal rounded-lg px-3 py-2.5 text-center text-sm font-medium leading-snug min-h-11 sm:min-h-8 sm:px-3 sm:py-1.5 sm:text-sm sm:leading-normal sm:whitespace-nowrap"
@@ -186,7 +186,7 @@ export function WholesaleFeedRow({
     ) : null
 
   const preMetaSlot = (
-    <div className="min-w-0 space-y-1 text-xs text-muted-foreground sm:text-sm">
+    <div className="min-w-0 space-y-1 overflow-hidden text-[11px] text-muted-foreground sm:text-xs">
       <div className="flex min-w-0 items-center justify-between gap-2">
         <span className="min-w-0 truncate">{t("wholesale.market.remainingBuyers", { count: product?.remaining_needed ?? 0 })}</span>
         <span className="shrink-0 tabular-nums text-foreground">
@@ -196,16 +196,20 @@ export function WholesaleFeedRow({
           })}
         </span>
       </div>
-      <Progress value={product?.progress_percentage ?? 0} className="h-1 rounded-full bg-muted" />
+      <Progress value={product?.progress_percentage ?? 0} className="h-1 w-full min-w-0 rounded-full bg-muted" />
     </div>
   )
 
-  const priceSlot = (
+  const priceSlot = (formatMoney(wholesaleValue) || formatMoney(priceValue)) ? (
     <div className="flex min-w-0 flex-wrap items-baseline gap-2">
-      <span className="text-base font-medium tabular-nums text-foreground">{formatMoney(wholesaleValue)}</span>
-      <span className="text-sm text-muted-foreground line-through">{formatMoney(priceValue)}</span>
+      {formatMoney(wholesaleValue) ? (
+        <span className="text-base font-medium tabular-nums text-foreground">{formatMoney(wholesaleValue)}</span>
+      ) : null}
+      {formatMoney(priceValue) ? (
+        <span className="text-sm text-muted-foreground line-through">{formatMoney(priceValue)}</span>
+      ) : null}
     </div>
-  )
+  ) : null
 
   return (
     <ProductCard

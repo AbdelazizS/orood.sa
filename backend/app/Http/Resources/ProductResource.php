@@ -138,7 +138,17 @@ class ProductResource extends JsonResource
                     'amenities' => $d->amenities ?? [],
                 ];
             }),
-            'subcategory' => $this->subcategory ? ['id' => $this->subcategory->id, 'name' => $this->subcategory->getLocalizedName($request->header('Accept-Language'))] : null,
+            'subcategory' => $this->subcategory
+                ? [
+                    'id' => $this->subcategory->id,
+                    'name' => $this->subcategory->getLocalizedName($request->header('Accept-Language')),
+                    'slug' => $this->subcategory->slug,
+                    'listing_property_type' => $this->subcategory->listing_property_type,
+                ]
+                : ($this->subcategory_other
+                    ? ['id' => null, 'name' => $this->subcategory_other]
+                    : null),
+            'subcategory_other' => $this->subcategory_other,
             'region' => $this->region ? [
                 'id' => $this->region->id,
                 'name' => $this->region->getLocalizedName($request->header('Accept-Language')),

@@ -59,7 +59,8 @@ export const BRANDING_FALLBACK = {
     show_developer_credit: true,
     developer_name: "Aziz",
     developer_linkedin_url: "https://www.linkedin.com/in/abdelaziz-elrasheed-3b1748257",
-    footer_tagline: "Trusted marketplace for offers, requests, and wholesale",
+    footer_tagline_ar: "سوق موثوق للعروض والطلبات وسوق الجملة",
+    footer_tagline_en: "Trusted marketplace for offers, requests, and wholesale",
     violation_notice: "",
   },
 }
@@ -172,8 +173,11 @@ export function useBranding() {
   }, [legal, locale])
 
   const footerTagline = useCallback(() => {
-    return footer.footer_tagline || FALLBACK.footer.footer_tagline || ""
-  }, [footer])
+    if (footer.footer_tagline) return footer.footer_tagline
+    return locale === "en"
+      ? footer.footer_tagline_en || FALLBACK.footer.footer_tagline_en || ""
+      : footer.footer_tagline_ar || FALLBACK.footer.footer_tagline_ar || ""
+  }, [footer, locale])
 
   const developerCredit = useCallback(() => {
     const show = footer.show_developer_credit ?? FALLBACK.footer.show_developer_credit

@@ -63,6 +63,22 @@ function userColumns({ t, i18n, setEditingUser, setVerifyUser, modMutation, navi
     { id: "email", header: t("auth.email"), cell: ({ row }) => row.original.email },
     { id: "phone", header: t("admin.phone"), cell: ({ row }) => row.original.phone || "—" },
     {
+      id: "registered_at",
+      header: t("admin.registeredAt", "تاريخ التسجيل"),
+      cell: ({ row }) => {
+        const raw = row.original.created_at
+        if (!raw) return "—"
+        try {
+          return new Date(raw).toLocaleString(i18n.language?.startsWith("en") ? "en-SA" : "ar-SA", {
+            dateStyle: "medium",
+            timeStyle: "short",
+          })
+        } catch {
+          return String(raw)
+        }
+      },
+    },
+    {
       id: "role",
       header: t("auth.role"),
       cell: ({ row }) => (

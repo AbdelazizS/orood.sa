@@ -5,12 +5,14 @@ namespace App\Services\Listings;
 use App\Models\Product;
 use App\Models\SellerPayoutProfile;
 use App\Models\User;
+use App\Services\Finance\FinanceModuleSettings;
 use App\Services\Finance\PaymentEligibilityEngine;
 
 class ListingActionResolver
 {
     public function __construct(
         private readonly PaymentEligibilityEngine $eligibility,
+        private readonly FinanceModuleSettings $financeModules,
     ) {}
 
     /**
@@ -40,7 +42,7 @@ class ListingActionResolver
             );
         }
 
-        if ($profile?->status === SellerPayoutProfile::STATUS_REJECTED) {
+        if ($profile?->status === SellerPayoutProfile::STATUS_REJECTED && $this->financeModules->isPaymentsModuleEnabled()) {
             return $this->state(
                 'payout_profile_rejected',
                 blocking: true,
@@ -55,7 +57,10 @@ class ListingActionResolver
             );
         }
 
-        if ($payoutStatus === 'pending_payout_setup' || ! $setup['can_activate_listings']) {
+        if (
+            $this->financeModules->requiresPayoutSetupForListings()
+            && ($payoutStatus === 'pending_payout_setup' || ! $setup['can_activate_listings'])
+        ) {
             return $this->state(
                 'awaiting_payment_setup',
                 blocking: true,
@@ -70,7 +75,7 @@ class ListingActionResolver
             );
         }
 
-        if ($profile?->status === SellerPayoutProfile::STATUS_PENDING_REVIEW) {
+        if ($profile?->status === SellerPayoutProfile::STATUS_PENDING_REVIEW && $this->financeModules->canUseBankAccounts()) {
             return $this->state(
                 'payout_profile_pending_review',
                 blocking: true,

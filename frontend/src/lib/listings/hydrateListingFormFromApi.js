@@ -1,3 +1,5 @@
+import { OTHER_SUBCATEGORY_KEY } from "@/lib/listings/subcategoryDerivedFields"
+
 /**
  * Build flat listing_attributes for the add/edit form from API listing payload.
  */
@@ -153,7 +155,10 @@ export function hydrateListingFormState(product) {
     priceEnabled: priceNum != null && Number.isFinite(priceNum) && priceNum > 0,
     price: priceNum != null && Number.isFinite(priceNum) && priceNum > 0 ? String(product.price) : "",
     categoryId: product.category?.id ?? null,
-    subcategoryId: product.subcategory?.id ?? null,
+    subcategoryId: product.subcategory_other
+      ? OTHER_SUBCATEGORY_KEY
+      : product.subcategory?.id ?? null,
+    subcategoryOther: product.subcategory_other ?? "",
     regionId: product.region?.id ?? null,
     cityId: product.city?.id ?? null,
     bidEnabled: !!product.accept_bids,

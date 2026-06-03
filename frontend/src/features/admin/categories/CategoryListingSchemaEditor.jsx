@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import apiClient from "@/lib/apiClient"
@@ -14,12 +14,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Loader2, Plus, Trash2, Upload } from "lucide-react"
+import { Loader2, Plus, Trash2, Upload, Save } from "lucide-react"
 import { toast } from "sonner"
 import { LUCIDE_ICON_OPTIONS } from "@/lib/lucideIconOptions"
 import { DynamicIcon } from "@/components/ui/DynamicIcon"
 
+import { Checkbox } from "@/components/ui/checkbox"
+
 const FIELD_TYPES = ["text", "number", "textarea", "select", "switch", "tags", "features", "checkbox"]
+
+const RE_PROPERTY_TYPES = [
+  { value: "apartment", labelKey: "realEstate.types.apartment" },
+  { value: "villa", labelKey: "realEstate.types.villa" },
+  { value: "land", labelKey: "realEstate.types.land" },
+  { value: "building", labelKey: "realEstate.types.building" },
+  { value: "floor", labelKey: "realEstate.types.floor" },
+  { value: "shop", labelKey: "realEstate.types.shop" },
+  { value: "farm", labelKey: "realEstate.types.farm" },
+]
 
 function normalizeOptions(options = []) {
   return options.map((opt, i) => ({
@@ -34,8 +46,9 @@ function optionLabel(opt, locale) {
   return locale?.startsWith("en") ? opt.label_en || opt.label_ar : opt.label_ar || opt.label_en
 }
 
-export function CategoryListingSchemaEditor({ categoryId, subcategoryId = null }) {
+export function CategoryListingSchemaEditor({ categoryId, categorySlug = null, subcategoryId = null }) {
   const { t, i18n } = useTranslation()
+  const isRealEstate = categorySlug === "real-estate"
   const queryClient = useQueryClient()
   const [newSection, setNewSection] = useState({ section_key: "", title_ar: "", title_en: "" })
   const [newField, setNewField] = useState({
@@ -124,7 +137,10 @@ export function CategoryListingSchemaEditor({ categoryId, subcategoryId = null }
 
   const updateFieldMutation = useMutation({
     mutationFn: ({ id, payload }) => apiClient.put(`/admin/category-schema-fields/${id}`, payload),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate()
+      toast.success(t("admin.saveField", "حفظ الحقل"))
+    },
   })
 
   const deleteFieldMutation = useMutation({
@@ -277,6 +293,15 @@ export function CategoryListingSchemaEditor({ categoryId, subcategoryId = null }
         </div>
       </div>
 
+      {isRealEstate ? (
+        <p className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          {t(
+            "admin.listingSchemaRealEstateHint",
+            "هذه الحقول تخص قسم العقارات فقط. تظهر في صفحة نشر الإعلان (/add) حسب الفرع المختار (شقة، مزرعة، …). لكل فرع حقول مختلفة — مثلاً «المساحة» للشقة، «عرض الأرض» للمزرعة."
+          )}
+        </p>
+      ) : null}
+
       {sections.map((section) => {
         const sectionFields = fields.filter((f) => f.section_id === section.id)
         return (
@@ -295,63 +320,19 @@ export function CategoryListingSchemaEditor({ categoryId, subcategoryId = null }
                 </Button>
               ) : null}
             </div>
-            {sectionFields.map((field, fieldIndex) => (
-              <div key={field.id} className="rounded border p-2 space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-medium">{field.label_ar || field.field_key}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {field.field_key} · {field.field_type}
-                    </p>
-                  </div>
-                  {!isReadOnly ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive shrink-0"
-                      onClick={() => deleteFieldMutation.mutate(field.id)}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  ) : null}
-                </div>
-
-                {["select", "condition", "features"].includes(field.field_type) ? (
-                  <FieldOptionsEditor
-                    field={field}
-                    locale={i18n.language}
-                    readOnly={isReadOnly}
-                    onChange={(opts) => updateFeatureOptions(field, opts)}
-                  />
-                ) : null}
-
-                {["switch", "checkbox", "features"].includes(field.field_type) ? (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">{t("admin.fieldIcon", "أيقونة العرض")}</Label>
-                    <Select
-                      value={field.config_json?.icon || "none"}
-                      disabled={isReadOnly}
-                      onValueChange={(v) => updateFieldIcon(field, v === "none" ? "" : v)}
-                    >
-                      <SelectTrigger className="h-9">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">{t("common.none", "بدون")}</SelectItem>
-                        {LUCIDE_ICON_OPTIONS.map((ic) => (
-                          <SelectItem key={ic} value={ic}>
-                            <span className="flex items-center gap-2">
-                              <DynamicIcon name={ic} className="size-4" />
-                              {ic}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ) : null}
-              </div>
+            {sectionFields.map((field) => (
+              <SchemaFieldEditor
+                key={field.id}
+                field={field}
+                readOnly={isReadOnly}
+                isRealEstate={isRealEstate}
+                locale={i18n.language}
+                onDelete={() => deleteFieldMutation.mutate(field.id)}
+                onSave={(payload) => updateFieldMutation.mutate({ id: field.id, payload })}
+                onOptionsChange={(opts) => updateFeatureOptions(field, opts)}
+                onIconChange={(icon) => updateFieldIcon(field, icon)}
+                isSaving={updateFieldMutation.isPending}
+              />
             ))}
           </div>
         )
@@ -465,6 +446,189 @@ export function CategoryListingSchemaEditor({ categoryId, subcategoryId = null }
             </Button>
           </div>
         </>
+      ) : null}
+    </div>
+  )
+}
+
+function describeVisibleWhen(visibleWhen, t) {
+  if (!visibleWhen || typeof visibleWhen !== "object") {
+    return t("admin.fieldAlwaysVisible", "يظهر دائماً")
+  }
+  const parts = []
+  if (Array.isArray(visibleWhen.property_type) && visibleWhen.property_type.length) {
+    const labels = visibleWhen.property_type.map((v) =>
+      t(`realEstate.types.${v}`, v)
+    )
+    parts.push(t("admin.visibleWhenTypes", "يظهر عند: {{types}}", { types: labels.join("، ") }))
+  }
+  if (visibleWhen.purpose === "rent") {
+    parts.push(t("admin.visibleWhenRent", "للإيجار فقط"))
+  }
+  return parts.length ? parts.join(" · ") : t("admin.fieldAlwaysVisible", "يظهر دائماً")
+}
+
+function canEditPropertyTypeVisibility(visibleWhen) {
+  if (!visibleWhen) return true
+  return Boolean(visibleWhen.property_type) && !visibleWhen.purpose
+}
+
+function SchemaFieldEditor({
+  field,
+  readOnly,
+  isRealEstate,
+  locale,
+  onDelete,
+  onSave,
+  onOptionsChange,
+  onIconChange,
+  isSaving,
+}) {
+  const { t } = useTranslation()
+  const [labelAr, setLabelAr] = useState(field.label_ar ?? "")
+  const [labelEn, setLabelEn] = useState(field.label_en ?? "")
+  const [required, setRequired] = useState(Boolean(field.required))
+  const [alwaysVisible, setAlwaysVisible] = useState(!field.visible_when)
+  const [visibleTypes, setVisibleTypes] = useState(
+    Array.isArray(field.visible_when?.property_type) ? [...field.visible_when.property_type] : []
+  )
+
+  useEffect(() => {
+    setLabelAr(field.label_ar ?? "")
+    setLabelEn(field.label_en ?? "")
+    setRequired(Boolean(field.required))
+    setAlwaysVisible(!field.visible_when)
+    setVisibleTypes(
+      Array.isArray(field.visible_when?.property_type) ? [...field.visible_when.property_type] : []
+    )
+  }, [field.id, field.label_ar, field.label_en, field.required, field.visible_when])
+
+  const showPropertyTypePicker =
+    isRealEstate && canEditPropertyTypeVisibility(field.visible_when)
+
+  const handleSave = () => {
+    const payload = {
+      label_ar: labelAr.trim(),
+      label_en: labelEn.trim() || null,
+      required,
+    }
+    if (showPropertyTypePicker) {
+      payload.visible_when =
+        alwaysVisible || visibleTypes.length === 0 ? null : { property_type: visibleTypes }
+    }
+    onSave(payload)
+  }
+
+  const toggleVisibleType = (value, checked) => {
+    setVisibleTypes((prev) => {
+      if (checked) return prev.includes(value) ? prev : [...prev, value]
+      return prev.filter((v) => v !== value)
+    })
+    setAlwaysVisible(false)
+  }
+
+  return (
+    <div className="rounded border p-3 space-y-3 bg-background">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-sm font-medium">{field.label_ar || field.field_key}</p>
+          <p className="text-xs text-muted-foreground font-mono">
+            {field.field_key} · {field.field_type}
+          </p>
+          {readOnly ? (
+            <p className="mt-1 text-xs text-muted-foreground">{describeVisibleWhen(field.visible_when, t)}</p>
+          ) : null}
+        </div>
+        {!readOnly ? (
+          <Button type="button" variant="ghost" size="icon" className="text-destructive shrink-0" onClick={onDelete}>
+            <Trash2 className="size-4" />
+          </Button>
+        ) : null}
+      </div>
+
+      {!readOnly ? (
+        <>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label className="text-xs">{t("admin.labelAr", "التسمية عربي")}</Label>
+              <Input value={labelAr} onChange={(e) => setLabelAr(e.target.value)} className="h-9" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">{t("admin.labelEn", "التسمية إنجليزي")}</Label>
+              <Input value={labelEn} onChange={(e) => setLabelEn(e.target.value)} className="h-9" />
+            </div>
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <Switch checked={required} onCheckedChange={setRequired} />
+            {t("admin.required", "مطلوب")}
+          </label>
+
+          {showPropertyTypePicker ? (
+            <div className="space-y-2 rounded-md border border-dashed p-2">
+              <Label className="text-xs">{t("admin.fieldVisibleWhen", "يظهر عند اختيار الفرع")}</Label>
+              <label className="flex items-center gap-2 text-xs">
+                <Checkbox
+                  checked={alwaysVisible}
+                  onCheckedChange={(checked) => {
+                    setAlwaysVisible(Boolean(checked))
+                    if (checked) setVisibleTypes([])
+                  }}
+                />
+                {t("admin.fieldAlwaysVisible", "يظهر دائماً")}
+              </label>
+              {!alwaysVisible ? (
+                <div className="flex flex-wrap gap-2">
+                  {RE_PROPERTY_TYPES.map(({ value, labelKey }) => (
+                    <label key={value} className="flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs">
+                      <Checkbox
+                        checked={visibleTypes.includes(value)}
+                        onCheckedChange={(checked) => toggleVisibleType(value, Boolean(checked))}
+                      />
+                      {t(labelKey, value)}
+                    </label>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : field.visible_when ? (
+            <p className="text-xs text-muted-foreground">{describeVisibleWhen(field.visible_when, t)}</p>
+          ) : null}
+
+          <Button type="button" size="sm" variant="secondary" onClick={handleSave} disabled={isSaving || !labelAr.trim()}>
+            {isSaving ? <Loader2 className="me-1 size-4 animate-spin" /> : <Save className="me-1 size-4" />}
+            {t("admin.saveField", "حفظ الحقل")}
+          </Button>
+        </>
+      ) : null}
+
+      {["select", "condition", "features"].includes(field.field_type) ? (
+        <FieldOptionsEditor field={field} locale={locale} readOnly={readOnly} onChange={onOptionsChange} />
+      ) : null}
+
+      {["switch", "checkbox", "features"].includes(field.field_type) ? (
+        <div className="space-y-1.5">
+          <Label className="text-xs">{t("admin.fieldIcon", "أيقونة العرض")}</Label>
+          <Select
+            value={field.config_json?.icon || "none"}
+            disabled={readOnly}
+            onValueChange={(v) => onIconChange(v === "none" ? "" : v)}
+          >
+            <SelectTrigger className="h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">{t("common.none", "بدون")}</SelectItem>
+              {LUCIDE_ICON_OPTIONS.map((ic) => (
+                <SelectItem key={ic} value={ic}>
+                  <span className="flex items-center gap-2">
+                    <DynamicIcon name={ic} className="size-4" />
+                    {ic}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       ) : null}
     </div>
   )

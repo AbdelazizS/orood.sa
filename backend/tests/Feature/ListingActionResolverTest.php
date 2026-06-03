@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Product;
 use App\Models\SellerPayoutProfile;
 use App\Models\User;
+use App\Services\Finance\FinanceModuleSettings;
 use App\Services\Listings\ListingActionResolver;
 use App\Services\Listings\ListingActivationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -13,6 +14,20 @@ use Tests\TestCase;
 class ListingActionResolverTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        app(FinanceModuleSettings::class)->update([
+            'payments_module' => true,
+            'escrow' => true,
+            'financial_guarantee' => true,
+            'bank_accounts' => true,
+            'cod' => true,
+            'wallet' => true,
+        ]);
+        FinanceModuleSettings::resetCache();
+    }
 
     public function test_awaiting_payment_setup_returns_primary_cta(): void
     {
@@ -30,7 +45,7 @@ class ListingActionResolverTest extends TestCase
         $this->assertTrue($state['blocking']);
         $this->assertNotEmpty($state['available_actions']);
         $this->assertSame('go_to_payment_setup', $state['available_actions'][0]['intent']);
-        $this->assertStringContainsString('/dashboard/payment-setup', $state['available_actions'][0]['href']);
+        $this->assertStringContainsString('/dashboard/account', $state['available_actions'][0]['href']);
     }
 
     public function test_moderation_rejected_returns_edit_action(): void

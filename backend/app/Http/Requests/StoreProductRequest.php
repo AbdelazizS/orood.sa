@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Subcategory;
 use App\Services\Listings\ListingSchemaService;
 use App\Services\Listings\ListingSchemaValidator;
+use App\Services\Listings\SubcategoryPropertyTypeResolver;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -17,11 +18,32 @@ class StoreProductRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $subId = $this->input('subcategory_id');
+        if (! $subId) {
+            return;
+        }
+
+        $sub = Subcategory::query()->find((int) $subId);
+        $propertyType = app(SubcategoryPropertyTypeResolver::class)->resolve($sub);
+        if (! $propertyType) {
+            return;
+        }
+
+        $attrs = $this->input('listing_attributes');
+        if (! is_array($attrs)) {
+            $attrs = [];
+        }
+        if (empty($attrs['property_type'])) {
+            $attrs['property_type'] = $propertyType;
+            $this->merge(['listing_attributes' => $attrs]);
+        }
+    }
+
     public function rules(): array
     {
-        $type = $this->input('type', 'offer');
-
-        $rules = [
+        return [
             'type' => ['required', 'string', Rule::in(['offer', 'request'])],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
@@ -33,6 +55,7 @@ class StoreProductRequest extends FormRequest
             'warranty' => ['nullable', 'string', 'max:50'],
             'category_id' => ['nullable', 'integer', 'exists:categories,id'],
             'subcategory_id' => ['nullable', 'integer', 'exists:subcategories,id'],
+            'subcategory_other' => ['nullable', 'string', 'max:255'],
             'region_id' => ['nullable', 'integer', 'exists:regions,id'],
             'city_id' => ['nullable', 'integer', 'exists:cities,id'],
             'location_lat' => ['nullable', 'numeric', 'between:-90,90'],
@@ -70,12 +93,6 @@ class StoreProductRequest extends FormRequest
             'contact_preferences' => ['nullable', 'array'],
             'shipping_details' => ['nullable', 'array'],
         ];
-
-        if ($type === 'offer') {
-            $rules['image_urls'] = ['required', 'array', 'min:1'];
-        }
-
-        return $rules;
     }
 
     public function withValidator(Validator $validator): void
@@ -93,6 +110,28 @@ class StoreProductRequest extends FormRequest
                 $validator->errors()->add('contact_phone_number', 'Phone number is required when call contact is enabled.');
             }
 
+            $categoryId = (int) $this->input('category_id');
+            $subId = $this->input('subcategory_id');
+            $otherText = trim((string) $this->input('subcategory_other', ''));
+            if ($categoryId > 0 && ! $subId) {
+                $hasSubs = Subcategory::query()
+                    ->where('category_id', $categoryId)
+                    ->where('is_active', true)
+                    ->exists();
+                if ($hasSubs && $otherText === '') {
+                    $validator->errors()->add('subcategory_other', 'Custom subcategory text is required when Other is selected.');
+                }
+            }
+            if ($subId && $otherText !== '') {
+                $validator->errors()->add('subcategory_other', 'Do not send subcategory_other when subcategory_id is set.');
+            }
+            if ($subId) {
+                $subcategory = Subcategory::query()->find((int) $subId);
+                if ($subcategory && ! $subcategory->isLeaf()) {
+                    $validator->errors()->add('subcategory_id', 'Subcategory must be a leaf (no child branches).');
+                }
+            }
+
             $isWholesale = filter_var($this->input('is_wholesale', false), FILTER_VALIDATE_BOOLEAN);
             if ($isWholesale) {
                 if ($this->input('wholesale_price') === null) {
@@ -104,7 +143,6 @@ class StoreProductRequest extends FormRequest
             }
 
             if ($this->usesDynamicListingSchema()) {
-                $category = Category::query()->find((int) $this->input('category_id'));
                 $schemaService = app(ListingSchemaService::class);
                 $schema = $schemaService->resolvePublishedSchema(
                     (int) $this->input('category_id'),
@@ -145,11 +183,17 @@ class StoreProductRequest extends FormRequest
                 if (empty($re['purpose'])) {
                     $validator->errors()->add('real_estate.purpose', 'Purpose (sale or rent) is required for real estate listings.');
                 }
-                if (empty($re['property_type'])) {
+                $derivedType = null;
+                if ($subId) {
+                    $derivedType = app(SubcategoryPropertyTypeResolver::class)->resolve(
+                        Subcategory::query()->find((int) $subId)
+                    );
+                }
+                if (empty($re['property_type']) && ! $derivedType && $otherText === '') {
                     $validator->errors()->add('real_estate.property_type', 'Property type is required for real estate listings.');
                 }
-                $type = $re['property_type'] ?? '';
-                if ($type !== 'land' && empty($re['area_sqm'])) {
+                $type = $re['property_type'] ?? $derivedType ?? '';
+                if ($type !== 'land' && $type !== '' && empty($re['area_sqm'])) {
                     $validator->errors()->add('real_estate.area_sqm', 'Area is required for this property type.');
                 }
                 if ($type === 'land') {
@@ -163,6 +207,10 @@ class StoreProductRequest extends FormRequest
 
     public function usesDynamicListingSchema(): bool
     {
+        if ($this->input('type', 'offer') === 'request') {
+            return false;
+        }
+
         $categoryId = (int) $this->input('category_id');
         if ($categoryId <= 0) {
             return false;

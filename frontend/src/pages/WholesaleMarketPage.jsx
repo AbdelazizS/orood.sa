@@ -298,6 +298,7 @@ export function WholesaleMarketPage() {
         path="/wholesale"
         title={seo?.seo_title ?? t("wholesale.market.title", "سوق الجملة")}
         description={seo?.description}
+        image={seo?.og?.image}
         hreflang={seo?.hreflang}
         jsonLd={wholesaleJsonLd}
         useTitleAsFull={Boolean(seo?.seo_title)}

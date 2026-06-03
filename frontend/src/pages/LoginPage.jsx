@@ -62,6 +62,7 @@ export function LoginPage() {
         path="/login"
         title={seo?.seo_title}
         description={seo?.description}
+        image={seo?.og?.image}
         hreflang={seo?.hreflang}
         robots={seo?.robots ?? "index,follow"}
         useTitleAsFull={Boolean(seo?.seo_title)}

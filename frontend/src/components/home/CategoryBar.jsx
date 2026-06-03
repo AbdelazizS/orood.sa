@@ -14,7 +14,7 @@ export function CategoryBar({ categories = [], isLoading }) {
 
   if (isLoading) {
     return (
-      <div className="border-b border-border bg-background px-4 py-4 sm:px-6">
+      <div className="border-b border-border bg-background px-4 py-4 sm:px-6" data-nosnippet>
         <div className="flex gap-4">
           {[...Array(6)].map((_, i) => (
             <div key={i} className="flex flex-col items-center gap-2 shrink-0">
@@ -30,7 +30,7 @@ export function CategoryBar({ categories = [], isLoading }) {
   if (categories.length === 0) return null
 
   return (
-    <div className="border-b border-border bg-background px-4 py-4 sm:px-6">
+    <div className="border-b border-border bg-background px-4 py-4 sm:px-6" data-nosnippet>
       <div
         ref={scrollRef}
         className="flex gap-3 overflow-x-auto scrollbar-hide py-1 sm:gap-4"

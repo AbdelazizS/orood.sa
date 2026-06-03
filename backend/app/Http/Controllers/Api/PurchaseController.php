@@ -8,6 +8,7 @@ use App\Models\GroupBuyReservation;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\Transaction;
+use App\Services\Finance\FinanceModuleSettings;
 use App\Services\Finance\OrderPaymentOrchestrator;
 use App\Services\Finance\PaymentEligibilityEngine;
 use App\Services\Finance\PhoneNormalizationService;
@@ -28,6 +29,11 @@ class PurchaseController extends Controller
      */
     public function store(Request $request, Product $product): JsonResponse
     {
+        $modules = app(FinanceModuleSettings::class);
+        if (! $modules->isPaymentsModuleEnabled()) {
+            return response()->json(['message' => __('finance.module_disabled')], 403);
+        }
+
         $user = $request->user();
         if ($user->id === $product->user_id) {
             return response()->json(['message' => 'Cannot purchase your own product'], 403);

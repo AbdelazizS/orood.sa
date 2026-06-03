@@ -14,10 +14,13 @@ use App\Models\City;
 use App\Models\Company;
 use App\Services\AdminSettingsService;
 use App\Services\PasswordPolicyService;
+use App\Support\DateTimeFormat;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Password;
@@ -35,33 +38,46 @@ class AuthController extends Controller
     ) {}
 
     /**
-     * Register a new user, send OTP, and return token.
+     * Register a new user (no outbound mail). Email is marked verified so login works without SMTP.
      */
     public function register(RegisterRequest $request): JsonResponse
     {
-        $user = User::create([
-            'name' => $request->validated('name'),
-            'email' => $request->validated('email'),
-            'phone' => $request->validated('phone'),
-            'how_did_you_hear' => $request->validated('how_did_you_hear'),
-            'referred_by_marketer_id' => $request->validated('referred_by_marketer_id'),
-            'password' => $request->validated('password'),
-            'role' => $this->adminSettings->getString(AdminSettingsService::KEY_DEFAULT_USER_ROLE, 'buyer'),
-        ]);
+        try {
+            return DB::transaction(function () use ($request) {
+                $user = User::create([
+                    'name' => $request->validated('name'),
+                    'email' => $request->validated('email'),
+                    'phone' => $request->validated('phone'),
+                    'how_did_you_hear' => $request->validated('how_did_you_hear'),
+                    'referred_by_marketer_id' => $request->validated('referred_by_marketer_id'),
+                    'password' => $request->validated('password'),
+                    'role' => $this->adminSettings->getString(AdminSettingsService::KEY_DEFAULT_USER_ROLE, 'buyer'),
+                    'email_verified_at' => now(),
+                    'is_verified' => true,
+                ]);
 
-        [$verification, $code] = Verification::createForUser($user, 'email');
-        Mail::to($user->email)->send(new OtpVerificationMail($code, $user->name));
+                $token = $this->createToken($user);
+                $user->refresh();
 
-        $token = $this->createToken($user);
+                return response()->json([
+                    'message' => __('auth.registered'),
+                    'user' => $this->userResource($user),
+                    'token' => $token,
+                    'token_type' => 'Bearer',
+                    'expires_at' => DateTimeFormat::toIso8601($user->api_token_expires_at),
+                    'email_verified' => true,
+                    'email_verification_sent' => false,
+                ], 201);
+            });
+        } catch (\Throwable $e) {
+            report($e);
 
-        return response()->json([
-            'message' => __('auth.registered'),
-            'user' => $this->userResource($user),
-            'token' => $token,
-            'token_type' => 'Bearer',
-            'expires_at' => $user->api_token_expires_at?->toIso8601String(),
-            'email_verified' => false,
-        ], 201);
+            return response()->json([
+                'message' => app()->hasDebugModeEnabled()
+                    ? $e->getMessage()
+                    : __('auth.register_failed'),
+            ], 500);
+        }
     }
 
     /**
@@ -143,14 +159,16 @@ class AuthController extends Controller
             ]);
         }
 
-        RateLimiter::hit($key, self::OTP_RATE_DECAY);
-
         [$verification, $code] = Verification::createForUser($user, 'email');
-        Mail::to($user->email)->send(new OtpVerificationMail($code, $user->name));
+        $sent = $this->sendOtpEmail($user->email, $code, $user->name);
+        if ($sent) {
+            RateLimiter::hit($key, self::OTP_RATE_DECAY);
+        }
 
         return response()->json([
-            'message' => __('auth.otp_sent'),
+            'message' => $sent ? __('auth.otp_sent') : __('auth.otp_resend_email_not_sent'),
             'resend_available_in' => 60, // seconds until resend allowed
+            'email_verification_sent' => $sent,
         ]);
     }
 
@@ -172,7 +190,7 @@ class AuthController extends Controller
                 'user' => $this->userResource($user),
                 'token' => $token,
                 'token_type' => 'Bearer',
-                'expires_at' => $user->api_token_expires_at?->toIso8601String(),
+                'expires_at' => DateTimeFormat::toIso8601($user->api_token_expires_at),
                 'email_verified' => true,
             ]);
         }
@@ -200,7 +218,7 @@ class AuthController extends Controller
             'user' => $this->userResource($user),
             'token' => $token,
             'token_type' => 'Bearer',
-            'expires_at' => $user->api_token_expires_at?->toIso8601String(),
+            'expires_at' => DateTimeFormat::toIso8601($user->api_token_expires_at),
             'email_verified' => true,
         ]);
     }
@@ -236,7 +254,7 @@ class AuthController extends Controller
             'user' => $this->userResource($user),
             'token' => $token,
             'token_type' => 'Bearer',
-            'expires_at' => $user->api_token_expires_at?->toIso8601String(),
+            'expires_at' => DateTimeFormat::toIso8601($user->api_token_expires_at),
         ]);
     }
 
@@ -328,13 +346,20 @@ class AuthController extends Controller
                 'email' => [__('auth.otp_rate_limit')],
             ]);
         }
-        RateLimiter::hit($key, self::OTP_RATE_DECAY);
 
         $user->update(['pending_email' => $validated['email']]);
 
         Verification::where('user_id', $user->id)->where('type', 'email_change')->delete();
         [, $code] = Verification::createForUser($user, 'email_change', 30);
-        Mail::to($validated['email'])->send(new OtpVerificationMail($code, $user->name));
+        $sent = $this->sendOtpEmail($validated['email'], $code, $user->name);
+        if (! $sent) {
+            $user->update(['pending_email' => null]);
+            Verification::where('user_id', $user->id)->where('type', 'email_change')->delete();
+
+            return response()->json(['message' => __('auth.otp_resend_email_not_sent')], 422);
+        }
+
+        RateLimiter::hit($key, self::OTP_RATE_DECAY);
 
         return response()->json([
             'message' => __('auth.change_email_otp_sent'),
@@ -432,6 +457,24 @@ class AuthController extends Controller
         return $token;
     }
 
+    /** Send OTP email; returns false on transport/config failure (does not throw). */
+    private function sendOtpEmail(string $to, string $code, string $userName): bool
+    {
+        try {
+            Mail::to($to)->send(new OtpVerificationMail($code, $userName));
+
+            return true;
+        } catch (\Throwable $e) {
+            report($e);
+            Log::warning('OTP email send failed', [
+                'to' => $to,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
     private function revokeToken(User $user): void
     {
         $user->forceFill([
@@ -481,9 +524,9 @@ class AuthController extends Controller
             'location_lng' => $user->location_lng !== null ? (float) $user->location_lng : null,
             'location_address' => $user->location_address,
             'is_verified' => (bool) $user->is_verified,
-            'email_verified_at' => $user->email_verified_at?->toIso8601String(),
+            'email_verified_at' => DateTimeFormat::toIso8601($user->email_verified_at),
             'email_verified' => (bool) $user->email_verified_at,
-            'created_at' => $user->created_at?->toIso8601String(),
+            'created_at' => DateTimeFormat::toIso8601($user->created_at),
             'permissions' => $permissions,
             'assistant' => $assistantPayload,
             'company_verification_status' => $user->company_verification_status ?? 'none',

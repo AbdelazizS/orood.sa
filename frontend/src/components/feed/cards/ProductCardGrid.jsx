@@ -1,13 +1,13 @@
 ﻿import { Link, useLocation } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
-import { MapPin, Package, ShoppingBag } from "lucide-react"
+import { MapPin, ShoppingBag } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { cn } from "@/lib/utils"
 import { ProductImage } from "@/components/ui/ProductImage"
 
-const formatPrice = (price, t) => {
-  if (price === null || price === undefined) return t("feed.priceOnRequest")
+const formatPrice = (price) => {
+  if (price === null || price === undefined) return null
   return new Intl.NumberFormat("ar-SA", {
     style: "currency",
     currency: "SAR",
@@ -16,8 +16,7 @@ const formatPrice = (price, t) => {
 }
 
 /**
- * ProductCardGrid â€” compact vertical card for grid layouts (similar products, etc).
- * Image on top, title, price, location. Hover: scale + shadow.
+ * ProductCardGrid — compact vertical card for grid layouts.
  */
 export function ProductCardGrid({ product, className }) {
   const { t } = useTranslation()
@@ -29,25 +28,26 @@ export function ProductCardGrid({ product, className }) {
   const isUsed = product?.condition === "used"
   const isRequest = product?.type === "request"
   const imageUrl = product?.media?.image_url ?? product?.media?.gallery?.[0]
+  const formattedPrice = formatPrice(product?.price)
 
   return (
-    <Link to={detailTo} className="block h-full" state={{ from }}>
+    <Link to={detailTo} className="block h-full min-w-0" state={{ from }}>
       <Card
         className={cn(
-          "group flex h-full flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all duration-200",
+          "group flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all duration-200",
           "hover:scale-[1.02] hover:shadow-md",
           "focus-within:ring-2 focus-within:ring-primary/20 focus-within:ring-offset-2",
           className
         )}
       >
-        <div className="relative aspect-[4/3] overflow-hidden bg-transparent">
+        <div className="relative aspect-[4/3] shrink-0 overflow-hidden bg-muted/20">
           <ProductImage
             src={imageUrl}
             alt={product?.title ?? ""}
             categorySlug={product?.category?.slug}
-            className="h-full w-full object-contain p-1.5 transition-transform duration-300 group-hover:scale-[1.02]"
+            className="size-full object-contain p-1.5 transition-transform duration-300 group-hover:scale-[1.02]"
           />
-          <div className="absolute start-2 top-2 flex flex-wrap gap-1">
+          <div className="absolute start-2 top-2 flex max-w-[calc(100%-1rem)] flex-wrap gap-1">
             <Badge
               className={cn(
                 "border-0 text-xs font-medium shadow-sm",
@@ -56,7 +56,7 @@ export function ProductCardGrid({ product, className }) {
             >
               {isRequest ? t("feed.request") : t("feed.offer")}
             </Badge>
-            {!isRequest && (
+            {!isRequest ? (
               <Badge
                 variant="secondary"
                 className={cn(
@@ -66,27 +66,28 @@ export function ProductCardGrid({ product, className }) {
               >
                 {isUsed ? t("feed.used") : t("feed.new")}
               </Badge>
-            )}
+            ) : null}
           </div>
         </div>
-        <div className="flex min-h-[120px] flex-1 flex-col justify-between space-y-2 p-3">
-          <h3 className="line-clamp-2 text-sm font-semibold leading-tight">
+
+        <div className="flex min-h-0 flex-1 flex-col gap-2 p-3">
+          <h3 className="line-clamp-2 min-h-0 text-sm font-semibold leading-snug">
             {product?.title}
           </h3>
-          <p className="flex items-center gap-1.5 text-base font-bold text-primary">
-            <ShoppingBag className="size-4 shrink-0" />
-            {formatPrice(product?.price, t)}
-          </p>
-          <p className="flex min-h-4 items-center gap-1.5 truncate text-xs text-muted-foreground">
-            {product?.location ? (
-              <>
-                <MapPin className="size-3.5 shrink-0" />
-                <span className="truncate">{product.location}</span>
-              </>
-            ) : (
-              <span className="invisible">.</span>
-            )}
-          </p>
+
+          {formattedPrice != null ? (
+            <p className="flex min-w-0 items-center gap-1.5 truncate text-base font-bold text-primary">
+              <ShoppingBag className="size-4 shrink-0" />
+              <span className="truncate">{formattedPrice}</span>
+            </p>
+          ) : null}
+
+          {product?.location ? (
+            <p className="mt-auto flex min-w-0 items-center gap-1.5 truncate text-xs text-muted-foreground">
+              <MapPin className="size-3.5 shrink-0" />
+              <span className="truncate">{product.location}</span>
+            </p>
+          ) : null}
         </div>
       </Card>
     </Link>

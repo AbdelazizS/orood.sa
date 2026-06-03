@@ -74,14 +74,24 @@ export function isMemberNavItemActive(item, location) {
 
 /**
  * @param {object | null} user
+ * @param {{ financeModules?: object }} [options]
  * @returns {MemberNavSection[]}
  */
-export function getMemberDashboardNavSections(user) {
+export function getMemberDashboardNavSections(user, options = {}) {
+  const modules = options.financeModules ?? {}
+  const walletVisible = modules.payments_module && modules.wallet
+
   /** @type {MemberNavItem[]} */
   const primary = [
     { id: "overview", to: "/dashboard", labelKey: "dashboard.overview", icon: LayoutDashboard },
     { id: "orders", to: "/dashboard/orders", labelKey: "dashboard.nav.orderCenter", icon: Package },
-    { id: "wallet", to: "/dashboard/wallet", labelKey: "dashboard.nav.wallet", icon: Wallet },
+    {
+      id: "wallet",
+      to: "/dashboard/wallet",
+      labelKey: "dashboard.nav.wallet",
+      icon: Wallet,
+      visible: () => walletVisible,
+    },
     { id: "messages", to: "/dashboard/messages", labelKey: "dashboard.nav.inbox", icon: MessageSquare },
     { id: "account", to: "/dashboard/account", labelKey: "dashboard.nav.account", icon: UserCircle },
     { id: "listings", to: "/dashboard/listings", labelKey: "dashboard.nav.listings", icon: Megaphone },
@@ -102,7 +112,8 @@ export function getMemberDashboardNavSections(user) {
 /**
  * Flat list for legacy consumers (e.g. account drawer menu).
  * @param {object | null} user
+ * @param {{ financeModules?: object }} [options]
  */
-export function getMemberDashboardNavFlat(user) {
-  return getMemberDashboardNavSections(user).flatMap((s) => s.items)
+export function getMemberDashboardNavFlat(user, options = {}) {
+  return getMemberDashboardNavSections(user, options).flatMap((s) => s.items)
 }

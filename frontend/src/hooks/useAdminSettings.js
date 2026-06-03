@@ -9,6 +9,7 @@ import {
   updatePaymentSettings,
   updateContactSettings,
 } from "@/services/adminSettingsService"
+import { FINANCE_MODULES_QUERY_KEY } from "@/hooks/useFinanceModules"
 
 export function useAdminSettings() {
   return useQuery({
@@ -32,6 +33,9 @@ function makeSectionMutation(key, fn) {
         }
         if (key === "wholesale_market_page") {
           queryClient.invalidateQueries({ queryKey: ["wholesale", "page-settings"] })
+        }
+        if (key === "payments") {
+          queryClient.invalidateQueries({ queryKey: FINANCE_MODULES_QUERY_KEY })
         }
       },
     })

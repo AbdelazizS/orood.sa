@@ -173,22 +173,16 @@ export function ListingDetailHarajHeader({ product }) {
                 </span>
               </div>
             ) : null}
-            <div>
-              {hasPrice ? (
+            {hasPrice ? (
+              <div>
                 <span className="text-base font-bold tabular-nums text-foreground sm:text-lg">
                   {formatPrice(price)}
                 </span>
-              ) : (
-                <span className="text-sm font-medium text-muted-foreground">
-                  {t("listingDetail.priceNotSet", "السعر غير محدد")}
-                </span>
-              )}
-              {hasPrice ? (
                 <span className="mt-0.5 hidden text-[11px] text-muted-foreground md:block">
                   {t("listingDetail.priceCaption", "(السعر)")}
                 </span>
-              ) : null}
-            </div>
+              </div>
+            ) : null}
           </div>
           {statsInline}
         </div>

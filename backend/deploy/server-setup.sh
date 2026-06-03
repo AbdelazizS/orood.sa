@@ -55,10 +55,19 @@ echo "==> Frontend build"
 cd "${APP_ROOT}/frontend"
 if [[ ! -f .env.production ]]; then
   cp .env.production.example .env.production
-  echo "!! Edit ${APP_ROOT}/frontend/.env.production if needed"
+fi
+# Never build with localhost API in production
+if grep -q 'localhost' .env.production 2>/dev/null; then
+  sed -i 's|^VITE_API_URL=.*|VITE_API_URL=|' .env.production
+  grep -q '^VITE_SITE_URL=' .env.production || echo 'VITE_SITE_URL=https://www.arooth.com' >> .env.production
+  echo "!! Fixed VITE_API_URL in .env.production (use empty for same-host /api/v1)"
 fi
 npm ci
 npm run build
+if grep -rq 'localhost:8000' dist/assets/ 2>/dev/null; then
+  echo "ERROR: frontend dist still references localhost — fix .env.production and rebuild"
+  exit 1
+fi
 
 echo "==> Nginx"
 cp "${APP_ROOT}/backend/deploy/nginx/arooth.conf" /etc/nginx/sites-available/arooth

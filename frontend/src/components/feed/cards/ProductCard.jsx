@@ -2,23 +2,27 @@ import { Link } from "react-router-dom"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { ProductImage } from "@/components/ui/ProductImage"
-import { Eye, MapPin, MessageCircle, Package, Clock } from "lucide-react"
+import { Eye, MapPin, MessageCircle, Clock } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { formatDistanceToNow } from "date-fns"
 import { ar, enUS } from "date-fns/locale"
 
-/** Canonical row height â€” keep in sync with FeedSkeleton */
+/** Fixed row height — keep in sync with FeedSkeleton */
 export const PRODUCT_CARD_ROW_HEIGHT = "h-[136px] sm:h-[140px]"
 
-/** Wholesale list row â€” taller than homepage default so progress + dual price + qty stepper fit */
+/** Wholesale list row — taller than homepage default */
 export const WHOLESALE_LIST_ROW_HEIGHT = "min-h-[168px] sm:min-h-[188px]"
 
-/** Wholesale list thumb â€” fluid on narrow screens, fixed from `sm` up (avoids horizontal overflow) */
-export const WHOLESALE_LIST_THUMB_WIDTH =
-  "w-[clamp(6.25rem,34vw,10.5rem)] max-w-[42%] shrink-0 sm:max-w-none sm:w-[11.5rem]"
+/** Default list thumb — full row height, fluid width on mobile */
+export const PRODUCT_CARD_THUMB_CLASS =
+  "h-full w-[clamp(5.5rem,32vw,8.75rem)] max-w-[38%] shrink-0 self-stretch sm:max-w-none sm:w-[140px] md:w-[160px]"
 
-const formatPrice = (price, t) => {
-  if (price === null || price === undefined) return t("feed.priceOnRequest")
+/** Wholesale list thumb */
+export const WHOLESALE_LIST_THUMB_WIDTH =
+  "h-full w-[clamp(6.25rem,34vw,10.5rem)] max-w-[42%] shrink-0 self-stretch sm:max-w-none sm:w-[11.5rem]"
+
+const formatPrice = (price) => {
+  if (price === null || price === undefined) return null
   return new Intl.NumberFormat("ar-SA", {
     style: "currency",
     currency: "SAR",
@@ -27,19 +31,13 @@ const formatPrice = (price, t) => {
 }
 
 /**
- * Listing card â€” Haraj-style horizontal layout. Fixed height everywhere (feed + sidebar).
- * compact: same design, less data (title + price only, no seller/location/stats).
- * narrow: denser type/padding for narrow columns (e.g. similar products); same fixed height.
- *
- * Optional slots (wholesale / extensions): `to`, `pillEndSlot`, `preMetaSlot`, `priceSlot`, `trailingSlot`, `articleClassName`.
- * `thumbnailCover` â€” fill the fixed-width thumb strip (object-cover, no inner padding); matches wholesale grid tiles when list rows grow taller than the default row height.
- * `thumbnailColumnClassName` â€” override thumb column width (e.g. wholesale `WHOLESALE_LIST_THUMB_WIDTH`).
- * `stackTrailingBelowOnNarrow` â€” when `trailingSlot` is set, stack CTA full-width under the row on small screens (wholesale list).
+ * Listing card — Haraj-style horizontal layout. Fixed height everywhere (feed + sidebar).
  */
 export function ProductCard({
   product,
   compact,
   narrow,
+  overlayAction = false,
   to,
   pillEndSlot = null,
   preMetaSlot = null,
@@ -57,11 +55,14 @@ export function ProductCard({
   const wantsCompanyTile = Boolean(companyBranding?.name || product.seller?.is_company)
   const isCompany = wantsCompanyTile && !hasListingImage
   const locale = i18n.language === "ar" ? ar : enUS
+  const hasPreMeta = Boolean(preMetaSlot)
+  const formattedPrice = formatPrice(product.price)
+  const showPrice = Boolean(priceSlot || formattedPrice != null)
 
   const publishedAt = product.published_at ? new Date(product.published_at) : null
   const timeAgo = publishedAt
     ? formatDistanceToNow(publishedAt, { addSuffix: true, locale })
-    : "â€”"
+    : "—"
 
   const imageCount = compact ? 0 : (product.media?.gallery?.length ?? (product.media?.image_url ? 1 : 0))
 
@@ -69,94 +70,137 @@ export function ProductCard({
     to ??
     (product?.is_wholesale ? `/wholesale/product/${product.id}` : `/products/${product.id}`)
 
+  const textPad = cn(
+    "px-3 py-3 sm:px-4 md:px-5",
+    narrow && "px-2.5 sm:px-3"
+  )
+
   const textColumn = (
     <div
       className={cn(
-        "flex h-full min-w-0 flex-1 flex-col justify-between py-3 text-start",
-        narrow ? "px-3" : "px-4 sm:px-5"
+        "flex h-full min-w-0 flex-1 flex-col overflow-hidden text-start",
+        textPad,
+        compact ? "justify-center gap-1.5" : "justify-between gap-2"
       )}
     >
-      <div className="flex min-h-0 flex-1 flex-col gap-1">
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
+      {!compact ? (
+        <div
+          className={cn(
+            "flex shrink-0 items-center justify-between gap-2",
+            overlayAction && "pe-8"
+          )}
+        >
           <span
             className={cn(
-              "font-medium px-1.5 py-0.5 rounded shrink-0 text-muted-foreground bg-muted/60",
-              narrow ? "text-[10px]" : "text-[11px]",
+              "shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground bg-muted/60",
               isRequest && "bg-blue-500/10 text-blue-600 dark:text-blue-400"
             )}
           >
             {isRequest ? t("feed.request") : t("feed.offer")}
           </span>
-          {pillEndSlot ? <div className="flex min-w-0 shrink flex-wrap items-center justify-end gap-1.5">{pillEndSlot}</div> : null}
+          {pillEndSlot ? (
+            <div className="flex min-w-0 max-w-[50%] shrink flex-wrap items-center justify-end gap-1">
+              {pillEndSlot}
+            </div>
+          ) : null}
         </div>
+      ) : null}
+
+      <div
+        className={cn(
+          "flex min-h-0 flex-1 flex-col justify-center gap-1 overflow-hidden",
+          compact && "flex-none justify-start"
+        )}
+      >
         <h3
           className={cn(
-            "min-h-0 shrink font-semibold leading-snug text-foreground hover:underline line-clamp-2",
-            compact ? "text-sm" : narrow ? "text-sm sm:text-[15px]" : "text-base sm:text-[17px]"
+            "min-w-0 font-semibold leading-snug text-foreground hover:underline",
+            compact
+              ? "line-clamp-2 text-sm"
+              : cn(
+                  hasPreMeta || narrow ? "line-clamp-1" : "line-clamp-2",
+                  narrow ? "text-sm sm:text-[15px]" : "text-sm sm:text-base md:text-[17px]"
+                )
           )}
         >
           {product.title}
         </h3>
-        {preMetaSlot ? <div className="min-h-0 shrink">{preMetaSlot}</div> : null}
-        {!compact && (
+
+        {preMetaSlot ? (
+          <div className="min-w-0 overflow-hidden [&_*]:truncate [&_p]:line-clamp-1">
+            {preMetaSlot}
+          </div>
+        ) : null}
+
+        {!compact ? (
           <div
             className={cn(
-              "mt-auto flex min-h-0 min-w-0 flex-wrap items-center gap-x-3 gap-y-1 overflow-visible text-muted-foreground sm:flex-nowrap sm:gap-y-0 sm:overflow-hidden sm:whitespace-nowrap",
-              narrow ? "gap-x-2 text-[11px] sm:text-xs" : "text-sm"
+              "flex min-w-0 items-center gap-x-2 overflow-hidden text-muted-foreground",
+              narrow ? "gap-x-1.5 text-[11px] sm:text-xs" : "text-[11px] sm:text-xs md:text-sm"
             )}
           >
-            <span className="flex min-w-0 shrink items-center gap-1">
-              <Avatar className="size-4 shrink-0">
-                <AvatarFallback className="text-[10px] bg-muted text-muted-foreground">
+            <span className="flex min-w-0 max-w-[40%] shrink items-center gap-1">
+              <Avatar className="size-3.5 shrink-0 sm:size-4">
+                <AvatarFallback className="bg-muted text-[9px] text-muted-foreground sm:text-[10px]">
                   {product.seller?.name?.charAt(0) ?? "?"}
                 </AvatarFallback>
               </Avatar>
-              <span className="truncate">{product.seller?.name ?? "â€”"}</span>
+              <span className="truncate">{product.seller?.name ?? "—"}</span>
             </span>
-            {product.location && (
-              <span className="flex min-w-0 shrink items-center gap-1">
+            {product.location ? (
+              <span className="hidden min-w-0 shrink items-center gap-1 sm:flex sm:max-w-[32%]">
                 <MapPin className="size-3 shrink-0" />
                 <span className="truncate">{product.location}</span>
               </span>
-            )}
-            <span className="flex shrink-0 items-center gap-1">
-              <Clock className="size-3 shrink-0" />
-              <span className={narrow ? "max-w-[5.5rem] truncate sm:max-w-[7rem]" : ""}>{timeAgo}</span>
-            </span>
-            <span className="flex shrink-0 items-center gap-1">
-              <MessageCircle className="size-3 shrink-0" />
-              {product.stats?.messages ?? product.stats?.comments ?? 0}
-            </span>
-            <span className="flex shrink-0 items-center gap-1">
-              <Eye className="size-3 shrink-0" />
-              {product.stats?.views ?? 0}
+            ) : null}
+            <span className="flex min-w-0 flex-1 items-center justify-end gap-x-2 overflow-hidden">
+              <span className="inline-flex shrink-0 items-center gap-1">
+                <Clock className="size-3 shrink-0" />
+                <span className="max-w-[5rem] truncate sm:max-w-[7rem]">{timeAgo}</span>
+              </span>
+              <span className="hidden shrink-0 items-center gap-1 sm:inline-flex">
+                <MessageCircle className="size-3 shrink-0" />
+                {product.stats?.messages ?? product.stats?.comments ?? 0}
+              </span>
+              <span className="hidden shrink-0 items-center gap-1 md:inline-flex">
+                <Eye className="size-3 shrink-0" />
+                {product.stats?.views ?? 0}
+              </span>
             </span>
           </div>
-        )}
+        ) : null}
       </div>
-      <div className="mt-1 flex shrink-0 items-center gap-2">
-        <div className="min-w-0 flex-1">
+
+      {showPrice ? (
+        <div className="shrink-0 overflow-hidden">
           {priceSlot ?? (
-            <span className={cn("font-medium text-foreground", narrow ? "text-sm sm:text-base" : "text-base")}>
-              {formatPrice(product.price, t)}
+            <span
+              className={cn(
+                "block truncate font-medium tabular-nums leading-none text-foreground",
+                narrow ? "text-sm sm:text-base" : "text-sm sm:text-base"
+              )}
+            >
+              {formattedPrice}
             </span>
           )}
         </div>
-      </div>
+      ) : null}
     </div>
   )
 
+  const useCover = thumbnailCover || hasListingImage
+
   const imageColumn = (
-    <div className={cn("h-full shrink-0", thumbnailColumnClassName ?? "w-[140px] sm:w-[160px]")}>
+    <div className={cn(thumbnailColumnClassName ?? PRODUCT_CARD_THUMB_CLASS)}>
       {isCompany ? (
-        <div className="flex items-center justify-center size-full bg-primary/10 text-primary font-bold text-sm text-center leading-tight p-2 rounded-none">
-          {product.company?.name ?? t("feed.companyPlaceholder", "Ù…Ù†ÙØ°")}
+        <div className="flex size-full items-center justify-center bg-primary/10 p-2 text-center text-sm font-bold leading-tight text-primary">
+          {product.company?.name ?? t("feed.companyPlaceholder", "منفذ")}
         </div>
       ) : (
         <div
           className={cn(
             "relative size-full overflow-hidden",
-            thumbnailCover ? "bg-muted/25 dark:bg-muted/15" : "bg-transparent"
+            useCover ? "bg-muted/20 dark:bg-muted/10" : "bg-transparent"
           )}
         >
           {product.media?.image_url ? (
@@ -167,23 +211,23 @@ export function ProductCard({
                 categorySlug={product.category?.slug}
                 className={cn(
                   "size-full",
-                  thumbnailCover
-                    ? "object-cover object-center p-0"
-                    : "object-contain p-1 sm:p-1.5"
+                  useCover
+                    ? "object-cover object-center"
+                    : "object-contain object-center p-1 sm:p-1.5"
                 )}
               />
-              {!compact && imageCount > 1 && (
-                <span className="absolute top-1 end-1 text-[10px] text-muted-foreground/90 bg-background/70 px-1 rounded">
-                  {imageCount} {t("feed.images", "ØµÙˆØ±")}
+              {!compact && imageCount > 1 ? (
+                <span className="absolute end-1 top-1 rounded bg-background/80 px-1 text-[10px] text-muted-foreground">
+                  {imageCount} {t("feed.images", "صور")}
                 </span>
-              )}
+              ) : null}
             </>
           ) : (
             <ProductImage
               src={null}
               alt={product.title}
               categorySlug={product.category?.slug}
-              className="size-full"
+              className="size-full object-contain"
             />
           )}
         </div>
@@ -191,28 +235,32 @@ export function ProductCard({
     </div>
   )
 
-  const linkClass = "flex min-h-0 min-w-0 flex-1 items-stretch gap-0 overflow-hidden outline-none transition-colors hover:bg-muted/50"
+  const linkClass =
+    "flex h-full min-h-0 min-w-0 flex-1 items-stretch overflow-hidden outline-none transition-colors hover:bg-muted/50"
 
   return (
     <article
       className={cn(
-        "flex w-full min-w-0 items-stretch gap-0 overflow-hidden border-b border-border bg-card transition-colors hover:bg-muted/50",
+        "flex w-full min-w-0 items-stretch overflow-hidden border-b border-border bg-card transition-colors hover:bg-muted/50",
         articleClassName ?? PRODUCT_CARD_ROW_HEIGHT,
         trailingSlot && stackTrailingBelowOnNarrow && "max-sm:flex-col max-sm:min-h-0 sm:flex-row"
       )}
     >
       {trailingSlot ? (
         <>
-          <Link to={href} className={cn(linkClass, stackTrailingBelowOnNarrow && "max-sm:min-h-[140px]")}>
+          <Link
+            to={href}
+            className={cn(linkClass, stackTrailingBelowOnNarrow && "max-sm:h-[136px] sm:h-full")}
+          >
             {imageColumn}
             {textColumn}
           </Link>
           <div
             className={cn(
-              "flex min-w-0 shrink flex-col items-stretch justify-center gap-1.5 border-border/60 px-2 py-2",
+              "flex min-w-0 shrink flex-col items-stretch justify-center gap-1.5 self-stretch border-border/60 px-2 py-3",
               stackTrailingBelowOnNarrow
-                ? "max-sm:w-full max-sm:max-w-none max-sm:border-s-0 max-sm:border-t max-sm:px-3 max-sm:py-3 sm:max-w-none sm:min-w-[7.5rem] sm:border-s sm:px-3 md:min-w-[8.5rem]"
-                : "max-w-[38%] border-s px-1.5 sm:max-w-none sm:min-w-[7rem] sm:shrink-0 sm:px-3 md:min-w-[7.5rem]"
+                ? "max-sm:w-full max-sm:max-w-none max-sm:border-s-0 max-sm:border-t max-sm:px-3 sm:min-w-[7.5rem] sm:border-s sm:px-3 md:min-w-[8.5rem]"
+                : "max-w-[38%] border-s px-2 sm:max-w-none sm:min-w-[7rem] sm:shrink-0 sm:px-3 md:min-w-[7.5rem]"
             )}
           >
             {trailingSlot}

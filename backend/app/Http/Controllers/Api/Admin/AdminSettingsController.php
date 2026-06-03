@@ -123,6 +123,13 @@ class AdminSettingsController extends Controller
     public function updatePayments(Request $request): JsonResponse
     {
         $validated = $request->validate([
+            'finance_modules' => ['sometimes', 'array'],
+            'finance_modules.payments_module' => ['sometimes', 'boolean'],
+            'finance_modules.escrow' => ['sometimes', 'boolean'],
+            'finance_modules.financial_guarantee' => ['sometimes', 'boolean'],
+            'finance_modules.bank_accounts' => ['sometimes', 'boolean'],
+            'finance_modules.cod' => ['sometimes', 'boolean'],
+            'finance_modules.wallet' => ['sometimes', 'boolean'],
             'payment_methods' => ['sometimes', 'array'],
             'payment_methods.*.id' => ['required', 'integer', 'exists:payment_methods,id'],
             'payment_methods.*.enabled' => ['sometimes', 'boolean'],

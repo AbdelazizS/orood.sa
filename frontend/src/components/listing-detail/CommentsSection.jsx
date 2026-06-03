@@ -163,7 +163,7 @@ export function CommentsSection({ product }) {
   return (
     <>
       <div dir={direction} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 sm:px-6">
-        <h3 className="text-sm font-semibold text-foreground">
+        <h3 className="text-base font-bold text-foreground">
           {t("comments.title", "التعليقات")}
         </h3>
         {!isOwner ? (
@@ -234,7 +234,7 @@ export function CommentsSection({ product }) {
                 dir={direction}
                 className="flex items-start gap-3 px-4 py-3 sm:px-6"
               >
-                <Avatar className="size-8 shrink-0">
+                <Avatar className="size-9 shrink-0 sm:size-10">
                   {item.user?.avatar_url ? (
                     <img
                       src={resolveImageUrl(item.user.avatar_url)}
@@ -248,7 +248,7 @@ export function CommentsSection({ product }) {
                 </Avatar>
                 <div className="min-w-0 flex-1 text-start">
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0">
-                    <span className="text-sm font-semibold">{getDisplayName(item.user)}</span>
+                    <span className="text-base font-semibold">{getDisplayName(item.user)}</span>
                     <span className="text-xs text-muted-foreground">
                       {timeAgo(item.created_at, t)}
                     </span>
@@ -265,7 +265,7 @@ export function CommentsSection({ product }) {
                         onChange={(e) => setEditingText(e.target.value)}
                         rows={3}
                         dir={direction}
-                        className="resize-none text-sm"
+                        className="resize-none text-base"
                       />
                       <div className="flex gap-2 rtl:flex-row-reverse">
                         <Button
@@ -290,7 +290,7 @@ export function CommentsSection({ product }) {
                       </div>
                     </div>
                   ) : (
-                    <p className="mt-1 text-sm leading-relaxed text-foreground">{item.body}</p>
+                    <p className="mt-1 text-base leading-loose text-foreground">{item.body}</p>
                   )}
                   {Array.isArray(item.replies) && item.replies.length > 0 && (
                     <div className="mt-2 space-y-2">
@@ -301,7 +301,7 @@ export function CommentsSection({ product }) {
                               ? t("comments.team", "فريق المنصة")
                               : getDisplayName(r.user)}
                           </p>
-                          <p className="mt-0.5 text-sm text-foreground">{r.body}</p>
+                          <p className="mt-0.5 text-base leading-loose text-foreground">{r.body}</p>
                         </div>
                       ))}
                     </div>
@@ -334,7 +334,7 @@ export function CommentsSection({ product }) {
                         onChange={(e) => setReplyText(e.target.value)}
                         rows={2}
                         dir={direction}
-                        className="resize-none text-sm"
+                        className="resize-none text-base"
                         placeholder={t("comments.replyingTo", "الرد على تعليق")}
                       />
                       <div className="flex gap-2 rtl:flex-row-reverse">
@@ -425,7 +425,7 @@ export function CommentsSection({ product }) {
             onChange={(e) => setCommentText(e.target.value)}
             rows={3}
             dir={direction}
-            className="resize-none text-sm"
+            className="resize-none text-base min-h-[88px]"
           />
           <Button
             className="w-full"

@@ -28,9 +28,12 @@ import { SellerBankDetailsCard } from "@/components/finance/SellerBankDetailsCar
 import { mapFinanceApiErrors, validateDynamicFormFields } from "@/lib/finance/dynamicFieldErrors"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useAuthStore } from "@/store/useAuthStore"
-import { ShoppingCart, Loader2, Wallet, Package, Shield, Landmark } from "lucide-react"
+import { ShoppingCart, Loader2, Wallet, Package, Shield, Landmark, MessageSquare, ArrowLeft, Info } from "lucide-react"
 import { resolveImageUrl } from "@/lib/imageUrl"
 import { toast } from "sonner"
+import { useFinanceModules, isPaymentsUiVisible } from "@/hooks/useFinanceModules"
+import { useAppDirection } from "@/providers/DirectionProvider"
+import { publicProfilePath } from "@/lib/profileRoutes"
 import {
   getPurchaseFieldErrors,
   normalizeSaudiPhone,
@@ -73,12 +76,124 @@ const PAYMENT_UI = {
   },
 }
 
+function PurchasePageShell({ title, onBack, sidebar, children }) {
+  const { t } = useTranslation()
+  const { direction } = useAppDirection()
+
+  return (
+    <div dir={direction} className="min-h-screen bg-background">
+      <main className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 pb-24 pt-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] xl:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
+        <article className="min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+          <div className="flex items-center border-b border-border px-2 py-2 sm:px-4">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="gap-2 min-h-[44px] text-base"
+              onClick={onBack}
+            >
+              <ArrowLeft className="size-5 rtl:rotate-180" aria-hidden />
+              {t("common.back", "رجوع")}
+            </Button>
+          </div>
+          <div className="border-b border-border px-4 py-4 sm:px-6">
+            <h1 className="flex items-center gap-2 text-xl font-bold sm:text-2xl">
+              <ShoppingCart className="size-6 shrink-0 sm:size-7" aria-hidden />
+              {title}
+            </h1>
+          </div>
+          <div className="p-4 sm:p-6">{children}</div>
+        </article>
+        {sidebar ? (
+          <aside className="min-w-0 lg:sticky lg:top-24 lg:self-start">{sidebar}</aside>
+        ) : null}
+      </main>
+    </div>
+  )
+}
+
+function PurchaseProductSidebar({ product, listingId, t, children }) {
+  const imageUrl =
+    product?.media?.image_url ?? product?.media?.cover ?? product?.media?.gallery?.[0]
+  const sellerProfile = publicProfilePath(product?.seller)
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+      <div className="space-y-4 p-4 sm:p-5">
+        {imageUrl ? (
+          <div className="aspect-[4/3] overflow-hidden rounded-lg border border-border bg-muted">
+            <img
+              src={resolveImageUrl(imageUrl)}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          </div>
+        ) : null}
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold leading-snug">{product?.title}</h2>
+          <p className="mt-2 text-2xl font-bold text-primary">{formatPrice(product?.price, t)}</p>
+          {product?.seller?.name ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {t("purchase.sellerLabel", "البائع")}:{" "}
+              {sellerProfile ? (
+                <Link to={sellerProfile} className="font-medium text-primary hover:underline">
+                  {product.seller.name}
+                </Link>
+              ) : (
+                product.seller.name
+              )}
+            </p>
+          ) : null}
+        </div>
+        {children}
+        <Button variant="outline" className="w-full" asChild>
+          <Link to={`/products/${listingId}`}>
+            {t("purchase.viewListing", "عرض الإعلان")}
+          </Link>
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function PurchaseOrderSummaryCard({ product, qty, lineTotal, paymentMethodLabel, t }) {
+  return (
+    <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-2 text-sm">
+      <p className="font-semibold text-base">{t("purchase.orderSummary", "ملخص الطلب")}</p>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-muted-foreground">{t("purchase.unitPrice", "سعر الوحدة")}</span>
+        <span className="font-semibold">{formatPrice(product?.price, t)}</span>
+      </div>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-muted-foreground">{t("purchase.quantity", "الكمية")}</span>
+        <span className="font-semibold tabular-nums">× {qty}</span>
+      </div>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-muted-foreground">{t("purchase.lineSubtotal", "المجموع الفرعي")}</span>
+        <span className="font-semibold">{formatPrice(lineTotal, t)}</span>
+      </div>
+      {paymentMethodLabel ? (
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-muted-foreground">{t("purchase.selectedPayment", "طريقة الدفع المختارة")}</span>
+          <span className="font-semibold text-end">{paymentMethodLabel}</span>
+        </div>
+      ) : null}
+      <div className="flex items-center justify-between gap-3 border-t border-border pt-2 text-base">
+        <span className="font-semibold">{t("purchase.invoiceTotal", "إجمالي الفاتورة")}</span>
+        <span className="font-bold text-primary">{formatPrice(lineTotal, t)}</span>
+      </div>
+    </div>
+  )
+}
+
 export function PurchasePage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { t, i18n } = useTranslation()
   const { user, token } = useAuthStore()
+  const { data: financeModules, isLoading: modulesLoading } = useFinanceModules()
+  const paymentsEnabled = isPaymentsUiVisible(financeModules)
 
   const [paymentMethod, setPaymentMethod] = useState("escrow")
   const [shippingAddress, setShippingAddress] = useState("")
@@ -217,33 +332,43 @@ export function PurchasePage() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-2xl space-y-6 px-4 py-8">
-        <Skeleton className="h-64" />
-      </div>
+      <PurchasePageShell
+        title={t("purchase.title", "اشتر الآن")}
+        onBack={() => navigate(`/products/${id}`)}
+      >
+        <Skeleton className="h-64 w-full rounded-lg" />
+        <Skeleton className="mt-4 h-40 w-full rounded-lg" />
+      </PurchasePageShell>
     )
   }
 
   if (isError) {
     return (
-      <div className="mx-auto max-w-2xl space-y-4 px-4 py-8">
+      <PurchasePageShell
+        title={t("purchase.title", "اشتر الآن")}
+        onBack={() => navigate(`/products/${id}`)}
+      >
         <p className="text-sm text-destructive">
           {error?.response?.data?.message ?? t("common.error")}
         </p>
-        <Button variant="outline" onClick={() => navigate(`/products/${id}`)}>
+        <Button variant="outline" className="mt-4" onClick={() => navigate(`/products/${id}`)}>
           {t("common.back")}
         </Button>
-      </div>
+      </PurchasePageShell>
     )
   }
 
   if (!product) {
     return (
-      <div className="mx-auto max-w-2xl space-y-4 px-4 py-8">
+      <PurchasePageShell
+        title={t("purchase.title", "اشتر الآن")}
+        onBack={() => navigate("/")}
+      >
         <p className="text-sm text-muted-foreground">{t("common.noResults")}</p>
-        <Button variant="outline" onClick={() => navigate("/")}>
+        <Button variant="outline" className="mt-4" onClick={() => navigate("/")}>
           {t("common.back")}
         </Button>
-      </div>
+      </PurchasePageShell>
     )
   }
 
@@ -253,6 +378,63 @@ export function PurchasePage() {
 
   if (!hasPrice || !isOffer || isOwner) {
     return <Navigate to={`/products/${id}`} replace />
+  }
+
+  const sellerId = product?.seller?.id
+
+  if (!modulesLoading && !paymentsEnabled) {
+    return (
+      <PurchasePageShell
+        title={t("purchase.title", "اشتر الآن")}
+        onBack={() => navigate(`/products/${id}`)}
+        sidebar={
+          <PurchaseProductSidebar product={product} listingId={id} t={t}>
+            {sellerId ? (
+              <Button asChild className="w-full gap-2" size="lg">
+                <Link to={`/dashboard/messages?with=${sellerId}`}>
+                  <MessageSquare className="size-4" />
+                  {t("bids.messageSeller", "مراسلة البائع")}
+                </Link>
+              </Button>
+            ) : null}
+          </PurchaseProductSidebar>
+        }
+      >
+        <div className="space-y-6">
+          <div className="flex gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4 sm:p-5">
+            <Info className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
+            <p className="text-sm leading-relaxed text-foreground/90 sm:text-base">
+              {t("finance.modules.paymentsDisabledMessage")}
+            </p>
+          </div>
+
+          <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-4 sm:p-5">
+            <h2 className="text-base font-semibold sm:text-lg">
+              {t("purchase.messagesOnlyHowTitle", "كيف تكمل الصفقة؟")}
+            </h2>
+            <ol className="list-decimal space-y-2 ps-5 text-sm leading-relaxed text-muted-foreground sm:text-base">
+              <li>{t("purchase.messagesOnlyStep1", "اضغط «مراسلة البائع» وافتح محادثة خاصة.")}</li>
+              <li>{t("purchase.messagesOnlyStep2", "اتفق مع البائع على السعر وطريقة الدفع والتسليم.")}</li>
+              <li>{t("purchase.messagesOnlyStep3", "لا تشارك بيانات حساسة إلا بعد التأكد من موثوقية الطرف الآخر.")}</li>
+            </ol>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            {sellerId ? (
+              <Button asChild size="lg" className="gap-2 sm:min-w-[200px]">
+                <Link to={`/dashboard/messages?with=${sellerId}`}>
+                  <MessageSquare className="size-4" />
+                  {t("bids.messageSeller", "مراسلة البائع")}
+                </Link>
+              </Button>
+            ) : null}
+            <Button variant="outline" size="lg" onClick={() => navigate(`/products/${id}`)}>
+              {t("purchase.viewListing", "عرض الإعلان")}
+            </Button>
+          </div>
+        </div>
+      </PurchasePageShell>
+    )
   }
 
   const priceAmount = Number(product?.price ?? 0)
@@ -299,12 +481,21 @@ export function PurchasePage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 px-4 py-8">
-      <h1 className="text-2xl font-bold flex items-center gap-2">
-        <ShoppingCart className="size-7" />
-        {t("purchase.title", "اشتر الآن")}
-      </h1>
-
+    <PurchasePageShell
+      title={t("purchase.title", "اشتر الآن")}
+      onBack={() => navigate(`/products/${id}`)}
+      sidebar={
+        <PurchaseProductSidebar product={product} listingId={id} t={t}>
+          <PurchaseOrderSummaryCard
+            product={product}
+            qty={qty}
+            lineTotal={lineTotal}
+            paymentMethodLabel={paymentMethodLabel}
+            t={t}
+          />
+        </PurchaseProductSidebar>
+      }
+    >
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -437,34 +628,6 @@ export function PurchasePage() {
               {purchaseFieldErrors.buyerNote ? (
                 <p className="text-sm text-destructive">{purchaseFieldErrors.buyerNote}</p>
               ) : null}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("purchase.orderSummary", "ملخص الطلب")}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">{t("purchase.unitPrice", "سعر الوحدة")}</span>
-              <span className="font-semibold">{formatPrice(product?.price, t)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">{t("purchase.quantity", "الكمية")}</span>
-              <span className="font-semibold tabular-nums">× {qty}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">{t("purchase.lineSubtotal", "المجموع الفرعي")}</span>
-              <span className="font-semibold">{formatPrice(lineTotal, t)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">{t("purchase.selectedPayment", "طريقة الدفع المختارة")}</span>
-              <span className="font-semibold">{paymentMethodLabel}</span>
-            </div>
-            <div className="flex items-center justify-between border-t border-border pt-2 text-base">
-              <span className="font-semibold">{t("purchase.invoiceTotal", "إجمالي الفاتورة")}</span>
-              <span className="font-bold text-primary">{formatPrice(lineTotal, t)}</span>
             </div>
           </CardContent>
         </Card>
@@ -637,6 +800,6 @@ export function PurchasePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PurchasePageShell>
   )
 }

@@ -20,12 +20,14 @@ export function useMainCategories() {
   })
 }
 
-export function useSubcategories(mainId) {
+export function useSubcategories(mainId, parentId = null) {
   const { i18n } = useTranslation()
+  const parentKey = parentId ?? "roots"
   return useQuery({
-    queryKey: ["categories", mainId, "subcategories", i18n.language],
+    queryKey: ["categories", mainId, "subcategories", parentKey, i18n.language],
     queryFn: async () => {
-      const { data } = await apiClient.get(`/categories/${mainId}/subcategories`)
+      const params = parentId ? { parent_id: parentId } : {}
+      const { data } = await apiClient.get(`/categories/${mainId}/subcategories`, { params })
       return unwrapList(data)
     },
     enabled: !!mainId,

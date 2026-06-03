@@ -67,7 +67,7 @@ export function CommentSection({ product }) {
         </Avatar>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-sm">{comment.user?.name ?? "—"}</span>
+            <span className="font-semibold text-base">{comment.user?.name ?? "—"}</span>
             <span className="text-xs text-muted-foreground">{formatDate(comment.created_at)}</span>
             {user?.id === comment.user_id && (
               <Button
@@ -81,7 +81,7 @@ export function CommentSection({ product }) {
               </Button>
             )}
           </div>
-          <p className="mt-0.5 whitespace-pre-wrap text-sm text-foreground">{comment.body}</p>
+          <p className="mt-0.5 whitespace-pre-wrap text-base leading-loose text-foreground">{comment.body}</p>
           {token && !isReply && (
             <Button
               variant="ghost"

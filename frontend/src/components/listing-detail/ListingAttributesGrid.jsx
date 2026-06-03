@@ -10,6 +10,7 @@ import {
   isActiveSwitch,
   isTruthyAttributeValue,
   buildSectionsFromFlatAttributes,
+  shouldHideRedundantListingField,
 } from "@/lib/listings/resolveListingFieldDisplay"
 
 export { resolveFieldLabel } from "@/lib/listings/resolveListingFieldDisplay"
@@ -34,7 +35,7 @@ function sectionIsChipOnly(section, fields) {
 /**
  * Generic PDP grid for schema-driven listing attributes.
  */
-export function ListingAttributesGrid({ sections, attributes, variant = "plain" }) {
+export function ListingAttributesGrid({ sections, attributes, variant = "plain", product = null }) {
   const { t, i18n } = useTranslation()
   const { direction } = useAppDirection()
   const locale = i18n.language
@@ -49,6 +50,7 @@ export function ListingAttributesGrid({ sections, attributes, variant = "plain" 
     .map((section, index) => {
         const fields = (section.fields ?? []).filter((row) => {
           if (!row?.field_key) return false
+          if (shouldHideRedundantListingField(row, product)) return false
           if (isSwitchField(row)) return isActiveSwitch(row, t)
           const dv = resolveFieldValue(row, t, locale)
           if (dv != null && dv !== "") return true

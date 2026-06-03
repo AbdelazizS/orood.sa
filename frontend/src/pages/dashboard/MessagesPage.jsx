@@ -378,8 +378,8 @@ export function MessagesPage() {
                             sendMessage(e)
                           }
                         }}
-                        rows={2}
-                        className="resize-none"
+                        rows={3}
+                        className="resize-none text-base min-h-[48px]"
                         placeholder={t("messages.typeMessage", "Type a message...")}
                       />
                       <Button type="submit" disabled={sendMutation.isPending || !message.trim()}>

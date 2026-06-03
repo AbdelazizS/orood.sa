@@ -11,6 +11,7 @@ class PaymentEligibilityEngine
     public function __construct(
         private readonly PaymentMethodService $paymentMethods,
         private readonly CodPolicyEngine $codPolicy,
+        private readonly FinanceModuleSettings $financeModules,
     ) {}
 
     /**
@@ -26,6 +27,19 @@ class PaymentEligibilityEngine
      */
     public function sellerSetupStatus(User $user): array
     {
+        if (! $this->financeModules->requiresPayoutSetupForListings()) {
+            return [
+                'payout_ready' => true,
+                'payout_status' => SellerPayoutProfile::STATUS_VERIFIED,
+                'primary_mode' => null,
+                'missing_fields' => [],
+                'can_activate_listings' => true,
+                'wallet_only_sufficient' => true,
+                'announcement_key' => null,
+                'announcement_params' => [],
+            ];
+        }
+
         $profile = $user->sellerPayoutProfile;
 
         if (! $profile) {
@@ -66,6 +80,10 @@ class PaymentEligibilityEngine
 
     public function resolveListingActivationStatus(User $seller, bool $autoPublish): string
     {
+        if (! $this->financeModules->requiresPayoutSetupForListings()) {
+            return 'active';
+        }
+
         $setup = $this->sellerSetupStatus($seller);
 
         if ($setup['can_activate_listings']) {
@@ -80,30 +98,40 @@ class PaymentEligibilityEngine
      */
     public function checkoutPaymentOptions(Product $product, ?User $buyer): array
     {
+        if (! $this->financeModules->isPaymentsModuleEnabled()) {
+            return [];
+        }
+
         $seller = $product->seller;
         $options = [];
 
-        $wallet = $this->paymentMethods->getByCode('wallet_escrow');
-        if ($wallet) {
-            $options[] = $this->methodPayload($wallet, 'escrow');
-        }
-
-        $codEval = $this->codPolicy->evaluate($product, $buyer, $seller);
-        if ($codEval['allowed']) {
-            $cod = $this->paymentMethods->getByCode('cod');
-            if ($cod) {
-                $options[] = array_merge($this->methodPayload($cod, 'cod'), [
-                    'buyer_must_accept' => $codEval['buyer_must_accept'],
-                ]);
+        if ($this->financeModules->canUseEscrow()) {
+            $wallet = $this->paymentMethods->getByCode('wallet_escrow');
+            if ($wallet) {
+                $options[] = $this->methodPayload($wallet, 'escrow');
             }
         }
 
-        $direct = $this->paymentMethods->getByCode('direct_transfer');
-        if ($direct && $seller?->sellerPayoutProfile?->status === SellerPayoutProfile::STATUS_VERIFIED
-            && $seller->sellerPayoutProfile->primary_mode === SellerPayoutProfile::MODE_DIRECT_BANK) {
-            $options[] = array_merge($this->methodPayload($direct, 'direct_transfer'), [
-                'seller_bank' => $this->maskedSellerBank($seller),
-            ]);
+        if ($this->financeModules->canUseCod()) {
+            $codEval = $this->codPolicy->evaluate($product, $buyer, $seller);
+            if ($codEval['allowed']) {
+                $cod = $this->paymentMethods->getByCode('cod');
+                if ($cod) {
+                    $options[] = array_merge($this->methodPayload($cod, 'cod'), [
+                        'buyer_must_accept' => $codEval['buyer_must_accept'],
+                    ]);
+                }
+            }
+        }
+
+        if ($this->financeModules->canUseBankAccounts()) {
+            $direct = $this->paymentMethods->getByCode('direct_transfer');
+            if ($direct && $seller?->sellerPayoutProfile?->status === SellerPayoutProfile::STATUS_VERIFIED
+                && $seller->sellerPayoutProfile->primary_mode === SellerPayoutProfile::MODE_DIRECT_BANK) {
+                $options[] = array_merge($this->methodPayload($direct, 'direct_transfer'), [
+                    'seller_bank' => $this->maskedSellerBank($seller),
+                ]);
+            }
         }
 
         return $options;

@@ -15,7 +15,7 @@ class RegisterRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'min:3', 'max:255', 'unique:users,name'],
+            'name' => ['required', 'string', 'min:3', 'max:255'],
             'email' => ['required', 'email', 'unique:users,email'],
             'phone' => ['nullable', 'string', 'regex:/^05\d{8}$/'],
             'how_did_you_hear' => ['nullable', 'string', 'max:255'],
@@ -29,7 +29,6 @@ class RegisterRequest extends FormRequest
         return [
             'name.required' => __('auth.validation.name_required'),
             'name.min' => __('auth.validation.name_min'),
-            'name.unique' => __('auth.validation.name_taken'),
             'email.required' => __('auth.validation.email_required'),
             'email.email' => __('auth.validation.email_invalid'),
             'email.unique' => __('auth.validation.email_taken'),

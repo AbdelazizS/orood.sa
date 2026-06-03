@@ -28,8 +28,9 @@ import {
 } from "@/components/ui/select"
 import apiClient from "@/lib/apiClient"
 import { LocalizedNameFields } from "@/components/admin/LocalizedNameFields"
-import { ChevronDown, Plus, Pencil, Trash2, Loader2, MapPin } from "lucide-react"
+import { ChevronDown, Plus, Pencil, Trash2, Loader2, MapPin, ChevronRight } from "lucide-react"
 import { CategoryListingSchemaEditor } from "@/features/admin/categories/CategoryListingSchemaEditor"
+import { countSubcategories } from "@/lib/listings/subcategoryTree"
 
 export function AdminCategoriesPage() {
   const { t } = useTranslation()
@@ -128,6 +129,10 @@ export function AdminCategoriesPage() {
     onSuccess: () => {
       setDeleteSubcategory(null)
       queryClient.refetchQueries({ queryKey: ["admin", "categories"] })
+    },
+    onError: (err) => {
+      const msg = err?.response?.data?.message
+      toast.error(msg || t("categories.deleteSubcategoryFailed", "تعذر حذف الفرع"))
     },
   })
 
@@ -247,14 +252,14 @@ export function AdminCategoriesPage() {
                           onClick={(e) => e.stopPropagation()}
                         />
                         <span className="text-sm text-muted-foreground">
-                          ({(category.subcategories ?? []).length} {t("categories.subcategories", "subcategories")})
+                          ({countSubcategories(category.subcategories ?? [])} {t("categories.subcategories", "subcategories")})
                         </span>
                       </div>
                       <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         <Button variant="ghost" size="icon" onClick={() => setEditingCategory(category)}>
                           <Pencil className="size-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setAddSubcategoryCategory(category)}>
+                        <Button variant="ghost" size="icon" onClick={() => setAddSubcategoryCategory({ category, parentId: null })}>
                           <Plus className="size-4" />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => setDeleteCategory(category)} className="text-destructive">
@@ -268,22 +273,19 @@ export function AdminCategoriesPage() {
                       <div>
                         <p className="text-sm font-medium mb-2">{t("categories.subcategories", "Subcategories")}</p>
                         <div className="space-y-2">
-                          {(category.subcategories ?? []).map((sub) => (
-                            <div
-                              key={sub.id}
-                              className="flex items-center justify-between rounded-lg border px-3 py-2"
-                            >
-                              <span>{sub.name_ar || sub.name}</span>
-                              <div className="flex items-center gap-2">
-                                <Button variant="ghost" size="icon" onClick={() => setEditingSubcategory({ ...sub, categoryId: category.id })}>
-                                  <Pencil className="size-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon" onClick={() => setDeleteSubcategory({ ...sub, categoryId: category.id })} className="text-destructive">
-                                  <Trash2 className="size-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
+                          <SubcategoryTree
+                            nodes={category.subcategories ?? []}
+                            category={category}
+                            depth={0}
+                            onAddChild={(parent) =>
+                              setAddSubcategoryCategory({ category, parentId: parent.id, parentName: parent.name_ar || parent.name })
+                            }
+                            onEdit={(sub) =>
+                              setEditingSubcategory({ ...sub, categoryId: category.id, categorySlug: category.slug })
+                            }
+                            onDelete={(sub) => setDeleteSubcategory({ ...sub, categoryId: category.id })}
+                            t={t}
+                          />
                         </div>
                       </div>
                       <div>
@@ -307,7 +309,7 @@ export function AdminCategoriesPage() {
                       </div>
                       <div>
                         <p className="text-sm font-medium mb-2">{t("admin.listingSchemaTitle", "مخطط الإعلان")}</p>
-                        <CategoryListingSchemaEditor categoryId={category.id} />
+                        <CategoryListingSchemaEditor categoryId={category.id} categorySlug={category.slug} />
                       </div>
                       <div>
                         <p className="text-sm font-medium mb-2">{t("wholesale.title", "سعر الجملة")} — {t("categories.wholesalePerRegion", "تفعيل لكل منطقة")}</p>
@@ -370,17 +372,36 @@ export function AdminCategoriesPage() {
         />
       )}
       {addSubcategoryCategory && (
-        <LocalizedDialog
-          title={`${t("categories.addSubcategory", "Add Subcategory")} - ${addSubcategoryCategory.name}`}
-          onSubmit={(payload) => createSubcategory.mutate({ categoryId: addSubcategoryCategory.id, payload })}
+        <SubcategoryFormDialog
+          title={
+            addSubcategoryCategory.parentId
+              ? `${t("categories.addChildSubcategory", "إضافة فرع فرعي")} — ${addSubcategoryCategory.parentName ?? ""}`
+              : `${t("categories.addSubcategory", "Add Subcategory")} - ${addSubcategoryCategory.category.name}`
+          }
+          categorySlug={addSubcategoryCategory.category.slug}
+          onSubmit={(payload) =>
+            createSubcategory.mutate({
+              categoryId: addSubcategoryCategory.category.id,
+              payload: {
+                ...payload,
+                parent_id: addSubcategoryCategory.parentId ?? null,
+              },
+            })
+          }
           onClose={() => setAddSubcategoryCategory(null)}
           isPending={createSubcategory.isPending}
         />
       )}
       {editingSubcategory && (
-        <LocalizedDialog
+        <SubcategoryFormDialog
           title={t("categories.editSubcategory", "Edit Subcategory")}
-          initial={{ name: editingSubcategory.name, name_ar: editingSubcategory.name_ar, name_en: editingSubcategory.name_en }}
+          categorySlug={editingSubcategory.categorySlug}
+          initial={{
+            name: editingSubcategory.name,
+            name_ar: editingSubcategory.name_ar,
+            name_en: editingSubcategory.name_en,
+            listing_property_type: editingSubcategory.listing_property_type ?? "",
+          }}
           onSubmit={(payload) => updateSubcategory.mutate({
             categoryId: editingSubcategory.categoryId,
             subcategoryId: editingSubcategory.id,
@@ -411,6 +432,63 @@ const LUCIDE_ICONS = [
   "TreeDeciduous", "Heart", "Dog", "Wrench", "Search", "ShoppingCart", "Star",
   "MapPin", "Phone", "Mail", "Building2", "Store", "Truck", "Gift",
 ]
+
+function subcategoryChildren(sub) {
+  return sub.children ?? sub.children_recursive ?? []
+}
+
+function SubcategoryTree({ nodes, category, depth, onAddChild, onEdit, onDelete, t }) {
+  if (!nodes?.length) return null
+  return (
+    <>
+      {nodes.map((sub) => {
+        const children = subcategoryChildren(sub)
+        return (
+        <div key={sub.id}>
+          <div
+            className="flex items-center justify-between rounded-lg border px-3 py-2"
+            style={{ marginInlineStart: depth * 16 }}
+          >
+            <span className="flex min-w-0 items-center gap-1 truncate">
+              {children.length ? (
+                <ChevronRight className="size-3.5 shrink-0 text-muted-foreground rtl:rotate-180" />
+              ) : null}
+              {sub.name_ar || sub.name}
+            </span>
+            <div className="flex shrink-0 items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                title={t("categories.addChildSubcategory", "إضافة فرع فرعي")}
+                onClick={() => onAddChild(sub)}
+              >
+                <Plus className="size-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => onEdit(sub)}>
+                <Pencil className="size-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => onDelete(sub)} className="text-destructive">
+                <Trash2 className="size-4" />
+              </Button>
+            </div>
+          </div>
+          {children.length ? (
+            <SubcategoryTree
+              nodes={children}
+              category={category}
+              depth={depth + 1}
+              onAddChild={onAddChild}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              t={t}
+            />
+          ) : null}
+        </div>
+        )
+      })}
+    </>
+  )
+}
 
 function LocalizedDialog({ title, initial = {}, onSubmit, onClose, isPending }) {
   const { t } = useTranslation()
@@ -470,6 +548,89 @@ function LocalizedDialog({ title, initial = {}, onSubmit, onClose, isPending }) 
             <span className="text-sm font-medium">{t("feed.companyDirectory", "دليل الشركات")}</span>
             <Switch checked={showCompanyDirectory} onCheckedChange={setShowCompanyDirectory} />
           </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
+            <Button type="submit" disabled={isPending}>{isPending ? <Loader2 className="size-4 animate-spin" /> : t("common.save")}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function SubcategoryFormDialog({ title, initial = {}, categorySlug, onSubmit, onClose, isPending }) {
+  const { t } = useTranslation()
+  const [name, setName] = useState(initial.name ?? "")
+  const [nameAr, setNameAr] = useState(initial.name_ar ?? "")
+  const [nameEn, setNameEn] = useState(initial.name_en ?? "")
+  const [listingPropertyType, setListingPropertyType] = useState(initial.listing_property_type ?? "")
+  const isRealEstate = categorySlug === "real-estate"
+
+  useEffect(() => {
+    setName(initial.name ?? "")
+    setNameAr(initial.name_ar ?? "")
+    setNameEn(initial.name_en ?? "")
+    setListingPropertyType(initial.listing_property_type ?? "")
+  }, [initial.name, initial.name_ar, initial.name_en, initial.listing_property_type])
+
+  const propertyTypeOptions = [
+    { value: "apartment", label: t("realEstate.types.apartment", "شقة") },
+    { value: "villa", label: t("realEstate.types.villa", "فيلا") },
+    { value: "land", label: t("realEstate.types.land", "أرض") },
+    { value: "building", label: t("realEstate.types.building", "عمارة") },
+    { value: "floor", label: t("realEstate.types.floor", "دور") },
+    { value: "shop", label: t("realEstate.types.shop", "محل") },
+    { value: "farm", label: t("realEstate.types.farm", "مزرعة") },
+  ]
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            const payload = {
+              name,
+              name_ar: nameAr || null,
+              name_en: nameEn || null,
+            }
+            if (isRealEstate) {
+              payload.listing_property_type = listingPropertyType || null
+            }
+            onSubmit(payload)
+          }}
+          className="space-y-4"
+        >
+          <LocalizedNameFields
+            name={name}
+            nameAr={nameAr}
+            nameEn={nameEn}
+            onNameChange={setName}
+            onNameArChange={setNameAr}
+            onNameEnChange={setNameEn}
+          />
+          {isRealEstate ? (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                {t("categories.listingPropertyType", "نوع العقار (اختياري)")}
+              </label>
+              <Select value={listingPropertyType || "none"} onValueChange={(v) => setListingPropertyType(v === "none" ? "" : v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t("categories.listingPropertyTypePlaceholder", "ربط الفرع بنوع العقار")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t("common.none", "بدون")}</SelectItem>
+                  {propertyTypeOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {t("categories.listingPropertyTypeHint", "يُشتق «نوع العقار» تلقائياً من الفرع ولا يُعرض مرة أخرى في نموذج الإعلان.")}
+              </p>
+            </div>
+          ) : null}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
             <Button type="submit" disabled={isPending}>{isPending ? <Loader2 className="size-4 animate-spin" /> : t("common.save")}</Button>

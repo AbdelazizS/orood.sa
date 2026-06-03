@@ -55,7 +55,7 @@ export function SellerListingsPage() {
               <p className="text-sm text-muted-foreground">
                 {product.price != null
                   ? `${Number(product.price).toLocaleString(priceLocale)} ${t("common.currency")}`
-                  : t("feed.priceOnRequest")}
+                  : null}
               </p>
             </CardHeader>
             <CardContent>

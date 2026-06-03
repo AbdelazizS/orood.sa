@@ -5,6 +5,7 @@ namespace App\Services\Listings;
 use App\Models\Category;
 use App\Models\CategoryListingSchema;
 use App\Models\CategorySchemaField;
+use App\Models\Subcategory;
 use Illuminate\Support\Collection;
 
 class ListingSchemaService
@@ -36,13 +37,15 @@ class ListingSchemaService
             ]);
 
         if ($subcategoryId) {
-            $specific = (clone $query)
-                ->where('subcategory_id', $subcategoryId)
-                ->orderByDesc('version')
-                ->first();
+            foreach ($this->subcategoryAncestorIds($subcategoryId) as $candidateId) {
+                $specific = (clone $query)
+                    ->where('subcategory_id', $candidateId)
+                    ->orderByDesc('version')
+                    ->first();
 
-            if ($specific) {
-                return $specific;
+                if ($specific) {
+                    return $specific;
+                }
             }
         }
 
@@ -194,5 +197,26 @@ class ListingSchemaService
 
             return $this->evaluateVisibleWhen($field->visible_when, $attributes);
         })->values();
+    }
+
+    /**
+     * Leaf first, then ancestors up to root.
+     *
+     * @return list<int>
+     */
+    private function subcategoryAncestorIds(int $subcategoryId): array
+    {
+        $ids = [];
+        $current = Subcategory::query()->find($subcategoryId);
+
+        while ($current) {
+            $ids[] = (int) $current->id;
+            if (! $current->parent_id) {
+                break;
+            }
+            $current = Subcategory::query()->find($current->parent_id);
+        }
+
+        return $ids;
     }
 }

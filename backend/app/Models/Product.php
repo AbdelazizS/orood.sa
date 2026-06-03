@@ -17,6 +17,7 @@ class Product extends Model
         'user_id',
         'category_id',
         'subcategory_id',
+        'subcategory_other',
         'region_id',
         'city_id',
         'title',

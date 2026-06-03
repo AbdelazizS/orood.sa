@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'registered' => 'Registration successful. Please verify your email.',
+    'registered' => 'Account created successfully. You can use the platform right away.',
     'login_success' => 'Login successful.',
     'invalid_credentials' => 'Invalid email or password.',
     'otp_sent' => 'Verification code sent to your email.',
@@ -20,6 +20,9 @@ return [
     'company_registration_disabled' => 'Company registration is currently disabled.',
     'company_already_registered' => 'Your company is already registered.',
     'company_registered' => 'Company verification request submitted and is now pending review.',
+    'otp_email_not_sent' => 'Your account was created, but we could not send the verification email. Try “Resend code” later or contact support. Admins: check SMTP/mail settings on the server.',
+    'otp_resend_email_not_sent' => 'Could not send email. Check SMTP settings or try again later.',
+    'register_failed' => 'Registration could not be completed. If this persists, check server logs and mail (SMTP) settings.',
     'validation' => [
         'name_required' => 'Name is required.',
         'name_min' => 'Name must be at least 3 characters.',

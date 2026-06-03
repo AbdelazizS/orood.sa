@@ -2,11 +2,12 @@ import { useTranslation } from "react-i18next"
 import { useAppDirection } from "@/providers/DirectionProvider"
 import { resolveImageUrl } from "@/lib/imageUrl"
 import { Separator } from "@/components/ui/separator"
+import { cn } from "@/lib/utils"
+
+const IMAGE_MIN_H = "min-h-[360px] sm:min-h-[420px] lg:min-h-[520px]"
 
 /**
- * Section 4 — Product Images.
- * Full width, stacked vertically. No padding, no border-radius, no shadow.
- * Count badge bottom-left on first image.
+ * Product images — Haraj-style full-width vertical stack below description.
  */
 export function ListingImages({ product }) {
   const { t } = useTranslation()
@@ -23,9 +24,12 @@ export function ListingImages({ product }) {
       <>
         <div
           dir={direction}
-          className="flex aspect-video w-full items-center justify-center bg-background text-muted-foreground"
+          className={cn(
+            "relative -mx-4 flex aspect-video w-[calc(100%+2rem)] items-center justify-center bg-muted/30 text-muted-foreground sm:mx-0 sm:w-full",
+            IMAGE_MIN_H
+          )}
         >
-          <span className="text-sm">{t("listingDetail.imageLabel", "Image")}</span>
+          <span className="text-base">{t("listingDetail.imageLabel", "Image")}</span>
         </div>
         <Separator />
       </>
@@ -34,16 +38,16 @@ export function ListingImages({ product }) {
 
   return (
     <>
-      <div dir={direction} className="flex w-full flex-col gap-1">
+      <div dir={direction} className="relative -mx-4 flex w-[calc(100%+2rem)] flex-col gap-0 sm:mx-0 sm:w-full">
         {urls.map((url, i) => (
           <div
             key={i}
-            className={`relative w-full overflow-hidden bg-background ${i === 0 ? "min-h-[260px] max-h-[65vh] sm:min-h-[320px] sm:max-h-[60vh] lg:min-h-[420px]" : "min-h-[180px] sm:min-h-[220px]"}`}
+            className={cn("relative w-full overflow-hidden bg-muted/30", IMAGE_MIN_H)}
           >
             <img
               src={url}
               alt={t("listingDetail.imageNumber", { index: i + 1, defaultValue: "Image {{index}}" })}
-              className={`h-full w-full object-cover ${i === 0 ? "max-h-[65vh] sm:max-h-[60vh]" : ""}`}
+              className="h-full w-full object-cover object-center"
               style={{ display: "block" }}
               onError={(e) => {
                 e.target.style.display = "none"

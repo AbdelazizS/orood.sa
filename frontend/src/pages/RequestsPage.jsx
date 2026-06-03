@@ -32,6 +32,7 @@ export function RequestsPage() {
         path="/requests"
         title={seo.seo_title ?? seo.title}
         description={seo.description}
+        image={seo?.og?.image}
         hreflang={seo.hreflang}
         useTitleAsFull={Boolean(seo.seo_title)}
       />

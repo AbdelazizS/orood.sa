@@ -3,7 +3,7 @@
 export const MAP_HEIGHT_COMPACT = "h-[240px] min-h-[200px] max-h-[280px]"
 export const MAP_HEIGHT_EXPANDED = "min-h-[min(45vh,360px)] max-h-[min(52vh,480px)]"
 
-/** Fixed height for picker map canvas (search overlays on top). */
+/** Fixed height for picker map canvas (search sits above in normal flow). */
 export const MAP_PICKER_MAP_CLASS = "relative h-[240px] w-full sm:h-[260px]"
 
 export const MAP_PICKER_SHELL_CLASS = "map-picker-clean"
@@ -32,6 +32,7 @@ export const MAP_PICKER_VIEW_PROPS = {
   showInlineHint: true,
   hintInFooter: true,
   shellVariant: "property",
+  markerVariant: "property",
 }
 
 export const MAP_SKELETON_CLASS =
