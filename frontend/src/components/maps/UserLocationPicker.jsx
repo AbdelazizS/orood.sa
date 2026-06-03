@@ -10,7 +10,16 @@ import { useMapsRuntimeReady } from "@/hooks/maps/useMapsRuntimeReady"
 import { GoogleLocationMapPicker } from "./GoogleLocationMapPicker.jsx"
 import { OsmLocationMapPicker } from "./OsmLocationMapPicker.jsx"
 import { MapboxLocationMapPicker } from "./MapboxLocationMapPicker.jsx"
+import { MapErrorBoundary } from "./MapErrorBoundary.jsx"
 import { MAP_SKELETON_CLASS } from "@/lib/maps/mapPickerUi"
+
+function OsmPickerSafe(props) {
+  return (
+    <MapErrorBoundary fallback="message">
+      <OsmLocationMapPicker {...props} />
+    </MapErrorBoundary>
+  )
+}
 
 /**
  * Unified location picker — Mapbox (when token available), Google, or OSM fallback.
@@ -48,7 +57,7 @@ export function UserLocationPicker({ showInlineHint = true, forceLegacy = false,
   }
 
   if (forceLegacy) {
-    return <OsmLocationMapPicker {...props} showInlineHint={showInlineHint} />
+    return <OsmPickerSafe {...props} showInlineHint={showInlineHint} />
   }
 
   if (manfithActive) {
@@ -74,7 +83,7 @@ export function UserLocationPicker({ showInlineHint = true, forceLegacy = false,
   }
 
   if (osmPreferred) {
-    return <OsmLocationMapPicker {...props} showInlineHint={showInlineHint} />
+    return <OsmPickerSafe {...props} showInlineHint={showInlineHint} />
   }
 
   return (
@@ -88,7 +97,7 @@ export function UserLocationPicker({ showInlineHint = true, forceLegacy = false,
       {mapboxLoadFailed ? (
         <p className="text-[11px] text-amber-700 dark:text-amber-400">{t("maps.mapboxFallbackOsm")}</p>
       ) : null}
-      <OsmLocationMapPicker {...props} showInlineHint={showInlineHint} />
+      <OsmPickerSafe {...props} showInlineHint={showInlineHint} />
     </>
   )
 }

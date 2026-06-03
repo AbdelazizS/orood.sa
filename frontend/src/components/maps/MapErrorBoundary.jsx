@@ -28,6 +28,9 @@ export class MapErrorBoundary extends Component {
     if (!this.state.failed) return this.props.children
 
     const { fallback = "picker", fallbackProps = {} } = this.props
+    if (fallback === "message") {
+      return <MapErrorFallbackMessage />
+    }
     if (fallback === "embed") {
       return <LeafletMapEmbed {...fallbackProps} />
     }

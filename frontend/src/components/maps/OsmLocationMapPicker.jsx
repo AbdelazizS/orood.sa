@@ -1,17 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { MapContainerSafe } from "@/components/maps/MapContainerSafe.jsx"
-import { Marker, TileLayer, useMap, useMapEvents } from "react-leaflet"
-import L from "leaflet"
-import "leaflet/dist/leaflet.css"
-import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png"
-import markerIcon from "leaflet/dist/images/marker-icon.png"
-import markerShadow from "leaflet/dist/images/marker-shadow.png"
+import { DeferredLeafletMarker } from "@/components/maps/DeferredLeafletMarker.jsx"
+import { TileLayer, useMap, useMapEvents } from "react-leaflet"
 import { Button } from "@/components/ui/button"
 import { useTranslation } from "react-i18next"
 import { Navigation } from "lucide-react"
 import { useMapRasterTiles } from "@/hooks/maps/useMapTheme"
 import { usePrefersReducedMotion } from "@/hooks/maps/useMapInteractions"
 import { reversePlace } from "@/lib/maps/geocoder"
+import { createDefaultPinIcon, createPropertyPinIcon } from "@/lib/maps/leafletSetup"
 import {
   DEFAULT_SA_OVERVIEW_ZOOM,
   getDefaultCenterFromEnv,
@@ -20,13 +17,6 @@ import { MapPickerEmptyHint } from "@/components/maps/MapPickerEmptyHint.jsx"
 import { MapSearchBar } from "@/components/maps/shell/MapSearchBar.jsx"
 import { cn } from "@/lib/utils"
 import { MAP_PICKER_MAP_CLASS } from "@/lib/maps/mapPickerUi"
-
-delete L.Icon.Default.prototype._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconUrl: markerIcon,
-  iconRetinaUrl: markerIcon2x,
-  shadowUrl: markerShadow,
-})
 
 function MapEvents({ onPick }) {
   useMapEvents({
@@ -213,15 +203,10 @@ export function OsmLocationMapPicker({
 
   const mapRemountKey = `${mapActive ? "on" : "off"}-${readOnly ? "ro" : "rw"}`
 
-  const propertyPinIcon = useMemo(() => {
-    if (markerVariant !== "property") return null
-    return L.divIcon({
-      className: "map-marker map-marker--property",
-      html: '<span class="map-marker-pin map-marker-pin--property" aria-hidden="true"></span>',
-      iconSize: [18, 18],
-      iconAnchor: [9, 9],
-    })
-  }, [markerVariant])
+  const markerIcon = useMemo(
+    () => (markerVariant === "property" ? createPropertyPinIcon() : createDefaultPinIcon()),
+    [markerVariant]
+  )
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -261,9 +246,9 @@ export function OsmLocationMapPicker({
             />
             {!readOnly ? <MapEvents onPick={handlePick} /> : null}
             {position ? (
-              <Marker
+              <DeferredLeafletMarker
                 position={position}
-                icon={propertyPinIcon ?? undefined}
+                icon={markerIcon}
                 draggable={!readOnly}
                 eventHandlers={readOnly ? undefined : { dragend: handleMarkerDragEnd }}
               />

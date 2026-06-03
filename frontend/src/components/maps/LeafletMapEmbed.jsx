@@ -1,22 +1,14 @@
 import { useCallback, useEffect, useMemo } from "react"
 import { MapContainerSafe } from "@/components/maps/MapContainerSafe.jsx"
-import { TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet"
-import L from "leaflet"
-import "leaflet/dist/leaflet.css"
-import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png"
-import markerIcon from "leaflet/dist/images/marker-icon.png"
-import markerShadow from "leaflet/dist/images/marker-shadow.png"
+import { DeferredLeafletMarker } from "@/components/maps/DeferredLeafletMarker.jsx"
+import { TileLayer, Popup, useMap, useMapEvents } from "react-leaflet"
+import { L, ensureLeafletDefaults } from "@/lib/maps/leafletSetup"
 import { useMapRasterTiles } from "@/hooks/maps/useMapTheme"
 import { usePrefersReducedMotion } from "@/hooks/maps/useMapInteractions"
 import { getDefaultCenterFromEnv, getDefaultMapView } from "@/lib/maps/constants"
 import { cn } from "@/lib/utils"
 
-delete L.Icon.Default.prototype._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconUrl: markerIcon,
-  iconRetinaUrl: markerIcon2x,
-  shadowUrl: markerShadow,
-})
+ensureLeafletDefaults()
 
 function FitBounds({ positions }) {
   const map = useMap()
@@ -140,7 +132,7 @@ export default function LeafletMapEmbed({
       {markers.map((m) => {
         if (m?.lat == null || m?.lng == null || !Number.isFinite(m.lat) || !Number.isFinite(m.lng)) return null
         return (
-          <Marker key={m.id ?? `${m.lat},${m.lng}`} position={[m.lat, m.lng]}>
+          <DeferredLeafletMarker key={m.id ?? `${m.lat},${m.lng}`} position={[m.lat, m.lng]}>
             {mapPopups && m.label && !isPreview ? (
               <Popup>
                 {m.url ? (
@@ -152,7 +144,7 @@ export default function LeafletMapEmbed({
                 )}
               </Popup>
             ) : null}
-          </Marker>
+          </DeferredLeafletMarker>
         )
       })}
     </MapContainerSafe>
