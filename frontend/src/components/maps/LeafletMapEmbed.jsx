@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo } from "react"
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet"
+import { MapContainerSafe } from "@/components/maps/MapContainerSafe.jsx"
+import { TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png"
@@ -20,14 +21,18 @@ L.Icon.Default.mergeOptions({
 function FitBounds({ positions }) {
   const map = useMap()
   useEffect(() => {
-    if (!positions?.length) return
-    if (positions.length === 1) {
-      const [lat, lng] = positions[0]
-      map.setView([lat, lng], Math.max(map.getZoom(), 12))
-      return
+    if (!map || map._removed || !positions?.length) return
+    try {
+      if (positions.length === 1) {
+        const [lat, lng] = positions[0]
+        map.setView([lat, lng], Math.max(map.getZoom(), 12))
+        return
+      }
+      const bounds = L.latLngBounds(positions.map(([lat, lng]) => [lat, lng]))
+      map.fitBounds(bounds, { padding: [28, 28], maxZoom: 14 })
+    } catch {
+      /* map mid-teardown */
     }
-    const bounds = L.latLngBounds(positions.map(([lat, lng]) => [lat, lng]))
-    map.fitBounds(bounds, { padding: [28, 28], maxZoom: 14 })
   }, [map, positions])
   return null
 }
@@ -46,7 +51,12 @@ function FlyToPin({ lat, lng, reducedMotion }) {
   const map = useMap()
   useEffect(() => {
     if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) return
-    map.flyTo([lat, lng], Math.max(map.getZoom(), 13), { duration: reducedMotion ? 0 : 0.45 })
+    if (!map || map._removed) return
+    try {
+      map.flyTo([lat, lng], Math.max(map.getZoom(), 13), { duration: reducedMotion ? 0 : 0.45 })
+    } catch {
+      /* map mid-teardown */
+    }
   }, [lat, lng, map, reducedMotion])
   return null
 }
@@ -103,8 +113,11 @@ export default function LeafletMapEmbed({
   const resolvedZoom =
     positions.length === 0 ? getDefaultMapView({ hasPin: false }).zoom : zoom
 
+  const mapRemountKey = `${flyToPrimary ? 1 : 0}-${picking ? 1 : 0}-${mapInteractive ? 1 : 0}`
+
   return (
-    <MapContainer
+    <MapContainerSafe
+      remountKey={mapRemountKey}
       center={center}
       zoom={resolvedZoom}
       className={cn(mapClassName, className, isPreview && "map-embed-preview")}
@@ -142,6 +155,6 @@ export default function LeafletMapEmbed({
           </Marker>
         )
       })}
-    </MapContainer>
+    </MapContainerSafe>
   )
 }

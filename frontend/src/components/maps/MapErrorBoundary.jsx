@@ -1,7 +1,7 @@
 import { Component } from "react"
 import { useTranslation } from "react-i18next"
 import { OsmLocationMapPicker } from "./OsmLocationMapPicker.jsx"
-import { LeafletMapEmbed } from "./LeafletMapEmbed.jsx"
+import LeafletMapEmbed from "./LeafletMapEmbed.jsx"
 
 /**
  * Catches map render errors and falls back to OSM/Leaflet.

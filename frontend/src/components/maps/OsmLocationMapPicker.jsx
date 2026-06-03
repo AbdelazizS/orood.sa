@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet"
+import { MapContainerSafe } from "@/components/maps/MapContainerSafe.jsx"
+import { Marker, TileLayer, useMap, useMapEvents } from "react-leaflet"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png"
@@ -56,7 +57,12 @@ function FlyToPin({ lat, lng }) {
   const reducedMotion = usePrefersReducedMotion()
   useEffect(() => {
     if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) return
-    map.flyTo([lat, lng], Math.max(map.getZoom(), 13), { duration: reducedMotion ? 0 : 0.45 })
+    if (!map || map._removed) return
+    try {
+      map.flyTo([lat, lng], Math.max(map.getZoom(), 13), { duration: reducedMotion ? 0 : 0.45 })
+    } catch {
+      /* map mid-teardown */
+    }
   }, [lat, lng, map, reducedMotion])
   return null
 }
@@ -197,6 +203,16 @@ export function OsmLocationMapPicker({
     [handlePick, onReverseGeocode]
   )
 
+  const handleMarkerDragEnd = useCallback(
+    (e) => {
+      const ll = e.target.getLatLng()
+      handlePick(ll.lat, ll.lng)
+    },
+    [handlePick]
+  )
+
+  const mapRemountKey = `${mapActive ? "on" : "off"}-${readOnly ? "ro" : "rw"}`
+
   const propertyPinIcon = useMemo(() => {
     if (markerVariant !== "property") return null
     return L.divIcon({
@@ -226,7 +242,8 @@ export function OsmLocationMapPicker({
           </div>
         ) : null}
         <div className={cn("relative z-0 overflow-hidden", mapClassNameProp ?? MAP_PICKER_MAP_CLASS)}>
-          <MapContainer
+          <MapContainerSafe
+            remountKey={mapRemountKey}
             center={initialCenter}
             zoom={initialZoom}
             className={cn(
@@ -248,19 +265,10 @@ export function OsmLocationMapPicker({
                 position={position}
                 icon={propertyPinIcon ?? undefined}
                 draggable={!readOnly}
-                eventHandlers={
-                  readOnly
-                    ? undefined
-                    : {
-                        dragend: (e) => {
-                          const ll = e.target.getLatLng()
-                          handlePick(ll.lat, ll.lng)
-                        },
-                      }
-                }
+                eventHandlers={readOnly ? undefined : { dragend: handleMarkerDragEnd }}
               />
             ) : null}
-          </MapContainer>
+          </MapContainerSafe>
           {mapActive && !hasPin && !readOnly ? <MapPickerEmptyHint /> : null}
         </div>
         {showLocateControl && !readOnly ? (

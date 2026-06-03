@@ -66,7 +66,7 @@ export function PropertyLocationMap({ product }) {
         </Button>
       </div>
 
-      {mapPicker()}
+      {!fullOpen ? mapPicker() : null}
 
       <div className="mt-3 flex flex-wrap gap-2">
         <OpenInMapsButton lat={lat} lng={lng} label={mapLabel} />
@@ -91,7 +91,7 @@ export function PropertyLocationMap({ product }) {
           </DialogHeader>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-6">
-            {mapPicker("[&_.relative]:!min-h-[min(72vh,720px)]")}
+            {fullOpen ? mapPicker("[&_.relative]:!min-h-[min(72vh,720px)]") : null}
           </div>
 
           <div className="flex shrink-0 flex-wrap gap-2 border-t border-border px-4 py-3 sm:px-6">
