@@ -401,6 +401,8 @@
       "sale_farm": "مزارع للبيع"
     },
     "loadingMap": "جاري تحميل الخريطة…",
+    "clusterTitle": "{{count}} إعلانات — اضغط للتكبير",
+    "groupTitle": "{{count}} إعلانات في هذا الموقع",
     "search": "بحث",
     "searchTitle": "البحث في الخريطة",
     "searchHint": "حدد المواصفات ثم اضغط تطبيق",

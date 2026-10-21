@@ -91,6 +91,31 @@ function ListingPreviewCard({ marker, onClose }) {
   )
 }
 
+/** Listings that share one spot on the map (same building / same coordinates). */
+function ListingGroupCard({ markers, onClose }) {
+  const { t } = useTranslation()
+  return (
+    <div className="pointer-events-auto mx-auto flex max-h-[min(60dvh,28rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-2">
+        <p className="text-sm font-bold">
+          {t("listingsMap.groupTitle", { count: markers.length, defaultValue: "{{count}} إعلانات في هذا الموقع" })}
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+          aria-label={t("common.close", "إغلاق")}
+        >
+          <X className="size-4" aria-hidden />
+        </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        {markers.map((m) => <MapListRow key={m.id} marker={m} />)}
+      </div>
+    </div>
+  )
+}
+
 function MapListRow({ marker }) {
   const { t, i18n } = useTranslation()
   const awaiting = isAwaitingMarker(marker)
@@ -145,6 +170,8 @@ export function ListingsMapPage() {
 
   const [panelOpen, setPanelOpen] = useState(false)
   const [selected, setSelected] = useState(null)
+  // A same-spot list belongs to the filters/view it was opened in; it closes when those change.
+  const [groupState, setGroupState] = useState({ key: null, list: null })
 
   // Filters (not bounds) decide when the map refits; bounds only narrow the current filter set.
   const filterKey = JSON.stringify([cityId, district, rePurpose, rePropertyType, categoryId, minPrice, maxPrice, streetWidthMin, realEstateOnly])
@@ -197,12 +224,14 @@ export function ListingsMapPage() {
           ...m,
           lat: Number(m.lat),
           lng: Number(m.lng),
-          ...(view === "marketing" ? { pin_label: t("subscriber.mapPin", "طلب تسويق") } : {}),
+          ...(view === "marketing" ? { pin_label: t("subscriber.mapPin", "طلب تسويق"), url: `/subscriber/listings/${m.id}` } : {}),
         })),
     [marketingData, data, view, t],
   )
 
   const selectedMarker = selected ? markers.find((m) => m.id === selected.id) ?? selected : null
+  const mapKey = `${filterKey}-${view}`
+  const group = groupState.key === mapKey ? groupState.list : null
 
   const handleSelect = useCallback(
     (marker) => {
@@ -210,12 +239,24 @@ export function ListingsMapPage() {
         navigate(marker.url ?? `/products/${marker.id}`)
         return
       }
+      setGroupState({ key: null, list: null })
       setSelected(marker)
     },
     [navigate],
   )
 
-  const handleMapClick = useCallback(() => setSelected(null), [])
+  const handleGroupSelect = useCallback(
+    (list) => {
+      setSelected(null)
+      setGroupState({ key: mapKey, list })
+    },
+    [mapKey],
+  )
+
+  const handleMapClick = useCallback(() => {
+    setSelected(null)
+    setGroupState({ key: null, list: null })
+  }, [])
 
   const busy = view === "marketing" ? marketingQuery.isFetching : isFetching
   const showEmpty = !isLoading && !busy && !isError && markers.length === 0
@@ -328,8 +369,9 @@ export function ListingsMapPage() {
         <ListingsPriceMap
           markers={markers}
           selectedId={selectedMarker?.id ?? null}
-          fitKey={`${filterKey}-${view}`}
+          fitKey={mapKey}
           onSelect={view === "marketing" ? (m) => navigate(`/subscriber/listings/${m.id}`) : handleSelect}
+          onGroupSelect={handleGroupSelect}
           onBoundsChange={view === "marketing" ? undefined : handleBoundsChange}
           onMapClick={handleMapClick}
         />
@@ -371,7 +413,9 @@ export function ListingsMapPage() {
 
         {/* Bottom: preview card (touch) or legend */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          {selectedMarker ? (
+          {group?.length ? (
+            <ListingGroupCard markers={group} onClose={() => setGroupState({ key: null, list: null })} />
+          ) : selectedMarker ? (
             <ListingPreviewCard marker={selectedMarker} onClose={() => setSelected(null)} />
           ) : (
             <div className="pointer-events-auto inline-flex items-center gap-3 rounded-full bg-background/95 px-3 py-1.5 text-xs shadow">

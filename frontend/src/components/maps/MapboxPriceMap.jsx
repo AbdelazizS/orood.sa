@@ -3,15 +3,13 @@ import { useTranslation } from "react-i18next"
 import { useTheme } from "@/providers/ThemeProvider"
 import { createMap, loadManfithMapSdk, createMarker } from "@/lib/maps/manfithAdapter"
 import { buildPriceMarkerElement, setPriceMarkerActive } from "@/components/maps/PriceMarker"
+import { PRICE_CLUSTER_COLOR, PRICE_CLUSTER_MAX_ZOOM, PRICE_CLUSTER_RADIUS } from "@/lib/maps/priceClusters"
 import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const SOURCE = "orood-price-pins"
 const CLUSTER_LAYER = "orood-price-clusters"
 const CLUSTER_COUNT_LAYER = "orood-price-clusters-count"
-/** Above this zoom every listing is its own price pin. */
-const CLUSTER_MAX_ZOOM = 13
-const CLUSTER_COLOR = "#2e7d4f"
 const BOUNDS_DEBOUNCE_MS = 400
 
 function toGeoJson(markers) {
@@ -39,6 +37,7 @@ export default function MapboxPriceMap({
   selectedId = null,
   fitKey = "",
   onSelect,
+  onGroupSelect,
   onBoundsChange,
   onMapClick,
   onLoadFailed,
@@ -57,14 +56,14 @@ export default function MapboxPriceMap({
   const dataRef = useRef(new Map())
   const fittedKeyRef = useRef(null)
   const selectedIdRef = useRef(selectedId)
-  const callbacksRef = useRef({ onSelect, onBoundsChange, onMapClick, onLoadFailed })
+  const callbacksRef = useRef({ onSelect, onGroupSelect, onBoundsChange, onMapClick, onLoadFailed })
   const labelCtxRef = useRef({ t, lang: i18n.language })
   const markersRef = useRef(markers)
   const fitKeyRef = useRef(fitKey)
 
   // Keep the latest props for map event handlers (registered once per map instance).
   useLayoutEffect(() => {
-    callbacksRef.current = { onSelect, onBoundsChange, onMapClick, onLoadFailed }
+    callbacksRef.current = { onSelect, onGroupSelect, onBoundsChange, onMapClick, onLoadFailed }
     labelCtxRef.current = { t, lang: i18n.language }
     markersRef.current = markers
     fitKeyRef.current = fitKey
@@ -176,8 +175,8 @@ export default function MapboxPriceMap({
             type: "geojson",
             data: toGeoJson([]),
             cluster: true,
-            clusterMaxZoom: CLUSTER_MAX_ZOOM,
-            clusterRadius: 48,
+            clusterMaxZoom: PRICE_CLUSTER_MAX_ZOOM,
+            clusterRadius: PRICE_CLUSTER_RADIUS,
           })
           map.addLayer({
             id: CLUSTER_LAYER,
@@ -185,7 +184,7 @@ export default function MapboxPriceMap({
             source: SOURCE,
             filter: ["has", "point_count"],
             paint: {
-              "circle-color": CLUSTER_COLOR,
+              "circle-color": PRICE_CLUSTER_COLOR,
               "circle-radius": ["step", ["get", "point_count"], 18, 10, 22, 50, 28],
               "circle-opacity": 0.9,
               "circle-stroke-width": 2,
@@ -205,8 +204,18 @@ export default function MapboxPriceMap({
             const feature = e.features?.[0]
             const clusterId = feature?.properties?.cluster_id
             if (clusterId == null) return
-            map.getSource(SOURCE)?.getClusterExpansionZoom(clusterId, (err, zoom) => {
+            const source = map.getSource(SOURCE)
+            source?.getClusterExpansionZoom(clusterId, (err, zoom) => {
               if (err) return
+              // Same building / same spot: zooming can't separate them, so list them instead.
+              if (zoom > PRICE_CLUSTER_MAX_ZOOM || map.getZoom() >= PRICE_CLUSTER_MAX_ZOOM) {
+                source.getClusterLeaves(clusterId, Infinity, 0, (leavesErr, leaves) => {
+                  if (leavesErr) return
+                  const list = (leaves ?? []).map((f) => dataRef.current.get(String(f.properties?.id))).filter(Boolean)
+                  if (list.length) callbacksRef.current.onGroupSelect?.(list)
+                })
+                return
+              }
               map.easeTo({ center: feature.geometry.coordinates, zoom })
             })
           })

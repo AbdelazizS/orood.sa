@@ -328,6 +328,27 @@
   border: 0;
 }
 
+/* Numbered group bubble for nearby listings (Leaflet; Mapbox draws its own circle layer) */
+.map-price-cluster {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  border-radius: 9999px;
+  background: oklch(0.5 0.13 148.5 / 0.92);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  box-shadow: 0 0 0 5px oklch(0.5 0.13 148.5 / 0.25), 0 2px 6px rgb(0 0 0 / 0.3);
+  transition: transform 120ms ease-out;
+}
+
+.map-price-cluster:hover {
+  transform: translate(-50%, -50%) scale(1.08) !important;
+}
+
 .map-marker--delivery .map-marker-pin--delivery {
   animation: map-pulse 1.8s ease-in-out infinite;
 }

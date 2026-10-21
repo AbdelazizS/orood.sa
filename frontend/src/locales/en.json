@@ -359,6 +359,8 @@
       "sale_farm": "Farms for sale"
     },
     "loadingMap": "Loading map…",
+    "clusterTitle": "{{count}} listings — tap to zoom in",
+    "groupTitle": "{{count}} listings at this spot",
     "search": "Search",
     "searchTitle": "Search the map",
     "searchHint": "Pick your criteria, then tap Apply",

@@ -65,7 +65,7 @@ export function MapContainerSafe({ className, children, remountKey = "", ...prop
   return (
     <MapReadySetterContext.Provider value={handleSetReady}>
       <MapReadyContext.Provider value={mapReady}>
-        <MapContainer key={mapKey} className={className} {...props}>
+        <MapContainer key={mapKey} className={cn("isolate", className)} {...props}>
           <MapReadyNotifier />
           {children}
         </MapContainer>
