@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductResource;
 use App\Http\Resources\ProfileResource;
@@ -20,7 +21,7 @@ class PublicProfileController extends Controller
      */
     public function showById(Request $request, int $id): JsonResponse
     {
-        $user = User::where('id', $id)
+        $user = User::where('id', $id)->where('role', '!=', UserRole::SUBSCRIBER->value)
             ->whereNull('banned_at')
             ->with(['city.region', 'company.city'])
             ->firstOrFail();
@@ -35,7 +36,7 @@ class PublicProfileController extends Controller
      */
     public function show(Request $request, string $username): JsonResponse
     {
-        $user = User::where('username', $username)
+        $user = User::where('username', $username)->where('role', '!=', UserRole::SUBSCRIBER->value)
             ->whereNull('banned_at')
             ->with(['city.region', 'company.city'])
             ->firstOrFail();
@@ -108,6 +109,16 @@ class PublicProfileController extends Controller
                 'product_types' => $company->product_types,
                 'is_verified' => $company->verification_status === 'approved',
                 'can_post_wholesale' => $company->verification_status === 'approved',
+                'user_id' => $company->user_id,
+                'activities' => $company->activities ?? [],
+                'fal_license_no' => $company->fal_license_no,
+                'description' => $company->description,
+                'phone' => $company->phone,
+                'email' => $company->email,
+                'lat' => $company->lat,
+                'lng' => $company->lng,
+                'videos_count' => $company->videos()->published()->where('is_short', false)->count(),
+                'shorts_count' => $company->videos()->published()->where('is_short', true)->count(),
             ] : null,
             'my_review' => $myReview ? new ReviewResource($myReview->load('reviewer')) : null,
         ]);
@@ -118,7 +129,7 @@ class PublicProfileController extends Controller
      */
     public function listingsById(Request $request, int $id): JsonResponse
     {
-        $user = User::where('id', $id)->whereNull('banned_at')->firstOrFail();
+        $user = User::where('id', $id)->where('role', '!=', UserRole::SUBSCRIBER->value)->whereNull('banned_at')->firstOrFail();
 
         return $this->listingsForUser($request, $user);
     }
@@ -128,7 +139,7 @@ class PublicProfileController extends Controller
      */
     public function listings(Request $request, string $username): JsonResponse
     {
-        $user = User::where('username', $username)
+        $user = User::where('username', $username)->where('role', '!=', UserRole::SUBSCRIBER->value)
             ->whereNull('banned_at')
             ->firstOrFail();
 
@@ -163,7 +174,7 @@ class PublicProfileController extends Controller
      */
     public function reviewsById(Request $request, int $id): JsonResponse
     {
-        $user = User::where('id', $id)->firstOrFail();
+        $user = User::where('id', $id)->where('role', '!=', UserRole::SUBSCRIBER->value)->firstOrFail();
 
         return $this->reviewsForUser($request, $user);
     }
@@ -173,7 +184,7 @@ class PublicProfileController extends Controller
      */
     public function reviews(Request $request, string $username): JsonResponse
     {
-        $user = User::where('username', $username)->firstOrFail();
+        $user = User::where('username', $username)->where('role', '!=', UserRole::SUBSCRIBER->value)->firstOrFail();
 
         return $this->reviewsForUser($request, $user);
     }

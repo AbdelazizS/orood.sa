@@ -22,6 +22,9 @@ import {
   FileText,
   SlidersHorizontal,
   Search,
+  Handshake,
+  Clapperboard,
+  FolderCheck,
 } from "lucide-react"
 
 /**
@@ -62,7 +65,10 @@ export const adminNavSections = [
     items: [
       { to: "/admin/users", labelKey: "dashboard.users", icon: Users },
       { to: "/admin/assistants", labelKey: "admin.assistants.nav", icon: UserCog, permission: "assistants.manage" },
+      { to: "/admin/subscribers", labelKey: "adminSubscribers.nav", icon: Handshake, permission: "subscribers.manage" },
+      { to: "/admin/subscriber-listings", labelKey: "adminSubscribers.listingsNav", icon: FolderCheck, permission: "subscribers.notes" },
       { to: "/admin/companies", labelKey: "admin.companiesVerificationTitle", icon: Landmark },
+      { to: "/admin/company-videos", labelKey: "adminVideos.nav", icon: Clapperboard },
       { to: "/admin/verifications", labelKey: "admin.verifications", icon: Shield, permission: "compliance.review_document_verifications" },
       { to: "/admin/listing-reports", labelKey: "admin.listingReports", icon: Flag },
       { to: "/admin/profile-reports", labelKey: "admin.profileReports", icon: UserRound },

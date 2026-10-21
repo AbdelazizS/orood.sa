@@ -257,6 +257,77 @@
   background: #2563eb;
 }
 
+/* Aqar-style price pins (ListingsPriceMap) */
+.map-price-pin {
+  --pin-bg: oklch(0.5 0.13 148.5);
+  --pin-bg-active: oklch(0.42 0.13 148.5);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  padding: 0.2rem 0.55rem;
+  border: 1.5px solid #fff;
+  border-radius: 9999px;
+  background: var(--pin-bg);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.28);
+  transform-origin: 50% 100%;
+  transition: transform 120ms ease-out, background-color 120ms ease-out;
+  font-variant-numeric: tabular-nums;
+}
+
+.map-price-pin::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  width: 0;
+  height: 0;
+  margin-left: -5px;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--pin-bg);
+}
+
+.map-price-pin--awaiting {
+  --pin-bg: oklch(0.55 0.01 260);
+  --pin-bg-active: oklch(0.45 0.01 260);
+  font-weight: 600;
+}
+
+.map-price-pin:hover,
+.map-price-pin:focus-visible,
+.map-price-pin.is-active {
+  background: var(--pin-bg-active);
+  transform: scale(1.12);
+  outline: none;
+}
+
+.map-price-pin:hover::after,
+.map-price-pin:focus-visible::after,
+.map-price-pin.is-active::after {
+  border-top-color: var(--pin-bg-active);
+}
+
+/* Raise hovered / selected pins above their neighbours (Mapbox wraps the element; Leaflet uses the icon div). */
+.mapboxgl-marker:has(.map-price-pin:hover),
+.mapboxgl-marker:has(.map-price-pin.is-active),
+.leaflet-marker-icon:has(.map-price-pin:hover),
+.leaflet-marker-icon:has(.map-price-pin.is-active) {
+  z-index: 10 !important;
+}
+
+.leaflet-div-icon.map-price-pin-icon {
+  background: transparent;
+  border: 0;
+}
+
 .map-marker--delivery .map-marker-pin--delivery {
   animation: map-pulse 1.8s ease-in-out infinite;
 }

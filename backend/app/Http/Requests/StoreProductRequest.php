@@ -61,6 +61,9 @@ class StoreProductRequest extends FormRequest
             'location_lat' => ['nullable', 'numeric', 'between:-90,90'],
             'location_lng' => ['nullable', 'numeric', 'between:-180,180'],
             'location_address' => ['nullable', 'string', 'max:500'],
+            'district' => ['nullable', 'string', 'max:120'],
+            'needs_marketer' => ['nullable', 'boolean'],
+            'ad_license_no' => ['nullable', 'string', 'max:50', 'regex:/^[0-9A-Za-z\-]+$/'],
             'listing_attributes' => ['nullable', 'array'],
             'real_estate' => ['nullable', 'array'],
             'real_estate.purpose' => ['nullable', 'string', Rule::in(['sale', 'rent'])],
@@ -98,6 +101,7 @@ class StoreProductRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
+            $this->requireAdLicenseIfConfigured($validator);
             $contactPhone = filter_var($this->input('contact_phone', false), FILTER_VALIDATE_BOOLEAN);
             $contactMessages = filter_var($this->input('contact_messages', false), FILTER_VALIDATE_BOOLEAN);
 
@@ -218,6 +222,17 @@ class StoreProductRequest extends FormRequest
         $category = Category::query()->find($categoryId);
 
         return $category && app(ListingSchemaService::class)->isDynamicSchemaEnabled($category);
+    }
+
+    /** REGA: when enabled, a real-estate offer needs its advertising licence number. */
+    protected function requireAdLicenseIfConfigured($validator): void
+    {
+        if (! config('listings.require_ad_license') || $this->input('type') === 'request' || ! $this->isRealEstateListingSelection()) {
+            return;
+        }
+        if (trim((string) $this->input('ad_license_no')) === '' && ! ($this->isMethod('PUT') && $this->route('product')?->ad_license_no)) {
+            $validator->errors()->add('ad_license_no', 'رقم ترخيص الإعلان من الهيئة العامة للعقار مطلوب للإعلانات العقارية.');
+        }
     }
 
     public function isRealEstateListingSelection(): bool

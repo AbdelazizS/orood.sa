@@ -6,6 +6,8 @@ import { FilterToolbar } from "@/components/home/FilterToolbar"
 import { CategoryBar } from "@/components/home/CategoryBar"
 import { SubcategoryBar } from "@/components/home/SubcategoryBar"
 import { AnnouncementStrip } from "@/components/home/AnnouncementStrip"
+import { RealEstateFilterBar } from "@/components/home/RealEstateFilterBar"
+import { FreeMarketingBanner } from "@/components/home/FreeMarketingBanner"
 import { useFiltersStore } from "@/store/useFiltersStore"
 import { SeoHead } from "@/components/seo/SeoHead"
 import { usePageSeo } from "@/hooks/usePageSeo"
@@ -14,7 +16,7 @@ import { mergeJsonLd, buildOrganizationSchema, buildWebSiteSchema } from "@/lib/
 import { seoHeadFromResolved } from "@/lib/seoHeadFromResolved"
 
 export function HomePage() {
-  const { setCategory, setSubcategory, setSearchQuery } = useFiltersStore()
+  const { setCategory, setSubcategory, setSearchQuery, categoryId } = useFiltersStore()
   const [searchParams] = useSearchParams()
   const { feedQuery, categoriesQuery, regionsQuery } = useHomepageFeed()
   const fallbackSeo = usePageSeo("home")
@@ -50,6 +52,8 @@ export function HomePage() {
 
   const categoriesLoading = categoriesQuery.isLoading
   const categories = categoriesQuery.data ?? []
+  const selectedCategory = categories.find((c) => c.id === categoryId)
+  const isRealEstateSelected = selectedCategory?.slug === "real-estate"
 
   const homeJsonLd = mergeJsonLd(buildWebSiteSchema(), buildOrganizationSchema())
 
@@ -63,6 +67,9 @@ export function HomePage() {
           jsonLd: seo?.json_ld?.length ? seo.json_ld : homeJsonLd,
         })}
       />
+      {/* Free marketing value strip */}
+      <FreeMarketingBanner />
+
       {/* Section 1 — Categories first (skeleton when loading) */}
       <CategoryBar categories={categories} isLoading={categoriesLoading} />
       <SubcategoryBar categories={categories} />
@@ -70,11 +77,16 @@ export function HomePage() {
       {/* Section 2 — Filter toolbar */}
       <FilterToolbar regions={regionsQuery.data ?? []} />
 
+      {/* Real estate: purpose/type/area filters + "خريطة العقارات" */}
+      {isRealEstateSelected ? <RealEstateFilterBar /> : null}
+
       {/* Section 4 — Announcement strip */}
       <AnnouncementStrip target="individuals" queryKey="home-individuals" />
 
-      {/* Section 5 — Listings feed */}
-      <div className="space-y-0">
+      {/* Company Shorts (real-estate channels) */}
+
+      {/* Section 5 — Listings feed (centred with space on both sides, per client note) */}
+      <div className="mx-auto w-full max-w-5xl space-y-0">
         <FeedList feedQuery={feedQuery} />
       </div>
     </section>

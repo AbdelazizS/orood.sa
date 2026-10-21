@@ -55,6 +55,8 @@ export function RegisterForm() {
     regionId: null,
     companyCityId: "",
     companyProductTypes: "",
+    companyActivities: [],
+    companyFalLicense: "",
     companyLicense: null,
   })
   const [fieldErrors, setFieldErrors] = useState({})
@@ -90,6 +92,8 @@ export function RegisterForm() {
         city_id: String(formData.companyCityId),
         category_id: String(formData.companyCategoryId),
         product_types: formData.companyProductTypes?.trim() || undefined,
+        activities: formData.companyActivities ?? [],
+        fal_license_no: formData.companyFalLicense?.trim() || undefined,
         license: formData.companyLicense || undefined,
       })
 
@@ -297,6 +301,8 @@ export function RegisterForm() {
               regionId: formData.regionId,
               companyCityId: formData.companyCityId,
               companyProductTypes: formData.companyProductTypes,
+              companyActivities: formData.companyActivities,
+              companyFalLicense: formData.companyFalLicense,
               companyLicense: formData.companyLicense,
             }}
             onChange={(v) =>
@@ -307,6 +313,8 @@ export function RegisterForm() {
                 regionId: v.regionId ?? prev.regionId,
                 companyCityId: v.companyCityId ?? prev.companyCityId,
                 companyProductTypes: v.companyProductTypes ?? prev.companyProductTypes,
+                companyActivities: v.companyActivities ?? prev.companyActivities,
+                companyFalLicense: v.companyFalLicense ?? prev.companyFalLicense,
                 companyLicense: v.companyLicense ?? prev.companyLicense,
               }))
             }

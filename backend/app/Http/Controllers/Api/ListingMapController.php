@@ -6,11 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class ListingMapController extends Controller
 {
     /**
-     * Published listings with coordinates for map browse.
+     * Published listings (plus listings awaiting a marketer) with coordinates for map browse.
      */
     public function index(Request $request): JsonResponse
     {
@@ -25,12 +26,28 @@ class ListingMapController extends Controller
             'category_id' => ['nullable', 'integer', 'exists:categories,id'],
             'real_estate_only' => ['nullable', 'boolean'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:500'],
+            'min_price' => ['nullable', 'numeric', 'min:0'],
+            'max_price' => ['nullable', 'numeric', 'min:0'],
+            'district' => ['nullable', 'string', 'max:120'],
+            'street_width_min' => ['nullable', 'numeric', 'min:0'],
+            'include_awaiting' => ['nullable', 'boolean'],
+            'user_id' => ['nullable', 'integer'],
         ]);
 
         $perPage = (int) ($validated['per_page'] ?? 200);
+        $hasPriceFilter = isset($validated['min_price']) || isset($validated['max_price']);
+        // Awaiting listings have no visible price, so a price filter leaves them out.
+        $includeAwaiting = $request->boolean('include_awaiting', true) && ! $hasPriceFilter;
 
         $query = Product::query()
-            ->publiclyListed()
+            ->where(function ($q) use ($includeAwaiting) {
+                $q->where(fn ($listed) => $listed->publiclyListed()
+                    ->where(fn ($m) => $m->whereNull('marketing_status')
+                        ->orWhere('marketing_status', '!=', Product::MARKETING_AWAITING)));
+                if ($includeAwaiting) {
+                    $q->orWhere(fn ($awaiting) => $awaiting->publiclyVisibleAwaiting());
+                }
+            })
             ->where('is_wholesale', false)
             ->whereNotNull('location_lat')
             ->whereNotNull('location_lng')
@@ -49,13 +66,32 @@ class ListingMapController extends Controller
             $query->where('city_id', $validated['city_id']);
         }
 
-        if (! empty($validated['purpose']) || ! empty($validated['property_type'])) {
+        if (! empty($validated['user_id'])) {
+            $query->where('user_id', $validated['user_id']);
+        }
+
+        if (! empty($validated['district'])) {
+            $query->where('district', trim($validated['district']));
+        }
+
+        if (isset($validated['min_price'])) {
+            $query->where('price', '>=', (float) $validated['min_price']);
+        }
+
+        if (isset($validated['max_price'])) {
+            $query->where('price', '<=', (float) $validated['max_price']);
+        }
+
+        if (! empty($validated['purpose']) || ! empty($validated['property_type']) || isset($validated['street_width_min'])) {
             $query->whereHas('realEstateDetail', function ($q) use ($validated) {
                 if (! empty($validated['purpose'])) {
                     $q->where('purpose', $validated['purpose']);
                 }
                 if (! empty($validated['property_type'])) {
                     $q->where('property_type', $validated['property_type']);
+                }
+                if (isset($validated['street_width_min'])) {
+                    $q->where('street_width_m', '>=', (float) $validated['street_width_min']);
                 }
             });
         }
@@ -69,23 +105,59 @@ class ListingMapController extends Controller
                 ->whereBetween('location_lng', [min($west, $east), max($west, $east)]);
         }
 
-        $listings = $query->orderByDesc('published_at')->limit($perPage)->get();
+        $listings = $query->orderByDesc('published_at')->orderByDesc('id')->limit($perPage)->get();
+        $viewer = $request->user();
 
         $markers = $listings->map(fn (Product $p) => [
             'id' => $p->id,
             'title' => $p->title,
-            'price' => $p->price,
+            // Never leak the price of a listing that is still waiting for a marketer.
+            'price' => $p->hidesPriceFrom($viewer) ? null : $p->price,
             'lat' => (float) $p->location_lat,
             'lng' => (float) $p->location_lng,
             'thumbnail' => $p->image_url ?? data_get($p->media, 'cover'),
             'url' => '/products/'.$p->id,
             'purpose' => $p->realEstateDetail?->purpose,
             'property_type' => $p->realEstateDetail?->property_type,
+            'marketing_status' => $p->marketing_status,
+            'district' => $p->district,
+            'street_width' => $p->realEstateDetail?->street_width_m,
+            'city' => $p->city?->getLocalizedName($request->header('Accept-Language')),
         ]);
 
         return response()->json([
             'data' => $markers,
             'meta' => ['count' => $markers->count()],
         ]);
+    }
+
+    /**
+     * Distinct districts (الأحياء) already used by map-visible listings in a city.
+     */
+    public function districts(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'city_id' => ['required', 'integer', 'exists:cities,id'],
+        ]);
+
+        $cityId = (int) $validated['city_id'];
+
+        $districts = Cache::remember("listings_map_districts_{$cityId}", now()->addMinutes(10), function () use ($cityId) {
+            return Product::query()
+                ->where('city_id', $cityId)
+                ->where(fn ($q) => $q->publiclyListed()->orWhere(fn ($a) => $a->publiclyVisibleAwaiting()))
+                ->whereNotNull('district')
+                ->where('district', '!=', '')
+                ->distinct()
+                ->orderBy('district')
+                ->pluck('district')
+                ->map(fn ($d) => trim((string) $d))
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+        });
+
+        return response()->json(['data' => $districts]);
     }
 }

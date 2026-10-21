@@ -8,11 +8,19 @@ use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\EnablesFinanceModules;
 use Tests\TestCase;
 
 class PurchaseEscrowFlowTest extends TestCase
 {
+    use EnablesFinanceModules;
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->enableFinanceModules();
+    }
 
     public function test_escrow_purchase_holds_funds_on_buyer_and_releases_to_seller_on_confirm(): void
     {
@@ -137,7 +145,7 @@ class PurchaseEscrowFlowTest extends TestCase
         $sellerToken = $this->issueApiToken($seller);
 
         $purchaseId = $this->withHeader('Authorization', "Bearer {$buyerToken}")
-            ->postJson("/api/v1/products/{$product->id}/purchase", ['payment_method' => 'cod'])
+            ->postJson("/api/v1/products/{$product->id}/purchase", ['payment_method' => 'cod', 'cod_accepted' => true])
             ->assertCreated()
             ->json('data.id');
 
@@ -198,7 +206,7 @@ class PurchaseEscrowFlowTest extends TestCase
 
         $token = $this->issueApiToken($buyer);
         $this->withHeader('Authorization', "Bearer {$token}")
-            ->postJson("/api/v1/products/{$product->id}/purchase", ['payment_method' => 'cod'])
+            ->postJson("/api/v1/products/{$product->id}/purchase", ['payment_method' => 'cod', 'cod_accepted' => true])
             ->assertStatus(422);
     }
 

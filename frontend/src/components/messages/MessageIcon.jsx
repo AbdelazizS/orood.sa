@@ -17,7 +17,11 @@ export function MessageIcon() {
   const user = useAuthStore((s) => s.user)
   const inAdminShell = pathname.startsWith("/admin")
   const staff = isStaffUser(user)
-  const messagesHref = inAdminShell || staff ? "/admin/messages" : "/dashboard/messages"
+  const messagesHref = inAdminShell || staff
+    ? "/admin/messages"
+    : user?.role === "subscriber"
+      ? "/subscriber/messages"
+      : "/dashboard/messages"
 
   const { data: conversations = [] } = useQuery({
     queryKey: ["conversations"],

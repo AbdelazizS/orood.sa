@@ -46,7 +46,8 @@ class BrandingSettingsTest extends TestCase
                 ],
             ])
             ->assertJsonPath('data.assets.logo_light', '/logo.png')
-            ->assertJsonPath('data.placements.navbar.width', '220px');
+            // 220px default, served in rem (220 / 16).
+            ->assertJsonPath('data.placements.navbar.width', '13.75rem');
     }
 
     public function test_public_branding_localizes_copyright(): void

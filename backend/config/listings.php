@@ -15,4 +15,10 @@ return [
     | Per-category override: categories.dynamic_schema_enabled
     */
     'dynamic_schema_enabled' => (bool) env('LISTINGS_DYNAMIC_SCHEMA_ENABLED', false),
+
+    /*
+    | REGA: real-estate offers must carry an advertising licence number (رقم ترخيص الإعلان).
+    | Off by default so existing flows keep working; turn on before the commercial launch.
+    */
+    'require_ad_license' => (bool) env('LISTINGS_REQUIRE_AD_LICENSE', false),
 ];

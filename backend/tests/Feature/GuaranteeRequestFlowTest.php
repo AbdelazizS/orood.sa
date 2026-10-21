@@ -6,11 +6,19 @@ use App\Models\Balance;
 use App\Models\GuaranteeRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\EnablesFinanceModules;
 use Tests\TestCase;
 
 class GuaranteeRequestFlowTest extends TestCase
 {
+    use EnablesFinanceModules;
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->enableFinanceModules();
+    }
 
     public function test_member_can_submit_deposit_request_and_admin_can_approve(): void
     {

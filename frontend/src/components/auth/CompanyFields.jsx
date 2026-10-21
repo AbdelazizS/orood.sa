@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/select"
 import apiClient from "@/lib/apiClient"
 import { useMainCategories } from "@/hooks/useCategories"
+import { Checkbox } from "@/components/ui/checkbox"
+import { COMPANY_ACTIVITIES } from "@/lib/video/videoFormat"
 import { Upload } from "lucide-react"
 
 export function CompanyFields({ value, onChange, disabled }) {
@@ -104,6 +106,38 @@ export function CompanyFields({ value, onChange, disabled }) {
           </Select>
         </div>
       </div>
+      {categories.find((c) => String(c.id) === String(value?.companyCategoryId))?.slug === "real-estate" ? (
+        <div className="space-y-2">
+          <Label>{t("auth.companyActivities", "نشاط الشركة العقارية")}</Label>
+          <div className="flex flex-wrap gap-4">
+            {COMPANY_ACTIVITIES.map((a) => {
+              const list = value?.companyActivities ?? []
+              return (
+                <label key={a} className="flex cursor-pointer items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={list.includes(a)}
+                    disabled={disabled}
+                    onCheckedChange={(on) =>
+                      onChange?.({ ...value, companyActivities: on === true ? [...new Set([...list, a])] : list.filter((x) => x !== a) })
+                    }
+                  />
+                  {t(`companyChannel.activity.${a}`, a)}
+                </label>
+              )
+            })}
+          </div>
+          <Label htmlFor="companyFalLicense" className="mt-2 block">{t("auth.falLicense", "رقم رخصة فال (اختياري)")}</Label>
+          <Input
+            id="companyFalLicense"
+            dir="ltr"
+            inputMode="numeric"
+            maxLength={50}
+            value={value?.companyFalLicense ?? ""}
+            onChange={(e) => onChange?.({ ...value, companyFalLicense: e.target.value.replace(/[^0-9A-Za-z-]/g, "") })}
+            disabled={disabled}
+          />
+        </div>
+      ) : null}
       <div className="space-y-2">
         <Label htmlFor="companyProductTypes">{t("auth.companyProductTypes")}</Label>
         <Input

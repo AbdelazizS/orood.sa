@@ -13,6 +13,20 @@ const DEFAULT_STATE = {
   reMinArea: "",
   reMaxArea: "",
   reBedroomsMin: "",
+  district: null,
+  minPrice: "",
+  maxPrice: "",
+  streetWidthMin: null,
+}
+
+const MAP_FILTER_DEFAULTS = {
+  regionId: null,
+  cityId: null,
+  rePropertyType: null,
+  district: null,
+  minPrice: "",
+  maxPrice: "",
+  streetWidthMin: null,
 }
 
 export const useFiltersStore = create((set) => ({
@@ -33,7 +47,8 @@ export const useFiltersStore = create((set) => ({
       regionId,
       cityId: regionId === state.regionId ? state.cityId : null,
     })),
-  setCity: (cityId) => set({ cityId }),
+  setCity: (cityId) =>
+    set((state) => ({ cityId, district: cityId === state.cityId ? state.district : null })),
   setActiveFilter: (activeFilter) => set({ activeFilter }),
   setListingType: (listingType) => set({ listingType }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
@@ -42,5 +57,12 @@ export const useFiltersStore = create((set) => ({
   setReMinArea: (reMinArea) => set({ reMinArea }),
   setReMaxArea: (reMaxArea) => set({ reMaxArea }),
   setReBedroomsMin: (reBedroomsMin) => set({ reBedroomsMin }),
+  setDistrict: (district) => set({ district: district || null }),
+  setMinPrice: (minPrice) => set({ minPrice }),
+  setMaxPrice: (maxPrice) => set({ maxPrice }),
+  setStreetWidthMin: (streetWidthMin) => set({ streetWidthMin }),
+  /** Apply the map search panel in one update (avoids one refetch per field). */
+  setMapFilters: (filters) => set((state) => ({ ...state, ...filters })),
+  resetMapFilters: () => set(MAP_FILTER_DEFAULTS),
   resetFilters: () => set(DEFAULT_STATE),
 }))

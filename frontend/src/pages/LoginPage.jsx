@@ -46,7 +46,8 @@ export function LoginPage() {
 
   const loginMutation = useMutation({
     mutationFn: () => authService.login(email, password),
-    onSuccess: () => navigate(redirectTo, { replace: true }),
+    onSuccess: (data) =>
+      navigate(data?.user?.role === "subscriber" && redirectTo === "/" ? "/subscriber" : redirectTo, { replace: true }),
   })
 
   const handleSubmit = (e) => {

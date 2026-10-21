@@ -14,15 +14,18 @@ use App\Models\User;
 use Database\Seeders\PaymentMethodSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\EnablesFinanceModules;
 use Tests\TestCase;
 
 class DirectTransferOrderFlowTest extends TestCase
 {
+    use EnablesFinanceModules;
     use RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->enableFinanceModules();
         $this->seed(PaymentMethodSeeder::class);
     }
 

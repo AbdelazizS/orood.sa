@@ -58,3 +58,5 @@ Artisan::command('products:backfill-sold-count', function () {
 })->purpose('Set products.sold_count from SUM(quantity) of completed purchases per product; others set to 0');
 
 Schedule::command('seo:generate-sitemap')->dailyAt('02:00');
+// Subscriber ads past their duration → listing goes back to "awaiting a marketer".
+Schedule::command('subscribers:expire-ads')->hourly();

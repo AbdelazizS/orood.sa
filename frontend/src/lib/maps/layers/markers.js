@@ -1,16 +1,18 @@
 /**
  * @param {typeof import('mapbox-gl')} mapboxgl
  * @param {import('mapbox-gl').Map} map
- * @param {{ lat: number, lng: number, draggable?: boolean, variant?: 'default'|'property'|'delivery' }} opts
+ * @param {{ lat: number, lng: number, draggable?: boolean, variant?: 'default'|'property'|'delivery', element?: HTMLElement, anchor?: string }} opts
  */
 export function createMarker(mapboxgl, map, opts) {
-  const { lat, lng, draggable = false, variant = "default" } = opts
+  const { lat, lng, draggable = false, variant = "default", element = null, anchor } = opts
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
 
   const useCustom = variant === "property" || variant === "delivery"
-  const marker = useCustom
-    ? new mapboxgl.Marker({ element: buildVariantElement(variant), draggable })
-    : new mapboxgl.Marker({ draggable })
+  const marker = element
+    ? new mapboxgl.Marker({ element, draggable, ...(anchor ? { anchor } : {}) })
+    : useCustom
+      ? new mapboxgl.Marker({ element: buildVariantElement(variant), draggable })
+      : new mapboxgl.Marker({ draggable })
 
   marker.setLngLat([lng, lat]).addTo(map)
   return marker

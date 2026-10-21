@@ -10,6 +10,9 @@ import { ar, enUS } from "date-fns/locale"
 /** Fixed row height — keep in sync with FeedSkeleton */
 export const PRODUCT_CARD_ROW_HEIGHT = "h-[136px] sm:h-[140px]"
 
+/** Row height when an extra meta line (e.g. real-estate specs) sits under the title */
+export const PRODUCT_CARD_ROW_HEIGHT_WITH_META = "h-[156px] sm:h-[164px]"
+
 /** Wholesale list row — taller than homepage default */
 export const WHOLESALE_LIST_ROW_HEIGHT = "min-h-[168px] sm:min-h-[188px]"
 
@@ -114,7 +117,7 @@ export function ProductCard({
       >
         <h3
           className={cn(
-            "min-w-0 font-semibold leading-snug text-foreground hover:underline",
+            "min-w-0 shrink-0 font-semibold leading-snug text-foreground hover:underline",
             compact
               ? "line-clamp-2 text-sm"
               : cn(
@@ -127,7 +130,7 @@ export function ProductCard({
         </h3>
 
         {preMetaSlot ? (
-          <div className="min-w-0 overflow-hidden [&_*]:truncate [&_p]:line-clamp-1">
+          <div className="min-w-0 shrink-0 overflow-hidden leading-normal [&_*]:truncate [&_p]:line-clamp-1">
             {preMetaSlot}
           </div>
         ) : null}
@@ -135,7 +138,7 @@ export function ProductCard({
         {!compact ? (
           <div
             className={cn(
-              "flex min-w-0 items-center gap-x-2 overflow-hidden text-muted-foreground",
+              "flex min-w-0 shrink-0 items-center gap-x-2 overflow-hidden text-muted-foreground",
               narrow ? "gap-x-1.5 text-[11px] sm:text-xs" : "text-[11px] sm:text-xs md:text-sm"
             )}
           >
@@ -242,7 +245,7 @@ export function ProductCard({
     <article
       className={cn(
         "flex w-full min-w-0 items-stretch overflow-hidden border-b border-border bg-card transition-colors hover:bg-muted/50",
-        articleClassName ?? PRODUCT_CARD_ROW_HEIGHT,
+        articleClassName ?? (hasPreMeta && !compact ? PRODUCT_CARD_ROW_HEIGHT_WITH_META : PRODUCT_CARD_ROW_HEIGHT),
         trailingSlot && stackTrailingBelowOnNarrow && "max-sm:flex-col max-sm:min-h-0 sm:flex-row"
       )}
     >

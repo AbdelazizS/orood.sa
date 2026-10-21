@@ -10,7 +10,7 @@ class DevelopmentSeeder extends Seeder
     {
         $this->call([
             ProductionSeeder::class,
-            PhaseOneSeeder::class,
+            SaudiMarketplaceSeeder::class,
             ProfileSeeder::class,
         ]);
     }

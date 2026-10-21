@@ -11,6 +11,7 @@ import { ProfileCoverAvatar } from "@/components/profile/ProfileCoverAvatar"
 import { ProfileTrustStrip } from "@/components/profile/ProfileTrustStrip"
 import { ProfileBioMap } from "@/components/profile/ProfileBioMap"
 import { ProfileTabs } from "@/components/profile/ProfileTabs"
+import { CompanyActivityChips } from "@/components/company/CompanyActivityChips"
 import { ProfileWholesaleStorefrontCta } from "@/components/profile/ProfileWholesaleStorefrontCta"
 import { LeaveReviewModal } from "@/components/reviews/LeaveReviewModal"
 import { OwnerProfileManagementPanel } from "@/features/profile/OwnerProfileManagementPanel"
@@ -116,6 +117,7 @@ export function PublicProfilePage() {
 
       <div className={cn(PUBLIC_PROFILE_CONTAINER, "space-y-5 pb-16 pt-2")}>
         <ProfileTrustStrip user={user} reviewSummary={reviewSummary} />
+        <CompanyActivityChips activities={company?.activities} />
         {company?.id && company?.can_post_wholesale !== false ? (
           <ProfileWholesaleStorefrontCta companyId={company.id} isVerified={company.is_verified} />
         ) : null}
@@ -133,6 +135,7 @@ export function PublicProfilePage() {
         onReviewModalOpenChange={!isOwner ? setReviewModalOpen : undefined}
         initialListings={initialListings}
         initialReviews={initialReviews}
+        company={company}
       />
 
       <LeaveReviewModal

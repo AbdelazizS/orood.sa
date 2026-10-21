@@ -95,6 +95,8 @@ export async function registerCompany(payload) {
   formData.append("city_id", payload.city_id)
   formData.append("category_id", payload.category_id)
   if (payload.product_types) formData.append("product_types", payload.product_types)
+  ;(payload.activities ?? []).forEach((a) => formData.append("activities[]", a))
+  if (payload.fal_license_no) formData.append("fal_license_no", payload.fal_license_no)
   if (payload.license) formData.append("license", payload.license)
 
   const { data } = await apiClient.post("/auth/register/company", formData, {

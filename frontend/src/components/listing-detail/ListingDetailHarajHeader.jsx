@@ -40,6 +40,7 @@ export function ListingDetailHarajHeader({ product }) {
 
   const { price, accept_bids: biddingEnabled, bids_visible: biddingVisible } = product ?? {}
   const hasPrice = price != null && Number(price) > 0
+  const awaitingMarketing = product?.marketing_status === "awaiting_marketer" && price == null
   const showBidSide = Boolean(biddingEnabled && (biddingVisible || isOwner))
   const currentBid = product?.highest_bid ?? product?.bids?.[0]?.amount
 
@@ -173,6 +174,19 @@ export function ListingDetailHarajHeader({ product }) {
                 </span>
               </div>
             ) : null}
+            {awaitingMarketing ? (
+              <div className="space-y-1">
+                <span className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-sm font-semibold text-muted-foreground">
+                  {t("realEstate.awaitingMarketing", "بانتظار التسويق")}
+                </span>
+                {/* PDF note 1: an awaiting listing shows the price per meter, not the total price. */}
+                {product?.price_per_sqm ? (
+                  <span className="block text-sm font-bold tabular-nums text-foreground">
+                    {t("realEstate.pricePerSqm", { value: Math.round(product.price_per_sqm).toLocaleString(), defaultValue: "سعر المتر: {{value}} ريال" })}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
             {hasPrice ? (
               <div>
                 <span className="text-base font-bold tabular-nums text-foreground sm:text-lg">
@@ -181,11 +195,22 @@ export function ListingDetailHarajHeader({ product }) {
                 <span className="mt-0.5 hidden text-[11px] text-muted-foreground md:block">
                   {t("listingDetail.priceCaption", "(السعر)")}
                 </span>
+                {product?.price_per_sqm ? (
+                  <span className="block text-[11px] text-muted-foreground tabular-nums">
+                    {t("realEstate.pricePerSqm", { value: Math.round(product.price_per_sqm).toLocaleString(), defaultValue: "سعر المتر: {{value}} ريال" })}
+                  </span>
+                ) : null}
               </div>
             ) : null}
           </div>
           {statsInline}
         </div>
+        {product?.ad_license_no ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            {t("realEstate.adLicenseShown", "رقم ترخيص الإعلان")}:{" "}
+            <span className="font-semibold tabular-nums text-foreground" dir="ltr">{product.ad_license_no}</span>
+          </p>
+        ) : null}
       </div>
       <Separator />
     </>

@@ -11,11 +11,19 @@ use App\Models\User;
 use App\Models\WithdrawalRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\EnablesFinanceModules;
 use Tests\TestCase;
 
 class FinanceAndOrdersRbacTest extends TestCase
 {
+    use EnablesFinanceModules;
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->enableFinanceModules();
+    }
 
     public function test_balance_charge_idempotency_creates_single_pending_request_until_admin_approval(): void
     {
@@ -57,7 +65,7 @@ class FinanceAndOrdersRbacTest extends TestCase
         $adminToken = $this->issueApiToken($admin);
 
         $this->withHeader('Authorization', "Bearer {$adminToken}")
-            ->postJson("/api/v1/admin/charge-requests/{$chargeRequest->id}/approve")
+            ->postJson("/api/v1/admin/charge-requests/{$chargeRequest->id}/approve", ['approval_note' => 'تم التحقق من التحويل'])
             ->assertOk();
 
         $balance->refresh();
@@ -148,7 +156,7 @@ class FinanceAndOrdersRbacTest extends TestCase
         $adminToken = $this->issueApiToken($admin);
 
         $this->withHeader('Authorization', "Bearer {$adminToken}")
-            ->postJson("/api/v1/admin/charge-requests/{$chargeRequest->id}/approve")
+            ->postJson("/api/v1/admin/charge-requests/{$chargeRequest->id}/approve", ['approval_note' => 'تم التحقق من التحويل'])
             ->assertOk();
 
         $this->assertDatabaseHas('notifications', [
@@ -174,7 +182,7 @@ class FinanceAndOrdersRbacTest extends TestCase
         $sellerToken = $this->issueApiToken($seller);
 
         $purchaseId = $this->withHeader('Authorization', "Bearer {$buyerToken}")
-            ->postJson("/api/v1/products/{$product->id}/purchase", ['payment_method' => 'cod'])
+            ->postJson("/api/v1/products/{$product->id}/purchase", ['payment_method' => 'cod', 'cod_accepted' => true])
             ->assertCreated()
             ->json('data.id');
 

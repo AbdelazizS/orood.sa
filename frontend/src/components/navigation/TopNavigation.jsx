@@ -16,7 +16,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import { Menu, Plus, LayoutDashboard, Shield, User, Bell, LogOut, MessageSquare } from "lucide-react"
+import { Menu, Plus, LayoutDashboard, Shield, User, Bell, LogOut, MessageSquare, Map as MapIcon } from "lucide-react"
 import { NavbarLogo } from "@/components/brand/NavbarLogo"
 import {
   NAVBAR_HEADER_ROW_CLASS,
@@ -30,6 +30,12 @@ function MobileNavSheetContent({ t, showBottomNav, token, user, isAdmin, onClose
   const memberProfileHref = publicProfilePath(user) ?? "/dashboard"
   return (
     <div className="flex flex-col gap-1">
+      <Button variant="ghost" size="sm" asChild className={linkClass}>
+        <Link to="/listings/map?real_estate_only=1" onClick={onClose} className="flex items-center gap-2">
+          <MapIcon className="size-4" />
+          {t("realEstate.mapBrowse", "خريطة العقارات")}
+        </Link>
+      </Button>
       {!showBottomNav && (
         <>
           <Button variant="ghost" size="sm" asChild className={linkClass}>
@@ -134,6 +140,12 @@ export function TopNavigation() {
 
         {/* Mobile: theme + lang + burger grouped together */}
         <div className="flex items-center gap-1 sm:gap-2">
+          <Button variant="ghost" size="sm" asChild className="gap-1.5 rounded-full px-2 sm:px-3">
+            <Link to="/listings/map?real_estate_only=1" title={t("realEstate.mapBrowse", "خريطة العقارات")}>
+              <MapIcon className="size-5" />
+              <span className="hidden text-sm font-semibold md:inline">{t("nav.map", "الخريطة")}</span>
+            </Link>
+          </Button>
           <ThemeToggle />
           <LanguageSwitcher />
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>

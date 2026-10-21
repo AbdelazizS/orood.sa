@@ -10,11 +10,13 @@ import { ChatThreadPanel, MessageBubble } from "@/components/messaging/messagesU
 import { ConversationListItem } from "@/components/messaging/ConversationListItem"
 import apiClient from "@/lib/apiClient"
 import { useAuthStore } from "@/store/useAuthStore"
+import { useAccountSectionBasePath } from "@/lib/accountSectionPaths"
 import { Send, MessageSquare, ArrowLeft, Loader2, Bell } from "lucide-react"
 import { NotificationsPage } from "@/pages/dashboard/NotificationsPage"
 import { NotificationDetailInner } from "@/pages/dashboard/NotificationDetailPage"
 
 export function MessagesPage() {
+  const accountBasePath = useAccountSectionBasePath()
   const { t } = useTranslation()
   const { user } = useAuthStore()
   const queryClient = useQueryClient()
@@ -241,7 +243,7 @@ export function MessagesPage() {
           <p className="mt-1 text-sm text-muted-foreground">{t("dashboard.inboxSubtitle")}</p>
         </div>
         {inboxTabs}
-        <NotificationDetailInner notificationId={nid} backHref="/dashboard/messages?hub=notifications" />
+        <NotificationDetailInner notificationId={nid} backHref={`${accountBasePath}/messages?hub=notifications`} />
       </div>
     )
   }

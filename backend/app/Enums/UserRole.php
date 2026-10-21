@@ -15,6 +15,8 @@ enum UserRole: string
     case ASSISTANT = 'assistant';
     case MARKETER = 'marketer';
     case COMPANY = 'company';
+    /** Hidden account created by admin: buys ads of listings awaiting a marketer. */
+    case SUBSCRIBER = 'subscriber';
 
     public function isPlatformManager(): bool
     {
@@ -52,6 +54,7 @@ enum UserRole: string
             self::ASSISTANT => 'مساعد',
             self::MARKETER => 'مسوق',
             self::COMPANY => 'شركة',
+            self::SUBSCRIBER => 'مشترك',
         };
     }
 }

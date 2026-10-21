@@ -21,6 +21,7 @@ import {
   TrustBanner,
 } from "@/components/listing-detail"
 import { PropertyLocationMap } from "@/components/maps/PropertyLocationMap.jsx"
+import { ListingVideosSection } from "@/components/listing-detail/ListingVideosSection"
 import { isRealEstateListing } from "@/lib/listings/isRealEstateListing"
 import { ViewRequestsSellerPanel } from "@/components/listing-detail/ViewRequestsSellerPanel"
 import { BidSection } from "@/features/offers/BidSection"
@@ -54,6 +55,8 @@ export function ProductDetailsPage() {
 
   const isOwner = token && (user?.id === product?.seller?.id || user?.id === product?.user_id)
   const isRE = isRealEstateListing(product)
+  /** Listing waiting for a marketer: the API hides price and contact, so hide buy/contact/bid too. */
+  const awaitingMarketing = product?.marketing_status === "awaiting_marketer" && product?.price == null
   const listingAttrs = product?.listing_attributes
   const hasListingAttrs =
     listingAttrs &&
@@ -185,6 +188,7 @@ export function ProductDetailsPage() {
           <ListingDetailHarajHeader product={product} />
           <ListingDescription product={product} />
           <ListingImages product={product} />
+          <ListingVideosSection productId={product?.id ?? id} />
           {showAttributesGrid ? (
             <ListingAttributesGrid
               sections={product?.listing_attribute_sections}
@@ -200,8 +204,8 @@ export function ProductDetailsPage() {
           ) : null}
           <PublisherInfoNote product={product} />
           {isRE ? <PropertyLocationMap product={product} /> : null}
-          {!isOwner && <ListingActions product={product} />}
-          {!isOwner && <BidSection product={product} />}
+          {!isOwner && !awaitingMarketing && <ListingActions product={product} />}
+          {!isOwner && !awaitingMarketing && <BidSection product={product} />}
           <CommentsSection product={product} />
           <ListingStatsRow product={product} />
           <ListingFinancialGuaranteeCard product={product} />

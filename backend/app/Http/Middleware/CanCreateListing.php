@@ -21,6 +21,9 @@ class CanCreateListing
         }
 
         $role = UserRole::tryFrom($user->role);
+        if ($role === UserRole::SUBSCRIBER) {
+            return response()->json(['message' => 'حساب المشترك لا يمكنه إنشاء إعلانات'], 403);
+        }
         if ($role && $role->isPlatformManager()) {
             return response()->json(['message' => 'لا يمكن لموظفي المنصة إنشاء إعلانات'], 403);
         }

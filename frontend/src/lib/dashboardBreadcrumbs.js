@@ -99,6 +99,15 @@ function resolveAdminTail(path, t) {
   if (path.startsWith("/admin/regions")) {
     return { to: "/admin/regions", label: t("admin.regions") }
   }
+  if (path.startsWith("/admin/company-videos")) {
+    return { to: "/admin/company-videos", label: t("adminVideos.nav", "فيديوهات الشركات") }
+  }
+  if (path.startsWith("/admin/subscriber-listings")) {
+    return { to: "/admin/subscriber-listings", label: t("adminSubscribers.listingsNav", "عروض المشتركين") }
+  }
+  if (path.startsWith("/admin/subscribers")) {
+    return { to: "/admin/subscribers", label: t("adminSubscribers.nav", "المشتركون") }
+  }
   if (path.startsWith("/admin/tasks")) {
     return { to: "/admin/tasks", label: t("admin.tasks") }
   }

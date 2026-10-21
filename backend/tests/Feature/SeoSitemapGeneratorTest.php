@@ -15,14 +15,20 @@ class SeoSitemapGeneratorTest extends TestCase
 {
     use RefreshDatabase;
 
+    private string $tempPublic;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Write sitemaps to a throwaway folder — never touch (or delete) the real public/ files.
+        $this->tempPublic = sys_get_temp_dir().DIRECTORY_SEPARATOR.'sitemap-test-'.uniqid();
+        File::ensureDirectoryExists($this->tempPublic);
+        $this->app->usePublicPath($this->tempPublic);
+    }
+
     protected function tearDown(): void
     {
-        foreach (glob(public_path('sitemap*.xml')) ?: [] as $file) {
-            @unlink($file);
-        }
-        if (File::exists(public_path('robots.txt'))) {
-            @unlink(public_path('robots.txt'));
-        }
+        File::deleteDirectory($this->tempPublic);
 
         parent::tearDown();
     }
@@ -31,11 +37,9 @@ class SeoSitemapGeneratorTest extends TestCase
     {
         $this->seed(SeoDefaultsSeeder::class);
 
-        Category::factory()->create([
-            'slug' => 'cars',
-            'is_active' => true,
-            'parent_id' => null,
-        ]);
+        // "cars" is created by a migration; reuse it.
+        (Category::query()->where('slug', 'cars')->first() ?? Category::factory()->create(['slug' => 'cars']))
+            ->update(['is_active' => true, 'parent_id' => null]);
 
         Product::factory()->create([
             'status' => 'published',

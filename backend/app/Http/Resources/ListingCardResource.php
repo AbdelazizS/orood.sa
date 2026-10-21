@@ -23,7 +23,10 @@ class ListingCardResource extends JsonResource
         return [
             'id' => $this->id,
             'title' => $this->title,
-            'price' => $this->price ? (float) $this->price : null,
+            'price' => $this->price && ! ($this->resource instanceof \App\Models\Product && $this->resource->hidesPriceFrom($request->user()))
+                ? (float) $this->price
+                : null,
+            'marketing_status' => $this->marketing_status,
             'thumbnail' => $thumbnail,
             'type' => $this->is_offer ? 'offer' : 'request',
             'bumped_at' => $this->bumped_at?->toISOString(),

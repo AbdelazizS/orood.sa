@@ -6,6 +6,7 @@ import {
   CircleHelp,
   UserCircle,
   Megaphone,
+  Clapperboard,
 } from "lucide-react"
 
 /**
@@ -95,6 +96,13 @@ export function getMemberDashboardNavSections(user, options = {}) {
     { id: "messages", to: "/dashboard/messages", labelKey: "dashboard.nav.inbox", icon: MessageSquare },
     { id: "account", to: "/dashboard/account", labelKey: "dashboard.nav.account", icon: UserCircle },
     { id: "listings", to: "/dashboard/listings", labelKey: "dashboard.nav.listings", icon: Megaphone },
+    {
+      id: "videos",
+      to: "/dashboard/videos",
+      labelKey: "companyVideos.nav",
+      icon: Clapperboard,
+      visible: (u) => u?.role === "company",
+    },
     { id: "help", to: "/dashboard/help", labelKey: "dashboard.nav.help", icon: CircleHelp },
   ]
 

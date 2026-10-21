@@ -19,7 +19,7 @@ class ListingEditHydrationApiTest extends TestCase
     public function test_listing_show_merges_legacy_real_estate_into_listing_attributes(): void
     {
         $seller = User::factory()->create();
-        $category = Category::factory()->create(['slug' => 'real-estate', 'dynamic_schema_enabled' => true]);
+        $category = tap(Category::query()->where('slug', 'real-estate')->first() ?? Category::factory()->create(['slug' => 'real-estate']), fn ($c) => $c->update(['dynamic_schema_enabled' => true]));
 
         $product = Product::factory()->create([
             'user_id' => $seller->id,

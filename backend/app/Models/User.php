@@ -193,6 +193,32 @@ class User extends Authenticatable
         return (string) $this->role === 'company';
     }
 
+    public function isSubscriber(): bool
+    {
+        return (string) $this->role === UserRole::SUBSCRIBER->value;
+    }
+
+    public function subscriberListings()
+    {
+        return $this->hasMany(SubscriberListing::class, 'subscriber_id');
+    }
+
+    public function subscriberCreditRequests()
+    {
+        return $this->hasMany(SubscriberCreditRequest::class, 'subscriber_id');
+    }
+
+    public function subscriberAdCredits()
+    {
+        return $this->hasMany(SubscriberAdCredit::class, 'subscriber_id');
+    }
+
+    /** Remaining ad credits (sum of the ledger). */
+    public function adCreditsBalance(): int
+    {
+        return (int) $this->subscriberAdCredits()->sum('delta');
+    }
+
     public function isAdminRole(): bool
     {
         return in_array((string) $this->role, ['admin', 'super_admin'], true);

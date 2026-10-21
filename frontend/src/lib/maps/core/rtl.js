@@ -3,31 +3,28 @@ const RTL_PLUGIN_URL =
 
 let rtlPromise = null
 
-/** Load Mapbox RTL text plugin once (Arabic labels). */
+/**
+ * Register the Mapbox RTL text plugin once (Arabic labels).
+ * Registered lazily: Mapbox fetches it the first time it renders RTL text, and the callback only
+ * fires then — so we must not wait for it (doing so stalled every map ~8s on the old timeout).
+ */
 export function ensureRtlTextPlugin(mapboxgl) {
   if (!mapboxgl?.setRTLTextPlugin) return Promise.resolve()
   if (rtlPromise) return rtlPromise
-  rtlPromise = new Promise((resolve) => {
-    const finish = () => resolve()
-    const timeout = setTimeout(finish, 8000)
-    try {
-      mapboxgl.setRTLTextPlugin(
-        RTL_PLUGIN_URL,
-        (err) => {
-          clearTimeout(timeout)
-          if (err && import.meta.env.DEV) {
-            // eslint-disable-next-line no-console
-            console.warn("[maps] RTL plugin:", err)
-          }
-          finish()
-        },
-        true
-      )
-    } catch {
-      clearTimeout(timeout)
-      finish()
-    }
-  })
+  try {
+    mapboxgl.setRTLTextPlugin(
+      RTL_PLUGIN_URL,
+      (err) => {
+        if (err && import.meta.env.DEV) {
+          console.warn("[maps] RTL plugin:", err)
+        }
+      },
+      true
+    )
+  } catch {
+    /* already registered (HMR) or unsupported */
+  }
+  rtlPromise = Promise.resolve()
   return rtlPromise
 }
 

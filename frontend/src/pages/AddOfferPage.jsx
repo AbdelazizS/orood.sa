@@ -30,6 +30,7 @@ import {
 import { contactPhoneFieldError, normalizeSaudiPhone } from "@/lib/phone/saudiPhone"
 import { ListingDetailsForm } from "@/components/add-listing/ListingDetailsForm"
 import { OptionsCheckboxes } from "@/components/add-listing/OptionsCheckboxes"
+import { RealEstateMarketingFields } from "@/components/add-listing/RealEstateMarketingFields"
 import { SubmitSection } from "@/components/add-listing/SubmitSection"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -76,6 +77,9 @@ export function AddOfferPage() {
   const [propertyLat, setPropertyLat] = useState(null)
   const [propertyLng, setPropertyLng] = useState(null)
   const [propertyAddress, setPropertyAddress] = useState("")
+  const [district, setDistrict] = useState("")
+  const [needsMarketer, setNeedsMarketer] = useState(false)
+  const [adLicenseNo, setAdLicenseNo] = useState("")
   const [listingAttributes, setListingAttributes] = useState({})
   const [acceptedAgreementIds, setAcceptedAgreementIds] = useState([])
   const [termsAccepted, setTermsAccepted] = useState(false)
@@ -136,6 +140,9 @@ export function AddOfferPage() {
     setPropertyLat(hydrated.propertyLat)
     setPropertyLng(hydrated.propertyLng)
     setPropertyAddress(hydrated.propertyAddress)
+    setDistrict(hydrated.district)
+    setNeedsMarketer(hydrated.needsMarketer)
+    setAdLicenseNo(hydrated.adLicenseNo)
     setListingAttributes(hydrated.listingAttributes)
     setTermsAccepted(true)
     setEditHydrated(true)
@@ -210,6 +217,9 @@ export function AddOfferPage() {
     setPropertyLat(null)
     setPropertyLng(null)
     setPropertyAddress("")
+    setDistrict("")
+    setNeedsMarketer(false)
+    setAdLicenseNo("")
   }, [isRealEstateCategory, categoryId])
 
   /* Re-apply full attribute map when published schema is ready (visible_when + switches). */
@@ -283,6 +293,7 @@ export function AddOfferPage() {
     if (dup.location_lat != null) setPropertyLat(dup.location_lat)
     if (dup.location_lng != null) setPropertyLng(dup.location_lng)
     if (dup.location_address) setPropertyAddress(dup.location_address)
+    if (dup.district) setDistrict(dup.district)
     if (dup.listing_attributes && typeof dup.listing_attributes === "object") {
       setListingAttributes(dup.listing_attributes)
     }
@@ -320,6 +331,9 @@ export function AddOfferPage() {
     if (d.propertyLat != null) setPropertyLat(d.propertyLat)
     if (d.propertyLng != null) setPropertyLng(d.propertyLng)
     if (typeof d.propertyAddress === "string") setPropertyAddress(d.propertyAddress)
+    if (typeof d.district === "string") setDistrict(d.district)
+    if (typeof d.needsMarketer === "boolean") setNeedsMarketer(d.needsMarketer)
+    if (typeof d.adLicenseNo === "string") setAdLicenseNo(d.adLicenseNo)
     if (typeof d.termsAccepted === "boolean") setTermsAccepted(d.termsAccepted)
   }, [token, isEditMode])
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -459,6 +473,9 @@ export function AddOfferPage() {
         propertyLat,
         propertyLng,
         propertyAddress,
+        district,
+        needsMarketer,
+        adLicenseNo,
         termsAccepted,
       })
       navigate("/login", { state: { redirectTo: "/add" } })
@@ -490,6 +507,9 @@ export function AddOfferPage() {
       contact_messages: contactMessages,
       free_shipping: freeShipping,
       free_return: freeReturn,
+      district: isRealEstateCategory ? district.trim() || null : null,
+      needs_marketer: Boolean(isRealEstateCategory && !isRequest && needsMarketer),
+      ad_license_no: isRealEstateCategory && !isRequest ? adLicenseNo.trim() || null : null,
       ...(usesDynamicSchema
         ? {
             listing_attributes: buildListingAttributesPayload(activeSchema, listingAttributes),
@@ -655,6 +675,20 @@ export function AddOfferPage() {
               }}
             />
           </>
+        ) : null}
+
+        {isRealEstateCategory ? (
+          <RealEstateMarketingFields
+            district={district}
+            needsMarketer={needsMarketer}
+            adLicenseNo={adLicenseNo}
+            showNeedsMarketer={!isRequest}
+            onChange={(patch) => {
+              if (patch.district !== undefined) setDistrict(patch.district)
+              if (patch.needsMarketer !== undefined) setNeedsMarketer(patch.needsMarketer)
+              if (patch.adLicenseNo !== undefined) setAdLicenseNo(patch.adLicenseNo)
+            }}
+          />
         ) : null}
 
         <ListingDetailsForm

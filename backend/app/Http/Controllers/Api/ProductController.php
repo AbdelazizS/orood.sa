@@ -40,6 +40,9 @@ class ProductController extends Controller
         if ($role && $role->isPlatformManager()) {
             return response()->json(['message' => 'لا يمكن لموظفي المنصة إنشاء إعلانات'], 403);
         }
+        if ($role === UserRole::SUBSCRIBER) {
+            return response()->json(['message' => 'حساب المشترك لا يمكنه إنشاء إعلانات'], 403);
+        }
 
         $validated = $request->validated();
         if ($error = $this->wholesaleGuardError($user, $validated['is_wholesale'] ?? false)) {
@@ -107,6 +110,11 @@ class ProductController extends Controller
             'location_lat' => $validated['location_lat'] ?? null,
             'location_lng' => $validated['location_lng'] ?? null,
             'location_address' => $validated['location_address'] ?? null,
+            'district' => $this->normalizeDistrict($validated['district'] ?? null),
+            'ad_license_no' => isset($validated['ad_license_no']) ? (trim($validated['ad_license_no']) ?: null) : null,
+            'marketing_status' => ! empty($validated['needs_marketer']) && $request->isRealEstateListingSelection()
+                ? Product::MARKETING_AWAITING
+                : null,
             'status' => $willPublish ? 'published' : 'pending_review',
             'moderation_status' => $willPublish ? 'approved' : 'pending',
             'payout_activation_status' => $willPublish ? 'active' : $payoutActivation,
@@ -184,6 +192,9 @@ class ProductController extends Controller
             'location_lat' => array_key_exists('location_lat', $validated) ? $validated['location_lat'] : $product->location_lat,
             'location_lng' => array_key_exists('location_lng', $validated) ? $validated['location_lng'] : $product->location_lng,
             'location_address' => array_key_exists('location_address', $validated) ? $validated['location_address'] : $product->location_address,
+            'district' => array_key_exists('district', $validated) ? $this->normalizeDistrict($validated['district']) : $product->district,
+            'ad_license_no' => array_key_exists('ad_license_no', $validated) ? (trim((string) $validated['ad_license_no']) ?: null) : $product->ad_license_no,
+            'marketing_status' => $this->resolveMarketingStatusOnUpdate($request, $product, $validated),
         ]);
 
         $this->syncListingAttributes($request, $product, $validated);
@@ -191,6 +202,31 @@ class ProductController extends Controller
         return response()->json([
             'data' => new ProductResource($product->fresh()->load(['category', 'subcategory.category', 'region', 'city', 'seller', 'realEstateDetail'])),
         ]);
+    }
+
+    private function normalizeDistrict(?string $district): ?string
+    {
+        $district = trim((string) $district);
+
+        return $district === '' ? null : $district;
+    }
+
+    /**
+     * The owner can switch "needs a marketer" on or off; a listing already marketed stays marketed.
+     *
+     * @param  array<string, mixed>  $validated
+     */
+    private function resolveMarketingStatusOnUpdate(StoreProductRequest $request, Product $product, array $validated): ?string
+    {
+        if (! array_key_exists('needs_marketer', $validated) || $product->marketing_status === Product::MARKETING_MARKETED) {
+            return $product->marketing_status;
+        }
+
+        if ($validated['needs_marketer'] && $request->isRealEstateListingSelection()) {
+            return Product::MARKETING_AWAITING;
+        }
+
+        return $product->isAwaitingMarketer() ? null : $product->marketing_status;
     }
 
     /**

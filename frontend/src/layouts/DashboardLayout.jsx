@@ -10,6 +10,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarInset,
@@ -30,7 +31,8 @@ import { ThemeToggle } from "@/components/navigation/ThemeToggle"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { NotificationBell } from "@/components/notifications/NotificationBell"
 import { MessageIcon } from "@/components/messages/MessageIcon"
-import { useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { getSubscriberOverview } from "@/services/subscriberService"
 import { useAuthStore } from "@/store/useAuthStore"
 import { useSidebar } from "@/components/ui/sidebar"
 import * as authService from "@/services/authService"
@@ -67,6 +69,7 @@ import {
 import { getMemberDashboardNavSections, isMemberNavItemActive } from "@/navigation/memberDashboardNav"
 import { useFinanceModules } from "@/hooks/useFinanceModules"
 import { adminNavSections, isAdminNavItemActive } from "@/navigation/adminDashboardNav"
+import { subscriberNavSections, isSubscriberNavItemActive } from "@/navigation/subscriberDashboardNav"
 import { publicProfilePath } from "@/lib/profileRoutes"
 import { AppLogo } from "@/components/common/AppLogo"
 import { SeoHead } from "@/components/seo/SeoHead"
@@ -92,7 +95,7 @@ function hasPermission(user, permission) {
  * Dashboard layout using shadcn Sidebar (dashboard-01 style).
  * Collapsible sidebar, responsive, follows shadcn blocks.
  */
-export function DashboardLayout({ adminLinks: isAdmin = false, children }) {
+export function DashboardLayout({ adminLinks: isAdmin = false, subscriber: isSubscriber = false, children }) {
   const location = useLocation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -111,8 +114,21 @@ export function DashboardLayout({ adminLinks: isAdmin = false, children }) {
         .filter((section) => section.items.length > 0)
     : []
   const { data: financeModules } = useFinanceModules()
-  const memberSections = !isAdmin ? getMemberDashboardNavSections(user, { financeModules }) : []
+  const memberSections = isSubscriber
+    ? subscriberNavSections
+    : !isAdmin
+      ? getMemberDashboardNavSections(user, { financeModules })
+      : []
+  const isMemberItemActive = isSubscriber ? isSubscriberNavItemActive : isMemberNavItemActive
+  const homePath = isAdmin ? "/admin" : isSubscriber ? "/subscriber" : "/dashboard"
   const isCollapsed = state === "collapsed"
+  const { data: subscriberOverview } = useQuery({
+    queryKey: ["subscriber", "overview"],
+    queryFn: getSubscriberOverview,
+    enabled: isSubscriber,
+    refetchInterval: 30_000,
+  })
+  const navBadge = (link) => (link.badge === "unread" ? Number(subscriberOverview?.unread_total ?? 0) : 0)
 
   const iconRailNavButtonClass = cn(
     "rounded-full text-sm transition-all data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:shadow-sm data-[active=true]:ring-1 data-[active=true]:ring-sidebar-border/60",
@@ -135,11 +151,11 @@ export function DashboardLayout({ adminLinks: isAdmin = false, children }) {
 
   return (
     <>
-      {!isAdmin ? <SeoHead path="/dashboard" noindex /> : null}
+      {!isAdmin ? <SeoHead path={homePath} noindex /> : null}
       <Sidebar side={side} collapsible="icon">
         <SidebarHeader className="border-b" dir={direction}>
           <Link
-            to={isAdmin ? "/admin" : "/dashboard"}
+            to={homePath}
             className={cn(
               "flex min-w-0 items-center transition-opacity hover:opacity-90",
               isCollapsed && !isMobile ? "mx-auto size-11 justify-center" : "justify-center px-2 py-2",
@@ -155,7 +171,7 @@ export function DashboardLayout({ adminLinks: isAdmin = false, children }) {
           {!isAdmin && user && (() => {
             const profileLink = (
               <Link
-                to={publicProfilePath(user) ?? "/dashboard"}
+                to={isSubscriber ? "/subscriber/account" : (publicProfilePath(user) ?? "/dashboard")}
                 className={cn(
                   "flex min-w-0 items-center rounded-lg transition-colors hover:bg-sidebar-accent",
                   isCollapsed && !isMobile
@@ -251,7 +267,7 @@ export function DashboardLayout({ adminLinks: isAdmin = false, children }) {
                 <SidebarGroupContent>
                   <SidebarMenu className={cn("gap-0.5", isCollapsed && !isMobile && "items-center")}>
                     {section.items.map((link) => {
-                      const isActive = isMemberNavItemActive(link, location)
+                      const isActive = isMemberItemActive(link, location)
                       return (
                         <SidebarMenuItem key={link.id}>
                           <SidebarMenuButton
@@ -265,6 +281,11 @@ export function DashboardLayout({ adminLinks: isAdmin = false, children }) {
                               <span>{t(link.labelKey)}</span>
                             </Link>
                           </SidebarMenuButton>
+                          {navBadge(link) > 0 ? (
+                            <SidebarMenuBadge className="top-3 rounded-full bg-destructive text-white peer-data-[active=true]/menu-button:text-white">
+                              {navBadge(link) > 99 ? "99+" : navBadge(link)}
+                            </SidebarMenuBadge>
+                          ) : null}
                         </SidebarMenuItem>
                       )
                     })}
@@ -333,7 +354,7 @@ export function DashboardLayout({ adminLinks: isAdmin = false, children }) {
                     </DropdownMenuItem>
                   ) : (
                     <DropdownMenuItem asChild>
-                      <Link to="/dashboard">{t("dashboard.overview")}</Link>
+                      <Link to={homePath}>{t("dashboard.overview")}</Link>
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />

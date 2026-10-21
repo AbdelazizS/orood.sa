@@ -174,6 +174,9 @@ export function hydrateListingFormState(product) {
     propertyLat: product.location_lat ?? null,
     propertyLng: product.location_lng ?? null,
     propertyAddress: product.location_address ?? "",
+    district: product.district ?? "",
+    needsMarketer: product.marketing_status === "awaiting_marketer",
+    adLicenseNo: product.ad_license_no ?? "",
     listingAttributes: listingAttributesFromProduct(product),
   }
 }

@@ -22,7 +22,9 @@ export function NotificationsPage({ embedded = false } = {}) {
   const queryClient = useQueryClient()
   const basePath = useAccountSectionBasePath()
   const detailTo = (id) =>
-    embedded ? `/dashboard/messages?hub=notifications&nid=${encodeURIComponent(String(id))}` : `${basePath}/notifications/${id}`
+    embedded
+      ? `${basePath === "/subscriber" ? "/subscriber" : "/dashboard"}/messages?hub=notifications&nid=${encodeURIComponent(String(id))}`
+      : `${basePath}/notifications/${id}`
 
   const { data: inbox, isLoading } = useNotificationsInbox(50)
   const { data: financeModules } = useFinanceModules()

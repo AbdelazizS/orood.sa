@@ -78,11 +78,20 @@ Route::prefix('v1')->group(function () {
     Route::get('/homepage/sections', HomepageSectionsController::class);
     Route::get('/homepage/features', \App\Http\Controllers\Api\HomepageFeaturesController::class);
     Route::get('/listings', [ListingController::class, 'index']);
-    Route::get('/listings/map', [ListingMapController::class, 'index']);
+    Route::middleware(['optional.auth.api'])->group(function () {
+        Route::get('/listings/map', [ListingMapController::class, 'index']);
+    });
+    Route::get('/listings/map/districts', [ListingMapController::class, 'districts']);
     Route::middleware(['optional.auth.api'])->group(function () {
         Route::get('/listings/{listing}', [ListingController::class, 'show']);
         Route::get('/listings/{listing}/reviews', [ReviewController::class, 'forListing']);
         Route::get('/products/{product}', ProductShowController::class);
+        Route::get('/companies/{company}/videos', [\App\Http\Controllers\Api\CompanyVideoController::class, 'channel']);
+        Route::get('/videos/shorts/latest', [\App\Http\Controllers\Api\CompanyVideoController::class, 'latestShorts']);
+        Route::get('/products/{product}/videos', [\App\Http\Controllers\Api\CompanyVideoController::class, 'forProduct']);
+        Route::get('/videos/{video}', [\App\Http\Controllers\Api\CompanyVideoController::class, 'show']);
+        Route::get('/videos/{video}/comments', [\App\Http\Controllers\Api\CompanyVideoController::class, 'comments']);
+        Route::post('/videos/{video}/view', [\App\Http\Controllers\Api\CompanyVideoController::class, 'view'])->middleware('throttle:60,1');
         Route::post('/products/{product}/view', \App\Http\Controllers\Api\ProductViewController::class);
         Route::get('/products/{product}/similar', ProductSimilarController::class);
         Route::get('/products/{product}/comments', [CommentController::class, 'index']);
@@ -189,11 +198,23 @@ Route::prefix('v1')->group(function () {
         Route::get('/saved-searches', [SavedSearchController::class, 'index']);
         Route::post('/saved-searches', [SavedSearchController::class, 'store']);
         Route::delete('/saved-searches/{savedSearch}', [SavedSearchController::class, 'destroy']);
+        Route::post('/videos/{video}/like', [\App\Http\Controllers\Api\CompanyVideoController::class, 'toggleLike'])->middleware('throttle:60,1');
+        Route::post('/videos/{video}/comments', [\App\Http\Controllers\Api\CompanyVideoController::class, 'storeComment'])->middleware(['not.subscriber', 'throttle:30,1']);
+        Route::delete('/video-comments/{comment}', [\App\Http\Controllers\Api\CompanyVideoController::class, 'destroyComment']);
+        Route::post('/video-comments/{comment}/like', [\App\Http\Controllers\Api\CompanyVideoController::class, 'toggleCommentLike'])->middleware('throttle:60,1');
+        Route::post('/video-comments/{comment}/pin', [\App\Http\Controllers\Api\CompanyVideoController::class, 'togglePin']);
+        Route::post('/video-comments/{comment}/heart', [\App\Http\Controllers\Api\CompanyVideoController::class, 'toggleHeart']);
+        Route::post('/video-comments/{comment}/hide', [\App\Http\Controllers\Api\CompanyVideoController::class, 'toggleHide']);
+        Route::get('/company/videos', [\App\Http\Controllers\Api\Company\CompanyVideoManageController::class, 'index']);
+        Route::post('/company/videos', [\App\Http\Controllers\Api\Company\CompanyVideoManageController::class, 'store'])->middleware('throttle:20,1');
+        Route::put('/company/videos/{video}', [\App\Http\Controllers\Api\Company\CompanyVideoManageController::class, 'update']);
+        Route::delete('/company/videos/{video}', [\App\Http\Controllers\Api\Company\CompanyVideoManageController::class, 'destroy']);
+        Route::put('/company/activities', [\App\Http\Controllers\Api\Company\CompanyVideoManageController::class, 'updateActivities']);
         Route::get('/conversations', [MessageController::class, 'index']);
         Route::get('/conversations/{conversation}', [MessageController::class, 'show']);
-        Route::post('/messages', [MessageController::class, 'store']);
+        Route::post('/messages', [MessageController::class, 'store'])->middleware('not.subscriber');
         Route::post('/conversations/{conversation}/messages', [MessageController::class, 'reply']);
-        Route::post('/products/{product}/bids', [BidController::class, 'store']);
+        Route::post('/products/{product}/bids', [BidController::class, 'store'])->middleware('not.subscriber');
         Route::get('/account/bids', [BidController::class, 'mine']);
         Route::get('/account/bids/incoming', [BidController::class, 'incoming']);
         Route::post('/products/{product}/bids/{bid}/accept', \App\Http\Controllers\Api\BidAcceptController::class);
@@ -201,12 +222,12 @@ Route::prefix('v1')->group(function () {
         Route::delete('/products/{product}/bids/{bid}', [BidController::class, 'destroy']);
         Route::patch('/products/{product}/bids/{bid}/visibility', [BidController::class, 'toggleVisibility']);
         Route::post('/account/bids/{bid}/create-order', [BidController::class, 'createOrder']);
-        Route::post('/products/{product}/view-request', [\App\Http\Controllers\Api\ViewRequestController::class, 'store']);
+        Route::post('/products/{product}/view-request', [\App\Http\Controllers\Api\ViewRequestController::class, 'store'])->middleware('not.subscriber');
         Route::get('/account/view-requests', [\App\Http\Controllers\Api\ViewRequestController::class, 'indexMine']);
         Route::get('/account/view-requests/incoming', [\App\Http\Controllers\Api\ViewRequestController::class, 'indexIncoming']);
         Route::get('/products/{product}/view-requests', [\App\Http\Controllers\Api\ViewRequestController::class, 'indexForProduct']);
         Route::patch('/view-requests/{viewRequest}', [\App\Http\Controllers\Api\ViewRequestController::class, 'update']);
-        Route::post('/products/{product}/comments', [CommentController::class, 'store']);
+        Route::post('/products/{product}/comments', [CommentController::class, 'store'])->middleware('not.subscriber');
         // Legacy route (kept): like/dislike
         Route::post('/products/{product}/comments/{comment}/like', \App\Http\Controllers\Api\CommentLikeController::class);
         // Spec routes
@@ -216,7 +237,7 @@ Route::prefix('v1')->group(function () {
         Route::delete('/comments/{comment}', [CommentController::class, 'destroy']);
         Route::post('/products/{product}/bump', [ProductController::class, 'bump']);
         Route::delete('/products/{product}', [ProductController::class, 'destroy']);
-        Route::post('/products/{product}/purchase', [PurchaseController::class, 'store']);
+        Route::post('/products/{product}/purchase', [PurchaseController::class, 'store'])->middleware('not.subscriber');
         Route::get('/products/{product}/checkout-payment-options', [\App\Http\Controllers\Api\Finance\CheckoutPaymentController::class, 'options']);
         Route::get('/seller/payout-profile', [\App\Http\Controllers\Api\Finance\SellerPayoutProfileController::class, 'show']);
         Route::put('/seller/payout-profile', [\App\Http\Controllers\Api\Finance\SellerPayoutProfileController::class, 'update']);
@@ -233,7 +254,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar']);
         Route::post('/profile/cover', [ProfileController::class, 'updateCover']);
         Route::get('/users/{user}/reviews', [ReviewController::class, 'index']);
-        Route::post('/reviews', [ReviewController::class, 'store']);
+        Route::post('/reviews', [ReviewController::class, 'store'])->middleware('not.subscriber');
         Route::put('/reviews/{review}', [ReviewController::class, 'update']);
         Route::delete('/reviews/{review}', [ReviewController::class, 'destroy']);
         Route::post('/reviews/{review}/react', [ReviewController::class, 'react']);
@@ -277,7 +298,45 @@ Route::prefix('v1')->group(function () {
     });
 
     // Admin (protected, role: super_admin, admin, manager)
+    // Subscriber area (hidden accounts that buy ads of listings awaiting a marketer)
+    Route::middleware(['auth.api', 'role:subscriber'])->prefix('subscriber')->group(function () {
+        Route::get('/summary', [\App\Http\Controllers\Api\Subscriber\SubscriberController::class, 'summary']);
+        Route::get('/available', [\App\Http\Controllers\Api\Subscriber\SubscriberController::class, 'available']);
+        Route::get('/available/map', [\App\Http\Controllers\Api\Subscriber\SubscriberController::class, 'availableMap']);
+        Route::get('/products/{product}', [\App\Http\Controllers\Api\Subscriber\SubscriberController::class, 'show']);
+        Route::post('/products/{product}/buy', [\App\Http\Controllers\Api\Subscriber\SubscriberController::class, 'buy'])
+            ->middleware('throttle:20,1');
+        Route::get('/my-listings', [\App\Http\Controllers\Api\Subscriber\SubscriberController::class, 'myListings']);
+        Route::post('/listings/{subscriberListing}/sold', [\App\Http\Controllers\Api\Subscriber\SubscriberController::class, 'markSold']);
+        Route::get('/overview', [\App\Http\Controllers\Api\Subscriber\SubscriberAccountController::class, 'overview']);
+        Route::get('/credits', [\App\Http\Controllers\Api\Subscriber\SubscriberAccountController::class, 'credits']);
+        Route::post('/credit-requests', [\App\Http\Controllers\Api\Subscriber\SubscriberAccountController::class, 'requestCredits'])
+            ->middleware('throttle:10,1');
+        Route::post('/support-conversation', [\App\Http\Controllers\Api\Subscriber\SubscriberAccountController::class, 'supportConversation'])
+            ->middleware('throttle:20,1');
+        Route::get('/account', [\App\Http\Controllers\Api\Subscriber\SubscriberAccountController::class, 'account']);
+        Route::put('/account', [\App\Http\Controllers\Api\Subscriber\SubscriberAccountController::class, 'updateAccount']);
+    });
+
+    // Private follow-up notes on bought listings (subscriber + staff; checked in the controller)
+    Route::middleware('auth.api')->group(function () {
+        Route::get('/subscriber-listings/{subscriberListing}/notes', [\App\Http\Controllers\Api\SubscriberListingNoteController::class, 'index']);
+        Route::post('/subscriber-listings/{subscriberListing}/notes', [\App\Http\Controllers\Api\SubscriberListingNoteController::class, 'store'])
+            ->middleware('throttle:60,1');
+    });
+
     Route::middleware(['auth.api', 'role:super_admin,admin,manager,employee,moderator,assistant'])->prefix('admin')->group(function () {
+        Route::get('/company-videos', [\App\Http\Controllers\Api\Admin\AdminCompanyVideoController::class, 'index']);
+        Route::patch('/company-videos/{video}/status', [\App\Http\Controllers\Api\Admin\AdminCompanyVideoController::class, 'updateStatus']);
+        Route::get('/subscribers', [\App\Http\Controllers\Api\Admin\AdminSubscriberController::class, 'index'])->middleware('permission:subscribers.manage');
+        Route::post('/subscribers', [\App\Http\Controllers\Api\Admin\AdminSubscriberController::class, 'store'])->middleware('permission:subscribers.manage');
+        Route::post('/subscribers/{user}/credits', [\App\Http\Controllers\Api\Admin\AdminSubscriberController::class, 'addCredits'])->middleware('permission:subscribers.manage');
+        Route::get('/subscriber-listings', [\App\Http\Controllers\Api\Admin\AdminSubscriberController::class, 'listings'])->middleware('permission:subscribers.notes');
+        Route::get('/subscriber-credit-requests', [\App\Http\Controllers\Api\Admin\AdminSubscriberController::class, 'creditRequests'])->middleware('permission:subscribers.manage');
+        Route::post('/subscriber-listings/{subscriberListing}/cancel', [\App\Http\Controllers\Api\Admin\AdminSubscriberController::class, 'cancelListing'])->middleware('permission:subscribers.manage');
+        Route::post('/subscriber-listings/{subscriberListing}/sold', [\App\Http\Controllers\Api\Admin\AdminSubscriberController::class, 'markListingSold'])->middleware('permission:subscribers.notes');
+        Route::post('/subscriber-credit-requests/{creditRequest}/approve', [\App\Http\Controllers\Api\Admin\AdminSubscriberController::class, 'approveCreditRequest'])->middleware('permission:subscribers.manage');
+        Route::post('/subscriber-credit-requests/{creditRequest}/reject', [\App\Http\Controllers\Api\Admin\AdminSubscriberController::class, 'rejectCreditRequest'])->middleware('permission:subscribers.manage');
         Route::post('/comments/{comment}/reply', [CommentController::class, 'teamReply']);
         Route::get('/categories', [AdminCategoryController::class, 'index']);
         Route::post('/categories', [AdminCategoryController::class, 'store']);
@@ -428,6 +487,7 @@ Route::prefix('v1')->group(function () {
             ->middleware('permission:finance.credit_balance');
         Route::post('/products/{product}/approve', [AdminProductController::class, 'approve']);
         Route::post('/products/{product}/reject', [AdminProductController::class, 'reject']);
+        Route::patch('/products/{product}/marketing-status', [AdminProductController::class, 'updateMarketingStatus']);
         Route::get('/analytics', AdminAnalyticsController::class);
         Route::get('/analytics/regions', [AdminAnalyticsController::class, 'regions']);
         Route::get('/overview', AdminOverviewController::class);

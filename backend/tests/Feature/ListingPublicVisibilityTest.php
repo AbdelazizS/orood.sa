@@ -36,6 +36,7 @@ class ListingPublicVisibilityTest extends TestCase
                 'title' => $uniqueTitle,
                 'description' => 'Description for visibility test.',
                 'image_urls' => ['https://example.com/listing-test.jpg'],
+                'contact_messages' => true,
             ]);
 
         $create->assertCreated();
@@ -99,6 +100,7 @@ class ListingPublicVisibilityTest extends TestCase
                 'title' => 'Pending title '.uniqid(),
                 'description' => 'Pending body.',
                 'image_urls' => ['https://example.com/pending.jpg'],
+                'contact_messages' => true,
             ]);
 
         $create->assertCreated();

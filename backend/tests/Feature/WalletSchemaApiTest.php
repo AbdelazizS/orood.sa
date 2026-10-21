@@ -6,11 +6,19 @@ use App\Models\PaymentMethod;
 use App\Models\User;
 use Database\Seeders\PaymentMethodSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\EnablesFinanceModules;
 use Tests\TestCase;
 
 class WalletSchemaApiTest extends TestCase
 {
+    use EnablesFinanceModules;
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->enableFinanceModules();
+    }
 
     public function test_charge_schema_returns_methods_with_fields_and_limits(): void
     {

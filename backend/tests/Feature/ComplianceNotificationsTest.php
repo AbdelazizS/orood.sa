@@ -9,11 +9,19 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\EnablesFinanceModules;
 use Tests\TestCase;
 
 class ComplianceNotificationsTest extends TestCase
 {
+    use EnablesFinanceModules;
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->enableFinanceModules();
+    }
 
     public function test_guarantee_deposit_request_notifies_staff_and_approve_notifies_member(): void
     {

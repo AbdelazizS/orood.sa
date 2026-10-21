@@ -9,6 +9,9 @@ class Company extends Model
 {
     use HasFactory;
 
+    /** Real-estate company activities (multi-select). */
+    public const ACTIVITIES = ['marketer', 'developer', 'seller'];
+
     protected $fillable = [
         'user_id',
         'name',
@@ -29,6 +32,8 @@ class Company extends Model
         'description',
         'lat',
         'lng',
+        'activities',
+        'fal_license_no',
     ];
 
     public function user()
@@ -37,6 +42,7 @@ class Company extends Model
     }
 
     protected $casts = [
+        'activities' => 'array',
         'rating' => 'decimal:1',
         'reviewed_at' => 'datetime',
     ];
@@ -69,6 +75,11 @@ class Company extends Model
     public function wholesaleBulkOffers()
     {
         return $this->hasMany(WholesaleBulkOffer::class);
+    }
+
+    public function videos()
+    {
+        return $this->hasMany(CompanyVideo::class);
     }
 
     public function products()

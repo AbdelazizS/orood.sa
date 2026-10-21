@@ -13,6 +13,13 @@ class Product extends Model
 {
     use HasFactory;
 
+    public const MARKETING_AWAITING = 'awaiting_marketer';
+
+    public const MARKETING_MARKETED = 'marketed';
+
+    /** Statuses that keep an awaiting-marketer listing off the map and detail page. */
+    public const AWAITING_HIDDEN_STATUSES = ['deleted', 'sold', 'archived', 'suspended', 'expired', 'draft'];
+
     protected $fillable = [
         'user_id',
         'category_id',
@@ -57,6 +64,8 @@ class Product extends Model
         'location_lat',
         'location_lng',
         'location_address',
+        'district',
+        'ad_license_no',
         'stats',
         'media',
         'image_url',
@@ -64,6 +73,7 @@ class Product extends Model
         'status',
         'payout_activation_status',
         'moderation_status',
+        'marketing_status',
         'published_at',
         'bumped_at',
         'highest_bid',
@@ -218,12 +228,63 @@ class Product extends Model
         return $this->moderation_status === 'approved' || $this->moderation_status === null;
     }
 
+    public function scopeAwaitingMarketer($query)
+    {
+        return $query->where('marketing_status', self::MARKETING_AWAITING);
+    }
+
+    /**
+     * Awaiting-marketer listings the public may see (pin + photos, no price): approved and not closed.
+     */
+    public function scopePubliclyVisibleAwaiting($query)
+    {
+        return $query->awaitingMarketer()
+            ->approved()
+            ->whereNotIn('status', self::AWAITING_HIDDEN_STATUSES);
+    }
+
+    public function isAwaitingMarketer(): bool
+    {
+        return $this->marketing_status === self::MARKETING_AWAITING;
+    }
+
+    public function isPubliclyVisibleAwaiting(): bool
+    {
+        if (! $this->isAwaitingMarketer() || in_array($this->status, self::AWAITING_HIDDEN_STATUSES, true)) {
+            return false;
+        }
+
+        return $this->moderation_status === 'approved' || $this->moderation_status === null;
+    }
+
+    /**
+     * Price and contact details stay hidden on awaiting listings, except for the owner and platform staff.
+     */
+    public function hidesPriceFrom(?User $viewer): bool
+    {
+        if (! $this->isAwaitingMarketer()) {
+            return false;
+        }
+        if ($viewer === null) {
+            return true;
+        }
+        if ((int) $viewer->id === (int) $this->user_id) {
+            return false;
+        }
+        // Subscribers see the full details of awaiting listings so they can decide to buy the ad.
+        if ($viewer->isSubscriber()) {
+            return false;
+        }
+
+        return ! (UserRole::tryFrom($viewer->role ?? '')?->isPlatformManager() ?? false);
+    }
+
     /**
      * Public JSON/detail access: listed like the feed, or owner, or platform staff.
      */
     public function isAccessibleBy(?User $viewer): bool
     {
-        if ($this->isPubliclyListed()) {
+        if ($this->isPubliclyListed() || $this->isPubliclyVisibleAwaiting()) {
             return true;
         }
         if ($viewer === null) {
@@ -299,6 +360,12 @@ class Product extends Model
     public function groupBuy()
     {
         return $this->hasOne(GroupBuy::class);
+    }
+
+    /** Latest subscriber ad on this listing (older expired/cancelled ads are kept as history). */
+    public function subscriberListing()
+    {
+        return $this->hasOne(SubscriberListing::class)->latestOfMany();
     }
 
     public function realEstateDetail()

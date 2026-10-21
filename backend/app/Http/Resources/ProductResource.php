@@ -19,6 +19,8 @@ class ProductResource extends JsonResource
         $isOwner = (bool) ($this->is_owner ?? false);
         $canViewBidDetails = (bool) ($this->can_view_bid_details ?? ($isOwner || (bool) ($this->bids_visible ?? true)));
         $viewer = $request->user();
+        // Awaiting-marketer listings: no price or contact details for the public.
+        $hidePrice = $this->resource instanceof \App\Models\Product && $this->resource->hidesPriceFrom($viewer);
         $anonymousHigh = null;
         $minimumNextBid = null;
         if ($this->accept_bids && ! $canViewBidDetails && ! $isOwner && $viewer) {
@@ -53,14 +55,18 @@ class ProductResource extends JsonResource
             'type' => $this->type,
             'title' => $this->title,
             'description' => $this->description,
-            'price' => $this->price,
+            'price' => $hidePrice ? null : $this->price,
             'currency' => 'SAR',
+            'marketing_status' => $this->marketing_status,
+            'district' => $this->district,
+            'price_per_sqm' => $this->pricePerSqm(),
+            'ad_license_no' => $this->ad_license_no,
             'condition' => $this->condition,
             'warranty' => $this->warranty,
             'is_offer' => $this->is_offer,
             'accept_bids' => (bool) $this->accept_bids,
             'bids_visible' => (bool) ($this->bids_visible ?? true),
-            'contact_phone' => $this->contact_phone ?? data_get($this->contact_preferences, 'phone_number'),
+            'contact_phone' => $hidePrice ? null : ($this->contact_phone ?? data_get($this->contact_preferences, 'phone_number')),
             'contact_by_call' => (bool) ($this->contact_by_call ?? data_get($this->contact_preferences, 'phone', false)),
             'free_shipping' => (bool) ($this->free_shipping ?? false),
             'free_return' => (bool) ($this->free_return ?? false),
@@ -88,8 +94,8 @@ class ProductResource extends JsonResource
                 'bids' => $visibleBidsCount,
                 'comments' => $this->comments_count ?? $this->comments()->count(),
             ],
-            'highest_bid' => $highestBid,
-            'minimum_next_bid' => $minimumNextBid,
+            'highest_bid' => $hidePrice ? null : $highestBid,
+            'minimum_next_bid' => $hidePrice ? null : $minimumNextBid,
             'current_bid_user_id' => $currentBidUserId,
             'seller' => [
                 'id' => $this->seller?->id,
@@ -99,7 +105,7 @@ class ProductResource extends JsonResource
                 'is_verified' => (bool) ($this->seller?->is_verified ?? false),
                 'email_verified' => (bool) $this->seller?->email_verified_at,
                 'verification_level' => $this->seller?->verification_level ?? null,
-                'phone' => $this->seller?->phone ?? data_get($this->contact_preferences, 'phone_number'),
+                'phone' => $hidePrice ? null : ($this->seller?->phone ?? data_get($this->contact_preferences, 'phone_number')),
                 'city' => $this->seller?->city ? [
                     'id' => $this->seller->city->id,
                     'name' => $this->seller->city->getLocalizedName($request->header('Accept-Language')),
@@ -156,11 +162,13 @@ class ProductResource extends JsonResource
             ] : null,
             'city' => $this->city ? ['id' => $this->city->id, 'name' => $this->city->getLocalizedName($request->header('Accept-Language'))] : null,
             'shipping_details' => $this->shipping_details ?? [],
-            'contact_preferences' => array_merge([
-                'phone' => true,
-                'messages' => true,
-                'phone_number' => null,
-            ], $this->contact_preferences ?? []),
+            'contact_preferences' => $hidePrice
+                ? ['phone' => false, 'messages' => false, 'phone_number' => null]
+                : array_merge([
+                    'phone' => true,
+                    'messages' => true,
+                    'phone_number' => null,
+                ], $this->contact_preferences ?? []),
             'media' => [
                 'image_url' => data_get($this->media, 'cover') ?? $this->image_url,
                 'gallery' => data_get($this->media, 'gallery') ?? (data_get($this->media, 'cover') ? [data_get($this->media, 'cover')] : []),
@@ -307,6 +315,18 @@ class ProductResource extends JsonResource
             $locale,
             $this->listingAttributesMap()
         );
+    }
+
+    /** Price per m² for real-estate listings with a price and an area (shown even when the total is hidden). */
+    protected function pricePerSqm(): ?int
+    {
+        $price = (float) ($this->resource->getRawOriginal('price') ?? 0);
+        if ($price <= 0 || ! $this->isRealEstateListing()) {
+            return null;
+        }
+        $area = (float) ($this->resource->realEstateDetail?->area_sqm ?? 0);
+
+        return $area > 0 ? (int) round($price / $area) : null;
     }
 
     /**

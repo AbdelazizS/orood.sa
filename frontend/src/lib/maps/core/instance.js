@@ -6,7 +6,8 @@ import { animateTo } from "@/lib/maps/core/camera"
 import { createMarker } from "@/lib/maps/layers/markers"
 import { mapDiagEnd, mapDiagStart } from "@/lib/maps/diagnostics"
 
-const LOAD_TIMEOUT_MS = 5_000
+// Generous for slow mobile networks before falling back to Leaflet.
+const LOAD_TIMEOUT_MS = 12_000
 
 function buildMapApi(map, mapboxgl, container) {
   let marker = null

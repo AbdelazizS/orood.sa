@@ -155,6 +155,8 @@ class FinancialPlatformTest extends TestCase
 
     public function test_listing_pending_payout_setup_when_seller_not_verified(): void
     {
+        // With auto-publish on, listings go live as "active"; the payout gate applies to listings held for review.
+        config(['listings.auto_publish_on_create' => false]);
         $seller = User::factory()->create();
         $token = $this->issueApiToken($seller);
 

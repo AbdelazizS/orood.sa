@@ -6,19 +6,20 @@ use App\Models\Balance;
 use App\Models\FinancialRequest;
 use App\Models\Permission;
 use App\Models\User;
-use Database\Seeders\PaymentMethodSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\EnablesFinanceModules;
 use Tests\TestCase;
 
 class WalletFinancialRequestTest extends TestCase
 {
+    use EnablesFinanceModules;
     use RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(PaymentMethodSeeder::class);
+        $this->enableFinanceModules();
     }
 
     public function test_charge_approve_requires_approval_note_and_credits_wallet(): void
@@ -134,6 +135,7 @@ class WalletFinancialRequestTest extends TestCase
                     'amount' => 50,
                     'payer_bank_name' => 'Bank A',
                     'transfer_reference' => 'REF-IDX',
+                    'receipt_url' => 'https://example.com/receipt-idx.jpg',
                 ],
             ])
             ->assertCreated();

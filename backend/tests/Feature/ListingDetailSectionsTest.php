@@ -18,7 +18,10 @@ class ListingDetailSectionsTest extends TestCase
     public function test_listing_show_virtual_sections_localize_legacy_real_estate_attributes(): void
     {
         $seller = User::factory()->create();
-        $category = Category::factory()->create(['slug' => 'real-estate', 'dynamic_schema_enabled' => true]);
+        $category = tap(Category::query()->where('slug', 'real-estate')->first() ?? Category::factory()->create(['slug' => 'real-estate']), fn ($c) => $c->update(['dynamic_schema_enabled' => true]));
+
+        // Migrations publish real-estate schemas; start from a clean slate so this test's schema is the one resolved.
+        CategoryListingSchema::query()->where('category_id', $category->id)->delete();
 
         $schema = CategoryListingSchema::create([
             'category_id' => $category->id,
@@ -93,6 +96,9 @@ class ListingDetailSectionsTest extends TestCase
             'user_id' => $seller->id,
             'category_id' => $category->id,
             'status' => 'published',
+            // The factory picks offer/request at random; the schema above is for offers.
+            'type' => 'offer',
+            'is_offer' => true,
         ]);
 
         $product->realEstateDetail()->create([

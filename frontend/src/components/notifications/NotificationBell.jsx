@@ -45,8 +45,8 @@ function NotificationBell() {
   const unreadCount = Number(data?.meta?.unread_count ?? 0)
 
   const openNotification = (id) => {
-    if (basePath === "/dashboard") {
-      navigate(`/dashboard/messages?hub=notifications&nid=${encodeURIComponent(String(id))}`)
+    if (basePath === "/dashboard" || basePath === "/subscriber") {
+      navigate(`${basePath}/messages?hub=notifications&nid=${encodeURIComponent(String(id))}`)
     } else {
       navigate(`${basePath}/notifications/${id}`)
     }

@@ -120,6 +120,22 @@ class AdminProductController extends Controller
         return response()->json(['data' => new ProductResource($product->fresh()->load(['category', 'subcategory', 'region', 'city', 'seller']))]);
     }
 
+    /**
+     * Toggle whether a listing is waiting for a marketer (price hidden from the public) or back to normal.
+     */
+    public function updateMarketingStatus(Request $request, Product $product): JsonResponse
+    {
+        $validated = $request->validate([
+            'marketing_status' => ['present', 'nullable', 'in:'.Product::MARKETING_AWAITING.','.Product::MARKETING_MARKETED],
+        ]);
+
+        $oldValues = $product->getOriginal();
+        $product->update(['marketing_status' => $validated['marketing_status']]);
+        $this->audit->log('product.marketing_status_updated', $product, $oldValues, $validated);
+
+        return response()->json(['data' => new ProductResource($product->fresh()->load(['category', 'subcategory', 'region', 'city', 'seller']))]);
+    }
+
     public function reject(Product $product): JsonResponse
     {
         $oldValues = $product->getOriginal();

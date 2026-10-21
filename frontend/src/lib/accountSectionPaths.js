@@ -15,6 +15,7 @@ export function useAccountSectionBasePath() {
   const { pathname } = useLocation()
   const user = useAuthStore((s) => s.user)
   if (pathname.startsWith("/admin")) return "/admin"
+  if (pathname.startsWith("/subscriber") || user?.role === "subscriber") return "/subscriber"
   if (isStaffUser(user)) return "/admin"
   return "/dashboard"
 }

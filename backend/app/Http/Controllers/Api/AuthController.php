@@ -111,6 +111,8 @@ class AuthController extends Controller
             'region_id' => $city?->region_id,
             'category_id' => $request->validated('category_id'),
             'product_types' => $request->validated('product_types'),
+            'activities' => array_values(array_unique($request->validated('activities') ?? [])) ?: null,
+            'fal_license_no' => $request->validated('fal_license_no'),
             'verification_status' => 'pending',
             'license_url' => $licenseUrl,
         ]);

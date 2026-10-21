@@ -1,6 +1,10 @@
 import { useTranslation } from "react-i18next"
 import { useAppDirection } from "@/providers/DirectionProvider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useSearchParams } from "react-router-dom"
+import { CompanyListingsMapTab } from "@/components/company/CompanyListingsMapTab"
+import { CompanyVideosTab } from "@/components/company/videos/CompanyVideosTab"
+import { CompanyAboutTab } from "@/components/company/CompanyAboutTab"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ProductCard } from "@/components/feed/cards/ProductCard"
@@ -55,7 +59,12 @@ export function ProfileTabs({
   onReviewModalOpenChange,
   initialListings = [],
   initialReviews = [],
+  company = null,
 }) {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const companyTabs = company?.id ? ["map", "videos", "about"] : []
+  const requestedTab = searchParams.get("tab")
+  const activeTab = ["listings", "reviews", ...companyTabs].includes(requestedTab) ? requestedTab : "listings"
   const { t, language } = useTranslation()
   const { direction } = useAppDirection()
   const listingsPages = listingsQuery.data?.pages ?? []
@@ -75,14 +84,19 @@ export function ProfileTabs({
   const listingAsProduct = (listing) => normalizeListingForProductCard(listing, sellerLabel)
 
   return (
-    <Tabs defaultValue="listings" className="w-full" dir={direction}>
+    <Tabs
+      value={activeTab}
+      onValueChange={(v) => setSearchParams(v === "listings" ? {} : { tab: v }, { replace: true })}
+      className="w-full"
+      dir={direction}
+    >
       <div
         className={cn(
           "sticky top-14 z-20 border-b border-border/80 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75",
         )}
       >
         <div className={PUBLIC_PROFILE_CONTAINER}>
-          <TabsList variant="line" className="h-11 w-full min-w-0 justify-start gap-0 rounded-none border-0 bg-transparent p-0">
+          <TabsList variant="line" className="h-11 w-full min-w-0 justify-start gap-0 overflow-x-auto overflow-y-hidden rounded-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden border-0 bg-transparent p-0">
             <TabsTrigger
               value="listings"
               className="rounded-none border-b-2 border-transparent px-3 py-2 text-sm data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
@@ -94,6 +108,24 @@ export function ProfileTabs({
                 </Badge>
               </span>
             </TabsTrigger>
+            {company?.id ? (
+              <>
+                <TabsTrigger value="map" className="rounded-none border-b-2 border-transparent px-3 py-2 text-sm data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+                  {t("companyChannel.tabMap", "الخارطة")}
+                </TabsTrigger>
+                <TabsTrigger value="videos" className="rounded-none border-b-2 border-transparent px-3 py-2 text-sm data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+                  <span className="flex items-center gap-2">
+                    {t("companyChannel.tabVideos", "الفيديوهات")}
+                    <Badge variant="secondary" className="tabular-nums">
+                      {formatNumber((company.videos_count ?? 0) + (company.shorts_count ?? 0), language)}
+                    </Badge>
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger value="about" className="rounded-none border-b-2 border-transparent px-3 py-2 text-sm data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+                  {t("companyChannel.tabAbout", "عن الشركة")}
+                </TabsTrigger>
+              </>
+            ) : null}
             <TabsTrigger
               value="reviews"
               className="rounded-none border-b-2 border-transparent px-3 py-2 text-sm data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
@@ -141,6 +173,20 @@ export function ProfileTabs({
                 </Button>
               ) : null}
             </TabsContent>
+
+            {company?.id ? (
+              <>
+                <TabsContent value="map" className="mt-4 pb-8 focus-visible:outline-none">
+                  {activeTab === "map" ? <CompanyListingsMapTab userId={company.user_id ?? user?.id} /> : null}
+                </TabsContent>
+                <TabsContent value="videos" className="mt-4 pb-8 focus-visible:outline-none">
+                  <CompanyVideosTab companyId={company.id} isOwner={isOwner} />
+                </TabsContent>
+                <TabsContent value="about" className="mt-4 pb-8 focus-visible:outline-none">
+                  <CompanyAboutTab company={company} user={user} />
+                </TabsContent>
+              </>
+            ) : null}
 
             <TabsContent value="reviews" className="mt-4 space-y-4 pb-8 focus-visible:outline-none">
               <RatingSummaryCard reviewSummary={reviewSummary} direction={direction} />

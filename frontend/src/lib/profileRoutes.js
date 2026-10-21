@@ -3,6 +3,8 @@
  */
 export function publicProfilePath(userOrSeller) {
   if (!userOrSeller) return null
+  // Subscriber accounts are hidden — they have no public profile.
+  if (userOrSeller.role === "subscriber") return null
   const username = userOrSeller.username
   const id = userOrSeller.id
   if (username && String(username).trim()) return `/profile/${String(username).trim()}`

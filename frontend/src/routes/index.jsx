@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate, Outlet, useParams } from "react-router-dom"
+import { createBrowserRouter, Navigate, Outlet, useParams, useLocation } from "react-router-dom"
 import { ViewRequestsLegacyRedirect } from "@/components/routing/ViewRequestsLegacyRedirect"
 import { ErrorFallback } from "@/components/ErrorBoundary"
 import { ScrollToTop } from "@/components/ScrollToTop"
@@ -89,6 +89,19 @@ import { AdminSeoRobotsPage } from "@/pages/admin/seo/AdminSeoRobotsPage"
 import { AdminSeoSocialPreviewPage } from "@/pages/admin/seo/AdminSeoSocialPreviewPage"
 import { AdminSeoReportsPage } from "@/pages/admin/seo/AdminSeoReportsPage"
 import { SeoHead } from "@/components/seo/SeoHead"
+import { SubscriberOverviewPage } from "@/pages/subscriber/SubscriberOverviewPage"
+import { SubscriberCreditsPage } from "@/pages/subscriber/SubscriberCreditsPage"
+import { SubscriberSupportPage } from "@/pages/subscriber/SubscriberSupportPage"
+import { SubscriberAccountPage } from "@/pages/subscriber/SubscriberAccountPage"
+import { SubscriberAvailablePage } from "@/pages/subscriber/SubscriberAvailablePage"
+import { SubscriberMyListingsPage } from "@/pages/subscriber/SubscriberMyListingsPage"
+import { SubscriberListingPage } from "@/pages/subscriber/SubscriberListingPage"
+import { AdminSubscribersPage } from "@/pages/admin/AdminSubscribersPage"
+import { AdminSubscriberListingsPage } from "@/pages/admin/AdminSubscriberListingsPage"
+import { AdminCompanyVideosPage } from "@/pages/admin/AdminCompanyVideosPage"
+import { VideoPlayerPage } from "@/pages/VideoPlayerPage"
+import { ShortsViewerPage } from "@/pages/ShortsViewerPage"
+import { CompanyVideosPage } from "@/pages/dashboard/CompanyVideosPage"
 
 function RedirectMemberNotificationDetail() {
   const { notificationId } = useParams()
@@ -99,19 +112,21 @@ function RedirectMemberNotificationDetail() {
 function MainLayout() {
   const { token, user } = useAuthStore()
   const isAuthenticated = Boolean(token && user)
+  // Subscribers have their own area; the member bottom bar (add listing, orders…) doesn't apply.
+  const showBottomNav = isAuthenticated && user?.role !== "subscriber"
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <VisitorTracker />
       <TopNavigation />
       <DemoBanner />
-      <main className={`flex-1 ${isAuthenticated ? "pb-20 lg:pb-0" : ""}`}>
+      <main className={`flex-1 ${showBottomNav ? "pb-20 lg:pb-0" : ""}`}>
         <AppLayout>
           <Outlet />
         </AppLayout>
       </main>
       <Footer />
-      {isAuthenticated && <BottomNavBar />}
+      {showBottomNav && <BottomNavBar />}
     </div>
   )
 }
@@ -129,6 +144,7 @@ const ADMIN_ROLES = ["super_admin", "admin", "manager", "employee", "moderator",
 
 function ProtectedRoute({ children, roles, userOnly, adminOnly }) {
   const { user, token, _hasHydrated } = useAuthStore()
+  const location = useLocation()
   if (!_hasHydrated) {
     return null
   }
@@ -138,6 +154,10 @@ function ProtectedRoute({ children, roles, userOnly, adminOnly }) {
   const isAdmin = ADMIN_ROLES.includes(user.role)
   if (adminOnly && !isAdmin) return <Navigate to="/dashboard" replace />
   if (userOnly && isAdmin) return <Navigate to="/admin" replace />
+  if (userOnly && user.role === "subscriber") {
+    const inbox = location.pathname.startsWith("/dashboard/messages") || location.pathname.startsWith("/dashboard/notifications")
+    return <Navigate to={inbox ? `/subscriber/messages${location.search}` : "/subscriber"} replace />
+  }
   if (roles && !roles.includes(user.role) && user.role !== "super_admin") {
     return <Navigate to="/dashboard" replace />
   }
@@ -191,6 +211,8 @@ export const router = createBrowserRouter([
       { path: "about", element: <LegalPage slug="about" /> },
       { path: "help", element: <LegalPage slug="help" /> },
       { path: "profile/:identifier", element: <PublicProfilePage /> },
+      { path: "videos/:id", element: <VideoPlayerPage /> },
+      { path: "shorts/:id", element: <ShortsViewerPage /> },
     ],
   },
   {
@@ -252,10 +274,35 @@ export const router = createBrowserRouter([
       { path: "reports", element: <Navigate to="/dashboard/account?tab=reports" replace /> },
       { path: "wholesale", element: <Navigate to="/dashboard/listings?channel=wholesale" replace /> },
       { path: "services", element: <CompanyServicesPage /> },
+      { path: "videos", element: <CompanyVideosPage /> },
       { path: "account", element: <AccountHubPage /> },
       { path: "help", element: <HelpPage /> },
       { path: "reviews", element: <Navigate to="/dashboard/account" replace /> },
       { path: "verification", element: <Navigate to="/dashboard/account?tab=verification" replace /> },
+    ],
+  },
+  {
+    path: "/subscriber",
+    element: (
+      <RouteScrollWrapper>
+        <ProtectedRoute roles={["subscriber"]}>
+          <DashboardShell>
+            <DashboardLayout subscriber />
+          </DashboardShell>
+        </ProtectedRoute>
+      </RouteScrollWrapper>
+    ),
+    errorElement: <ErrorFallback />,
+    children: [
+      { index: true, element: <SubscriberOverviewPage /> },
+      { path: "requests", element: <SubscriberAvailablePage /> },
+      { path: "my-listings", element: <SubscriberMyListingsPage /> },
+      { path: "listings/:id", element: <SubscriberListingPage /> },
+      { path: "messages", element: <MessagesPage /> },
+      { path: "notifications", element: <Navigate to="/subscriber/messages?hub=notifications" replace /> },
+      { path: "support", element: <SubscriberSupportPage /> },
+      { path: "credits", element: <SubscriberCreditsPage /> },
+      { path: "account", element: <SubscriberAccountPage /> },
     ],
   },
   {
@@ -322,6 +369,9 @@ export const router = createBrowserRouter([
       { path: "visitors", element: <AdminVisitorsPage /> },
       { path: "roles", element: <AdminRolesPage /> },
       { path: "assistants", element: <AdminAssistantsPage /> },
+      { path: "subscribers", element: <AdminSubscribersPage /> },
+      { path: "company-videos", element: <AdminCompanyVideosPage /> },
+      { path: "subscriber-listings", element: <AdminSubscriberListingsPage /> },
       { path: "audit", element: <AdminAuditPage /> },
       { path: "analytics", element: <AdminAnalyticsPage /> },
       { path: "verifications", element: <AdminVerificationsPage /> },

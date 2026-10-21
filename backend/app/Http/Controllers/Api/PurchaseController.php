@@ -38,6 +38,9 @@ class PurchaseController extends Controller
         if ($user->id === $product->user_id) {
             return response()->json(['message' => 'Cannot purchase your own product'], 403);
         }
+        if ($product->hidesPriceFrom($user)) {
+            return response()->json(['message' => 'هذا العقار بانتظار التسويق ولا يمكن شراؤه حالياً'], 422);
+        }
 
         $validated = $request->validate([
             'payment_method' => ['required', 'in:escrow,cod,direct_transfer'],
