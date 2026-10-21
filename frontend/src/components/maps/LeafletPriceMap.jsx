@@ -105,7 +105,7 @@ export default function LeafletPriceMap({
 
   return (
     <MapContainerSafe center={center} zoom={10} className={cn("h-full w-full touch-manipulation", className)}>
-      <TileLayer attribution={raster.attribution} url={raster.url} />
+      <TileLayer key={raster.className ?? "light"} attribution={raster.attribution} url={raster.url} className={raster.className} />
       <MapEvents onBoundsChange={onBoundsChange} onMapClick={onMapClick} />
       <FitToMarkers markers={valid} fitKey={fitKey} />
       {valid.map((m) => (

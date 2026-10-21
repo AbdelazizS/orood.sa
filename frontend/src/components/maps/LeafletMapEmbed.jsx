@@ -121,8 +121,10 @@ export default function LeafletMapEmbed({
       zoomControl={mapInteractive}
     >
       <TileLayer
+        key={raster.className ?? "light"}
         attribution={isPreview ? "" : raster.attribution}
         url={raster.url}
+        className={raster.className}
       />
       {positions.length > 1 || (positions.length === 1 && !flyToPrimary) ? <FitBounds positions={positions} /> : null}
       {flyToPrimary && positions.length === 1 && primary?.lat != null && primary?.lng != null ? (

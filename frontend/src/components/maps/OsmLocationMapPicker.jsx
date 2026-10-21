@@ -241,8 +241,10 @@ export function OsmLocationMapPicker({
             <SetViewWhenNoPin lat={lat} lng={lng} />
             <FlyToPin lat={lat} lng={lng} />
             <TileLayer
+              key={raster.className ?? "light"}
               attribution={hideMapAttribution ? "" : raster.attribution}
               url={raster.url}
+              className={raster.className}
             />
             {!readOnly ? <MapEvents onPick={handlePick} /> : null}
             {position ? (
