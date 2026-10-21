@@ -32,6 +32,11 @@ use Illuminate\Support\Str;
  * a few are marked "awaiting_marketer" to show the grey "انتظار" pins.
  *
  * All demo users: password "password".
+ *
+ * Production-safe (APP_ENV=production): adds data on top of what exists and deletes nothing,
+ * skips the demo staff accounts (super/admin/manager/employee), never changes the password of an
+ * existing account, and gives new demo accounts SEED_DEMO_PASSWORD (required, min 10 chars).
+ * Seeded listings have slugs starting with "seed-" so they are easy to find or remove later.
  */
 class SaudiMarketplaceSeeder extends Seeder
 {
@@ -90,6 +95,9 @@ class SaudiMarketplaceSeeder extends Seeder
         ],
     ];
 
+    /** Demo staff accounts — never created on production; the site's real admin is used instead. */
+    private const STAFF_KEYS = ['super', 'admin', 'manager', 'employee'];
+
     /** @var array<string, User> */
     private array $users = [];
 
@@ -134,21 +142,45 @@ class SaudiMarketplaceSeeder extends Seeder
         // Readable public profile links for the company channels (/profile/rakaez …).
         $usernames = ['rakaez' => 'rakaez', 'ofuq' => 'ofuq', 'sharqiya' => 'sharqiya', 'cars' => 'alnokhba-cars'];
 
+        $production = app()->environment('production');
+        $password = 'password';
+        if ($production) {
+            $password = (string) env('SEED_DEMO_PASSWORD', '');
+            if (strlen($password) < 10) {
+                throw new \RuntimeException('Set SEED_DEMO_PASSWORD (at least 10 characters) in .env before seeding demo data on production.');
+            }
+            $staff = User::query()->whereIn('role', ['super_admin', 'admin'])->orderBy('id')->first();
+            if (! $staff) {
+                throw new \RuntimeException('Create the real admin first (php artisan admin:create) — demo staff accounts are not seeded on production.');
+            }
+        }
+
         foreach ($rows as $key => [$email, $name, $role, $phone, $cityName]) {
+            if ($production && in_array($key, self::STAFF_KEYS, true)) {
+                $this->users[$key] = $staff;
+
+                continue;
+            }
+
             $city = City::query()->where('name', $cityName)->first();
-            $this->users[$key] = User::updateOrCreate(
-                ['email' => $email],
-                [
-                    'name' => $name,
-                    'phone' => $phone,
-                    'role' => $role,
-                    'password' => bcrypt('password'),
-                    'city_id' => $city?->id,
-                    'email_verified_at' => now(),
-                ],
-            );
-            if (isset($usernames[$key])) {
-                $this->users[$key]->forceFill(['username' => $usernames[$key]])->save();
+            $user = User::query()->firstOrNew(['email' => $email]);
+            if ($production && $user->exists) {
+                // Never touch a live account that happens to share a demo email.
+                $this->users[$key] = $user;
+
+                continue;
+            }
+            $user->fill([
+                'name' => $name,
+                'phone' => $phone,
+                'role' => $role,
+                'city_id' => $city?->id,
+            ]);
+            $user->forceFill(['password' => bcrypt($password), 'email_verified_at' => now()])->save();
+            $this->users[$key] = $user;
+
+            if (isset($usernames[$key]) && ! User::query()->where('username', $usernames[$key])->whereKeyNot($user->id)->exists()) {
+                $user->forceFill(['username' => $usernames[$key]])->save();
             }
         }
     }
