@@ -33,7 +33,7 @@ import { OptionsCheckboxes } from "@/components/add-listing/OptionsCheckboxes"
 import { RealEstateMarketingFields } from "@/components/add-listing/RealEstateMarketingFields"
 import { ListingVideoField } from "@/components/add-listing/ListingVideoField"
 import { DistrictCombobox } from "@/components/filters/DistrictCombobox"
-import { uploadListingVideo } from "@/services/companyVideoService"
+import { getMyListingVideos, uploadListingVideo } from "@/services/companyVideoService"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { SubmitSection } from "@/components/add-listing/SubmitSection"
@@ -89,6 +89,13 @@ export function AddOfferPage() {
   const [videoFile, setVideoFile] = useState(null)
   const [videoProbe, setVideoProbe] = useState(null)
   const [videoProgress, setVideoProgress] = useState(null)
+  // Same cache as the video field: the owner's videos already on this listing (edit mode).
+  const { data: existingVideos } = useQuery({
+    queryKey: ["listing-videos", "mine", editListingId],
+    queryFn: () => getMyListingVideos(editListingId),
+    enabled: isEditMode && Boolean(editListingId) && Boolean(token),
+  })
+  const existingVideosCount = existingVideos?.items?.length ?? 0
   const [needsMarketer, setNeedsMarketer] = useState(false)
   const [adLicenseNo, setAdLicenseNo] = useState("")
   const [listingAttributes, setListingAttributes] = useState({})
@@ -759,6 +766,23 @@ export function AddOfferPage() {
           realEstatePricing={isRealEstateOffer}
           pricePerMeter={pricePerMeter}
           awaitingMarketer={isRealEstateOffer && needsMarketer}
+          mapDisplay={mapDisplay}
+          hasVideo={Boolean(videoFile) || existingVideosCount > 0}
+          videoSlot={
+            <ListingVideoField
+              productId={isEditMode ? editListingId : null}
+              file={videoFile}
+              probe={videoProbe}
+              onFileChange={(f, info) => {
+                setVideoFile(f)
+                setVideoProbe(info)
+              }}
+              mapDisplay={mapDisplay}
+              onMapDisplayChange={setMapDisplay}
+              uploadProgress={videoProgress}
+              showMapToggle={!isRealEstateOffer}
+            />
+          }
           errors={{
             title: fieldErrors.title,
             description: fieldErrors.description,
@@ -797,6 +821,7 @@ export function AddOfferPage() {
                 setPricePerMeter(String(Math.round(Number(next) / area)))
               }
             }
+            if ("mapDisplay" in updates) setMapDisplay(updates.mapDisplay === "video" ? "video" : "price")
             if ("pricePerMeter" in updates) {
               pricePerMeterTouchedRef.current = true
               setPricePerMeter(String(updates.pricePerMeter ?? ""))
@@ -805,18 +830,7 @@ export function AddOfferPage() {
           }}
         />
 
-        <ListingVideoField
-          productId={isEditMode ? editListingId : null}
-          file={videoFile}
-          probe={videoProbe}
-          onFileChange={(f, info) => {
-            setVideoFile(f)
-            setVideoProbe(info)
-          }}
-          mapDisplay={mapDisplay}
-          onMapDisplayChange={setMapDisplay}
-          uploadProgress={videoProgress}
-        />
+
 
         <OptionsCheckboxes
           freeShipping={freeShipping}

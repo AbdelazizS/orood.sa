@@ -992,6 +992,12 @@
     "companyVerificationPending": "Your company request is now pending review"
   },
   "addListing": {
+    "mapDisplay": {
+      "title": "Show the property on the map as",
+      "price": "Price",
+      "video": "Video",
+      "needsVideo": "Add a video under “Upload video” above — without one the price shows on the map."
+    },
     "rePrice": {
       "total": "Property price",
       "perMeter": "Price per m²",
@@ -1000,6 +1006,7 @@
       "requiredHint": "Price and price per m² are required for all real-estate listings and show on the map."
     },
     "video": {
+      "upload": "Upload video",
       "title": "Listing video (optional)",
       "hint": "Shown on the listing, in Videos and on the map. A short vertical clip works best.",
       "pick": "Choose a video",

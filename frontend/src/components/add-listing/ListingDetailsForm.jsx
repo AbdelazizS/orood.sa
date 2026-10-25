@@ -28,6 +28,9 @@ export function ListingDetailsForm({
   realEstatePricing = false,
   pricePerMeter = "",
   awaitingMarketer = false,
+  videoSlot = null,
+  mapDisplay = "price",
+  hasVideo = false,
 }) {
   const { t } = useTranslation()
   const { direction } = useAppDirection()
@@ -114,10 +117,13 @@ export function ListingDetailsForm({
           )}
         </div>
 
+        {/* «حمل الفيديو» sits right after the photos. */}
+        {videoSlot}
+
         {/* Real-estate offers: total price + price per metre, both required (no «على السوم»). */}
         {realEstatePricing ? (
           <div className={BOX_STYLE}>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
                 <label htmlFor="re-price" className="text-[14px] font-bold text-foreground">
                   {t("addListing.rePrice.total", "سعر العقار")} <span className="text-destructive">*</span>
@@ -162,6 +168,38 @@ export function ListingDetailsForm({
                 </div>
                 {errors.pricePerMeter ? <p className="text-sm text-destructive" role="alert">{errors.pricePerMeter}</p> : null}
               </div>
+              {/* «تريد ظهور العقار على الخارطة»: price pin or the property's video (Snap-style bubble). */}
+              <fieldset className="space-y-2 sm:col-span-2 lg:col-span-1">
+                <legend className="mb-2 text-[14px] font-bold text-foreground">
+                  {t("addListing.mapDisplay.title", "تريد ظهور العقار على الخارطة")}
+                </legend>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: "price", label: t("addListing.mapDisplay.price", "سعر العقار") },
+                    { id: "video", label: t("addListing.mapDisplay.video", "فيديو العقار") },
+                  ].map((opt) => (
+                    <label
+                      key={opt.id}
+                      className={cn(
+                        "flex h-11 cursor-pointer items-center justify-center gap-2 rounded-md border text-sm font-semibold transition-colors",
+                        mapDisplay === opt.id ? "border-primary bg-primary/10 text-primary" : "border-input hover:border-primary/50",
+                      )}
+                    >
+                      <Checkbox
+                        checked={mapDisplay === opt.id}
+                        onCheckedChange={() => onChange({ mapDisplay: opt.id })}
+                        className="size-[18px] rounded-[3px]"
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
+                {mapDisplay === "video" && !hasVideo ? (
+                  <p className="text-[12px] text-amber-600 dark:text-amber-400">
+                    {t("addListing.mapDisplay.needsVideo", "أرفق فيديو من «حمل الفيديو» أعلاه — بدونه يظهر السعر على الخارطة.")}
+                  </p>
+                ) : null}
+              </fieldset>
             </div>
             <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">
               {awaitingMarketer

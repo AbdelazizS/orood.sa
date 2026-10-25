@@ -24,7 +24,7 @@ const MAX_MB_FALLBACK = 200
  *   uploadProgress?: number|null,
  * }} props
  */
-export function ListingVideoField({ productId, file, probe, onFileChange, mapDisplay, onMapDisplayChange, uploadProgress = null }) {
+export function ListingVideoField({ productId, file, probe, onFileChange, mapDisplay, onMapDisplayChange, uploadProgress = null, showMapToggle = true }) {
   const { t } = useTranslation()
   const inputRef = useRef(null)
   const queryClient = useQueryClient()
@@ -68,7 +68,7 @@ export function ListingVideoField({ productId, file, probe, onFileChange, mapDis
       <div className="flex items-start gap-2">
         <Clapperboard className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
         <div className="min-w-0">
-          <p className="text-[14px] font-bold">{t("addListing.video.title", "فيديو الإعلان (اختياري)")}</p>
+          <p className="text-[14px] font-bold">{t("addListing.video.upload", "حمل الفيديو")}</p>
           <p className="text-[12px] text-muted-foreground">
             {t("addListing.video.hint", "يظهر في صفحة الإعلان وفي «فيديوهات» وعلى الخارطة. يفضّل فيديو قصير بالطول.")}
           </p>
@@ -132,7 +132,7 @@ export function ListingVideoField({ productId, file, probe, onFileChange, mapDis
         }}
       />
 
-      {hasVideo ? (
+      {hasVideo && showMapToggle ? (
         <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-md bg-muted/30 p-2.5">
           <Checkbox
             checked={mapDisplay === "video"}

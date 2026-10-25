@@ -6,6 +6,8 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/navigation/ThemeToggle"
 import { UserMenu } from "@/components/navigation/UserMenu"
+import { MessageIcon } from "@/components/messages/MessageIcon"
+import { NotificationBell } from "@/components/notifications/NotificationBell"
 import { useAuthStore } from "@/store/useAuthStore"
 import { publicProfilePath } from "@/lib/profileRoutes"
 import * as authService from "@/services/authService"
@@ -147,6 +149,13 @@ export function TopNavigation() {
         {/* Mobile: theme + lang + burger grouped together */}
         <div className="flex items-center gap-1 sm:gap-2">
           {/* The map / videos entry points live in the search bar under the categories (client note 2026-10). */}
+          {/* Messages + notifications with their red unread badges, on every page and every screen size. */}
+          {token && user ? (
+            <>
+              <MessageIcon />
+              <NotificationBell />
+            </>
+          ) : null}
           <ThemeToggle />
           <LanguageSwitcher />
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -176,19 +185,7 @@ export function TopNavigation() {
           {/* Desktop: messages, notifications, profile/auth (hidden on mobile, profile is in sheet) */}
           <div className="hidden lg:flex items-center gap-1">
             {token && user ? (
-              <>
-                <Button variant="ghost" size="icon" asChild className="relative">
-                  <Link to={isAdmin ? "/admin/messages" : "/dashboard/messages"} title={t("dashboard.messages", "الرسائل")}>
-                    <MessageSquare className="size-5" />
-                  </Link>
-                </Button>
-                <Button variant="ghost" size="icon" asChild className="relative">
-                  <Link to={isAdmin ? "/admin/notifications" : "/dashboard/messages?hub=notifications"} title={t("notifications.title", "الإشعارات")}>
-                    <Bell className="size-5" />
-                  </Link>
-                </Button>
-                <UserMenu />
-              </>
+              <UserMenu />
             ) : (
               <>
                 <Button variant="ghost" size="sm" asChild className="rounded-full">

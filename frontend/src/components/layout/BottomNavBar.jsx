@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 import { useAppDirection } from "@/providers/DirectionProvider"
 import { useAuthStore } from "@/store/useAuthStore"
 import { isStaffUser } from "@/lib/accountSectionPaths"
+import { useUnreadCounts } from "@/hooks/useUnreadCounts"
 
 /**
  * Fixed mobile bottom bar (hidden on lg+), shown to everyone — visitors are sent to login by the
@@ -17,6 +18,7 @@ export function BottomNavBar() {
   const user = useAuthStore((s) => s.user)
   const staff = isStaffUser(user)
   const path = location.pathname
+  const unread = useUnreadCounts()
   const search = location.search
 
   const ordersPath = staff ? "/admin/orders" : "/dashboard/orders"
@@ -30,13 +32,14 @@ export function BottomNavBar() {
     { key: "home", to: "/", icon: Home, label: t("nav.home", "الرئيسية"), active: path === "/" },
     { key: "orders", to: ordersPath, icon: Package, label: t("nav.trackOrders", "تتبع الطلبات"), active: path.startsWith(ordersPath) },
     { key: "add" },
-    { key: "notifications", to: notificationsPath, icon: Bell, label: t("nav.notifications", "الإشعارات"), active: isNotifications },
+    { key: "notifications", to: notificationsPath, icon: Bell, label: t("nav.notifications", "الإشعارات"), active: isNotifications, badge: unread.notifications },
     {
       key: "inbox",
       to: inboxPath,
       icon: Mail,
       label: t("nav.messages", "الرسائل"),
       active: staff ? path.startsWith("/admin/messages") : path.startsWith("/dashboard/messages") && !isNotifications,
+      badge: unread.messages,
     },
   ]
 
@@ -76,7 +79,14 @@ export function BottomNavBar() {
                 item.active ? "text-primary" : "text-muted-foreground",
               )}
             >
-              <Icon className="size-6 shrink-0" aria-hidden />
+              <span className="relative">
+                <Icon className="size-6 shrink-0" aria-hidden />
+                {item.badge > 0 ? (
+                  <span className="absolute -top-1.5 -end-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-white ring-2 ring-background">
+                    {item.badge > 99 ? "99+" : item.badge}
+                  </span>
+                ) : null}
+              </span>
               <span className={cn("max-w-full truncate text-[11px]", item.active && "font-medium")}>{item.label}</span>
             </Link>
           )
