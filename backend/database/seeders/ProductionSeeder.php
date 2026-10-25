@@ -10,6 +10,7 @@ class ProductionSeeder extends Seeder
     {
         $this->call([
             SaudiRegionsSeeder::class,
+            SaudiLocationsSeeder::class,
             PermissionSeeder::class,
             CategorySeeder::class,
             CategoryListingSchemaSeeder::class,

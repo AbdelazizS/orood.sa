@@ -111,6 +111,8 @@ class ProductController extends Controller
             'location_lng' => $validated['location_lng'] ?? null,
             'location_address' => $validated['location_address'] ?? null,
             'district' => $this->normalizeDistrict($validated['district'] ?? null),
+            'price_per_meter' => isset($validated['price_per_meter']) && (float) $validated['price_per_meter'] > 0 ? $validated['price_per_meter'] : null,
+            'map_display' => $validated['map_display'] ?? 'price',
             'ad_license_no' => isset($validated['ad_license_no']) ? (trim($validated['ad_license_no']) ?: null) : null,
             'marketing_status' => ! empty($validated['needs_marketer']) && $request->isRealEstateListingSelection()
                 ? Product::MARKETING_AWAITING
@@ -193,6 +195,10 @@ class ProductController extends Controller
             'location_lng' => array_key_exists('location_lng', $validated) ? $validated['location_lng'] : $product->location_lng,
             'location_address' => array_key_exists('location_address', $validated) ? $validated['location_address'] : $product->location_address,
             'district' => array_key_exists('district', $validated) ? $this->normalizeDistrict($validated['district']) : $product->district,
+            'price_per_meter' => array_key_exists('price_per_meter', $validated)
+                ? ((float) $validated['price_per_meter'] > 0 ? $validated['price_per_meter'] : null)
+                : $product->price_per_meter,
+            'map_display' => $validated['map_display'] ?? ($product->map_display ?? 'price'),
             'ad_license_no' => array_key_exists('ad_license_no', $validated) ? (trim((string) $validated['ad_license_no']) ?: null) : $product->ad_license_no,
             'marketing_status' => $this->resolveMarketingStatusOnUpdate($request, $product, $validated),
         ]);

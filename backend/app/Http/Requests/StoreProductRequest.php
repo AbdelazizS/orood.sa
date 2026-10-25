@@ -62,6 +62,8 @@ class StoreProductRequest extends FormRequest
             'location_lng' => ['nullable', 'numeric', 'between:-180,180'],
             'location_address' => ['nullable', 'string', 'max:500'],
             'district' => ['nullable', 'string', 'max:120'],
+            'price_per_meter' => ['nullable', 'numeric', 'min:0'],
+            'map_display' => ['nullable', 'in:price,video'],
             'needs_marketer' => ['nullable', 'boolean'],
             'ad_license_no' => ['nullable', 'string', 'max:50', 'regex:/^[0-9A-Za-z\-]+$/'],
             'listing_attributes' => ['nullable', 'array'],
@@ -102,6 +104,7 @@ class StoreProductRequest extends FormRequest
     {
         $validator->after(function (Validator $validator) {
             $this->requireAdLicenseIfConfigured($validator);
+            $this->requireRealEstatePrices($validator);
             $contactPhone = filter_var($this->input('contact_phone', false), FILTER_VALIDATE_BOOLEAN);
             $contactMessages = filter_var($this->input('contact_messages', false), FILTER_VALIDATE_BOOLEAN);
 
@@ -232,6 +235,27 @@ class StoreProductRequest extends FormRequest
         }
         if (trim((string) $this->input('ad_license_no')) === '' && ! ($this->isMethod('PUT') && $this->route('product')?->ad_license_no)) {
             $validator->errors()->add('ad_license_no', 'رقم ترخيص الإعلان من الهيئة العامة للعقار مطلوب للإعلانات العقارية.');
+        }
+    }
+
+    /**
+     * Real-estate offers must carry a total price and a price per metre ("على السوم" isn't accepted),
+     * so every property shows a price on the map. Awaiting-marketer listings still hide the total publicly.
+     */
+    protected function requireRealEstatePrices($validator): void
+    {
+        if (! config('listings.require_real_estate_price', true) || $this->input('type') === 'request' || ! $this->isRealEstateListingSelection()) {
+            return;
+        }
+        $existing = $this->isMethod('PUT') ? $this->route('product') : null;
+        $price = $this->has('price') ? (float) $this->input('price') : (float) ($existing?->price ?? 0);
+        $perMeter = $this->has('price_per_meter') ? (float) $this->input('price_per_meter') : (float) ($existing?->price_per_meter ?? 0);
+
+        if ($price <= 0) {
+            $validator->errors()->add('price', 'سعر العقار مطلوب للإعلانات العقارية.');
+        }
+        if ($perMeter <= 0) {
+            $validator->errors()->add('price_per_meter', 'سعر المتر مطلوب للإعلانات العقارية.');
         }
     }
 

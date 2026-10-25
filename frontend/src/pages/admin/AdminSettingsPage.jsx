@@ -13,6 +13,7 @@ import { PaymentSettingsSection } from "@/features/admin/settings/PaymentSetting
 import { ContactSettingsSection } from "@/features/admin/settings/ContactSettingsSection"
 import { BrandingSettingsSection } from "@/features/admin/settings/BrandingSettingsSection"
 import { MailSettingsSection } from "@/features/admin/settings/MailSettingsSection"
+import { SiteFeaturesSection } from "@/features/admin/settings/SiteFeaturesSection"
 
 const TAB_VALUES = ["security", "account", "auth", "content", "wholesale-page", "payments", "contact", "branding", "mail"]
 
@@ -89,7 +90,8 @@ export function AdminSettingsPage() {
         <TabsContent value="content" className="mt-4">
           <ContentSettingsSection settings={settings.content} />
         </TabsContent>
-        <TabsContent value="wholesale-page" className="mt-4">
+        <TabsContent value="wholesale-page" className="mt-4 space-y-4">
+          <SiteFeaturesSection />
           <WholesaleMarketPageSettingsSection
             key={JSON.stringify(settings.wholesale_market_page ?? null)}
             settings={settings}

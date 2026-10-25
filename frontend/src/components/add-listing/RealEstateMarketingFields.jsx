@@ -4,26 +4,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 /**
- * Real-estate extras on the add/edit listing form: district (الحي) and "needs a marketer".
+ * Real-estate extras on the add/edit listing form: REGA ad licence and "needs a marketer".
+ * (The district picker is shared by all sections and sits next to the city.)
  */
-export function RealEstateMarketingFields({ district, needsMarketer, adLicenseNo = "", showNeedsMarketer = true, onChange }) {
+export function RealEstateMarketingFields({ needsMarketer, adLicenseNo = "", showNeedsMarketer = true, onChange }) {
   const { t } = useTranslation()
 
   return (
     <div className="space-y-3">
-      <div className="space-y-1.5">
-        <Label htmlFor="listing-district" className="text-sm font-medium">
-          {t("realEstate.district", "الحي")}
-        </Label>
-        <Input
-          id="listing-district"
-          maxLength={120}
-          value={district}
-          placeholder={t("realEstate.districtPlaceholder", "مثال: النرجس")}
-          onChange={(e) => onChange({ district: e.target.value })}
-        />
-      </div>
-
       {showNeedsMarketer ? (
         <div className="space-y-1.5">
           <Label htmlFor="listing-ad-license" className="text-sm font-medium">
@@ -62,7 +50,7 @@ export function RealEstateMarketingFields({ district, needsMarketer, adLicenseNo
             <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
               {t(
                 "realEstate.needsMarketerHint",
-                "يظهر العقار على الخريطة بعلامة «انتظار» بدون سعر أو بيانات تواصل حتى يتبناه مسوق.",
+                "يظهر على الخريطة بعلامة «انتظار»: سعر المتر ظاهر للجميع، والسعر الإجمالي وبيانات التواصل للإدارة والمشتركين فقط.",
               )}
             </span>
           </span>

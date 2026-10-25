@@ -19,6 +19,8 @@ class FeedRequest extends FormRequest
             'subcategory_id' => 'nullable|integer|exists:subcategories,id',
             'region_id' => 'nullable|integer|exists:regions,id',
             'city_id' => 'nullable|integer|exists:cities,id',
+            'district' => 'nullable|string|max:120',
+            'has_video' => 'nullable|boolean',
             'price_min' => 'nullable|numeric|min:0',
             'price_max' => 'nullable|numeric|min:0',
             'search' => 'nullable|string|max:100',

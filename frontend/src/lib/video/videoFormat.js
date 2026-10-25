@@ -98,3 +98,10 @@ export function probeVideoFile(file) {
 }
 
 export const COMPANY_ACTIVITIES = ["marketer", "developer", "seller"]
+
+/** Label for the listing a video is about: «عرض العقار» for real estate, else «عرض التفاصيل». */
+export function viewListingLabel(product, t) {
+  return product?.category === "real-estate"
+    ? t("companyChannel.viewListing", "عرض العقار")
+    : t("videos.viewDetails", "عرض التفاصيل")
+}

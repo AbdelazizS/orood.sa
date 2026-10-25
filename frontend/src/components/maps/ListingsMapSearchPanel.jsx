@@ -1,10 +1,9 @@
 import { useMemo, useState } from "react"
-import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
-import apiClient from "@/lib/apiClient"
 import { useRegions, useCities } from "@/hooks/useRegions"
 import { useFiltersStore } from "@/store/useFiltersStore"
 import { realEstateTypeLabel } from "@/lib/realEstate/labels"
+import { DistrictCombobox } from "@/components/filters/DistrictCombobox"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -76,16 +75,6 @@ export function ListingsMapSearchPanel({ open, onOpenChange }) {
   const embeddedCities = selectedRegion?.cities ?? []
   const { data: fetchedCities = [] } = useCities(embeddedCities.length ? null : draft.regionId)
   const cities = embeddedCities.length ? embeddedCities : fetchedCities
-
-  const { data: districts = [], isFetching: districtsLoading } = useQuery({
-    queryKey: ["listings", "map", "districts", draft.cityId],
-    queryFn: async () => {
-      const { data: res } = await apiClient.get("/listings/map/districts", { params: { city_id: draft.cityId } })
-      return Array.isArray(res?.data) ? res.data : []
-    },
-    enabled: Boolean(draft.cityId),
-    staleTime: 10 * 60_000,
-  })
 
   const update = (patch) => setDraft((d) => ({ ...d, ...patch }))
 
@@ -182,34 +171,12 @@ export function ListingsMapSearchPanel({ open, onOpenChange }) {
 
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">{t("listingsMap.district", "الحي")}</Label>
-            <Select
-              value={draft.district ?? ALL}
-              onValueChange={(v) => update({ district: v === ALL ? null : v })}
-              disabled={!draft.cityId || districtsLoading}
-            >
-              <SelectTrigger className="h-10 w-full">
-                <SelectValue
-                  placeholder={
-                    draft.cityId
-                      ? t("filters.all", "الكل")
-                      : t("listingsMap.districtNeedsCity", "اختر المدينة أولاً")
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>
-                  {draft.cityId ? t("filters.all", "الكل") : t("listingsMap.districtNeedsCity", "اختر المدينة أولاً")}
-                </SelectItem>
-                {districts.map((d) => (
-                  <SelectItem key={d} value={d}>
-                    {d}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {draft.cityId && !districtsLoading && districts.length === 0 ? (
-              <p className="text-xs text-muted-foreground">{t("listingsMap.noDistricts", "لا توجد أحياء مسجلة لهذه المدينة بعد")}</p>
-            ) : null}
+            <DistrictCombobox
+              cityId={draft.cityId}
+              value={draft.district}
+              onChange={(d) => update({ district: d })}
+              allowAll
+            />
           </div>
 
           <fieldset className="space-y-1.5">

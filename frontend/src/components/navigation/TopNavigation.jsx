@@ -16,7 +16,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import { Menu, Plus, LayoutDashboard, Shield, User, Bell, LogOut, MessageSquare, Map as MapIcon } from "lucide-react"
+import { Menu, Plus, LayoutDashboard, Shield, User, Bell, LogOut, MessageSquare, Map as MapIcon, Clapperboard } from "lucide-react"
 import { NavbarLogo } from "@/components/brand/NavbarLogo"
 import {
   NAVBAR_HEADER_ROW_CLASS,
@@ -31,9 +31,15 @@ function MobileNavSheetContent({ t, showBottomNav, token, user, isAdmin, onClose
   return (
     <div className="flex flex-col gap-1">
       <Button variant="ghost" size="sm" asChild className={linkClass}>
-        <Link to="/listings/map?real_estate_only=1" onClick={onClose} className="flex items-center gap-2">
+        <Link to="/listings/map" onClick={onClose} className="flex items-center gap-2">
           <MapIcon className="size-4" />
-          {t("realEstate.mapBrowse", "خريطة العقارات")}
+          {t("nav.map", "الخريطة")}
+        </Link>
+      </Button>
+      <Button variant="ghost" size="sm" asChild className={linkClass}>
+        <Link to="/videos" onClick={onClose} className="flex items-center gap-2">
+          <Clapperboard className="size-4" />
+          {t("nav.videos", "فيديوهات")}
         </Link>
       </Button>
       {!showBottomNav && (
@@ -140,12 +146,7 @@ export function TopNavigation() {
 
         {/* Mobile: theme + lang + burger grouped together */}
         <div className="flex items-center gap-1 sm:gap-2">
-          <Button variant="ghost" size="sm" asChild className="gap-1.5 rounded-full px-2 sm:px-3">
-            <Link to="/listings/map?real_estate_only=1" title={t("realEstate.mapBrowse", "خريطة العقارات")}>
-              <MapIcon className="size-5" />
-              <span className="hidden text-sm font-semibold md:inline">{t("nav.map", "الخريطة")}</span>
-            </Link>
-          </Button>
+          {/* The map / videos entry points live in the search bar under the categories (client note 2026-10). */}
           <ThemeToggle />
           <LanguageSwitcher />
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>

@@ -8,7 +8,7 @@ import { useAuthStore } from "@/store/useAuthStore"
 import { useAppDirection } from "@/providers/DirectionProvider"
 import { VideoComments } from "@/components/company/videos/VideoComments"
 import { VideoChannelRow } from "@/components/company/videos/VideoChannelRow"
-import { LinkedListingCard } from "@/components/company/videos/LinkedListingCard"
+import { ViewListingButton } from "@/components/company/videos/ViewListingButton"
 import { formatCount, formatDuration } from "@/lib/video/videoFormat"
 import { timeAgo } from "@/lib/timeAgo"
 import { SeoHead } from "@/components/seo/SeoHead"
@@ -143,7 +143,7 @@ export function VideoPlayerPage() {
         <h1 className="text-xl font-bold leading-snug">{video.title}</h1>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <VideoChannelRow company={video.company} />
+          <VideoChannelRow company={video.company} owner={video.owner} />
           <div className="flex gap-2">
             <Button
               variant={video.liked_by_me ? "default" : "outline"}
@@ -180,7 +180,9 @@ export function VideoPlayerPage() {
           ) : null}
         </div>
 
-        <LinkedListingCard product={video.product} company={video.company} />
+        {video.product ? (
+          <ViewListingButton product={video.product} className="border border-border bg-card text-foreground shadow-sm" />
+        ) : null}
 
         <div ref={commentsRef}>
           <VideoComments video={video} onSeek={seek} getCurrentTime={getCurrentTime} />

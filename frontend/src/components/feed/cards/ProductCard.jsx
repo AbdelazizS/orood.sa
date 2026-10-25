@@ -2,7 +2,7 @@ import { Link } from "react-router-dom"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { ProductImage } from "@/components/ui/ProductImage"
-import { Eye, MapPin, MessageCircle, Clock } from "lucide-react"
+import { Eye, MapPin, MessageCircle, Clock, Play } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { formatDistanceToNow } from "date-fns"
 import { ar, enUS } from "date-fns/locale"
@@ -157,6 +157,15 @@ export function ProductCard({
               </span>
             ) : null}
             <span className="flex min-w-0 flex-1 items-center justify-end gap-x-2 overflow-hidden">
+              {product.has_video ? (
+                <span
+                  className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground/85 text-background"
+                  title={t("feed.hasVideo", "يحتوي على فيديو")}
+                  aria-label={t("feed.hasVideo", "يحتوي على فيديو")}
+                >
+                  <Play className="ms-px size-2.5 fill-current" aria-hidden />
+                </span>
+              ) : null}
               <span className="inline-flex shrink-0 items-center gap-1">
                 <Clock className="size-3 shrink-0" />
                 <span className="max-w-[5rem] truncate sm:max-w-[7rem]">{timeAgo}</span>

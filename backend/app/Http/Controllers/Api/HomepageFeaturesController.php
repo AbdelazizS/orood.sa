@@ -26,6 +26,8 @@ class HomepageFeaturesController extends Controller
             'data' => [
                 'show_company_directory' => $companyDirectoryEnabled,
                 'show_wholesale' => $wholesaleEnabled,
+                // Admin switch (Settings → general): the «سوق الجملة» button on the homepage/footer.
+                'show_wholesale_button' => \App\Support\SiteFeatures::all()['show_wholesale_button'],
             ],
         ]);
     }

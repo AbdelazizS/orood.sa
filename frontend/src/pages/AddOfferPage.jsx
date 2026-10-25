@@ -31,6 +31,11 @@ import { contactPhoneFieldError, normalizeSaudiPhone } from "@/lib/phone/saudiPh
 import { ListingDetailsForm } from "@/components/add-listing/ListingDetailsForm"
 import { OptionsCheckboxes } from "@/components/add-listing/OptionsCheckboxes"
 import { RealEstateMarketingFields } from "@/components/add-listing/RealEstateMarketingFields"
+import { ListingVideoField } from "@/components/add-listing/ListingVideoField"
+import { DistrictCombobox } from "@/components/filters/DistrictCombobox"
+import { uploadListingVideo } from "@/services/companyVideoService"
+import { Label } from "@/components/ui/label"
+import { toast } from "sonner"
 import { SubmitSection } from "@/components/add-listing/SubmitSection"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -78,6 +83,12 @@ export function AddOfferPage() {
   const [propertyLng, setPropertyLng] = useState(null)
   const [propertyAddress, setPropertyAddress] = useState("")
   const [district, setDistrict] = useState("")
+  const [pricePerMeter, setPricePerMeter] = useState("")
+  const pricePerMeterTouchedRef = useRef(false)
+  const [mapDisplay, setMapDisplay] = useState("price")
+  const [videoFile, setVideoFile] = useState(null)
+  const [videoProbe, setVideoProbe] = useState(null)
+  const [videoProgress, setVideoProgress] = useState(null)
   const [needsMarketer, setNeedsMarketer] = useState(false)
   const [adLicenseNo, setAdLicenseNo] = useState("")
   const [listingAttributes, setListingAttributes] = useState({})
@@ -121,7 +132,7 @@ export function AddOfferPage() {
     setDescription(hydrated.description)
     setImageUrls(hydrated.imageUrls)
     setPriceEnabled(hydrated.priceEnabled)
-    setPrice(hydrated.price)
+    setPrice(String(hydrated.price ?? "").replace(/\.0+$/, ""))
     setCategoryId(hydrated.categoryId)
     setSubcategoryId(hydrated.subcategoryId)
     setSubcategoryOther(hydrated.subcategoryOther ?? "")
@@ -141,6 +152,9 @@ export function AddOfferPage() {
     setPropertyLng(hydrated.propertyLng)
     setPropertyAddress(hydrated.propertyAddress)
     setDistrict(hydrated.district)
+    setPricePerMeter(existingListing.price_per_meter != null ? String(Math.round(existingListing.price_per_meter)) : "")
+    pricePerMeterTouchedRef.current = existingListing.price_per_meter != null
+    setMapDisplay(existingListing.map_display === "video" ? "video" : "price")
     setNeedsMarketer(hydrated.needsMarketer)
     setAdLicenseNo(hydrated.adLicenseNo)
     setListingAttributes(hydrated.listingAttributes)
@@ -172,6 +186,7 @@ export function AddOfferPage() {
     !activeSchema
   const locationPolicy = activeSchema?.policies?.location
   const isRealEstateCategory = isRealEstateCategorySelection(categoryId, mainCategories)
+  const isRealEstateOffer = isRealEstateCategory && type !== "request"
   const mainForValidation = mainCategories.find((c) => String(c.id) === String(categoryId))
   const inlineSubsForValidation =
     mainForValidation && Array.isArray(mainForValidation.subcategories)
@@ -213,14 +228,15 @@ export function AddOfferPage() {
   }, [isRealEstateCategory, subcategoryId, selectedSubcategory])
 
   useEffect(() => {
-    if (isRealEstateCategory) return
+    // Wait for the category list: before it loads every category looks "not real estate",
+    // which wiped the saved values of a real-estate listing being edited.
+    if (isRealEstateCategory || !mainCategories.length) return
     setPropertyLat(null)
     setPropertyLng(null)
     setPropertyAddress("")
-    setDistrict("")
     setNeedsMarketer(false)
     setAdLicenseNo("")
-  }, [isRealEstateCategory, categoryId])
+  }, [isRealEstateCategory, categoryId, mainCategories.length])
 
   /* Re-apply full attribute map when published schema is ready (visible_when + switches). */
   useEffect(() => {
@@ -339,10 +355,28 @@ export function AddOfferPage() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const saveMutation = useMutation({
-    mutationFn: (payload) =>
-      isEditMode
-        ? apiClient.put(`/products/${editListingId}`, payload)
-        : apiClient.post("/products", payload),
+    mutationFn: async (payload) => {
+      const response = isEditMode
+        ? await apiClient.put(`/products/${editListingId}`, payload)
+        : await apiClient.post("/products", payload)
+      // The listing is saved first; its video is uploaded right after (a failed upload keeps the listing).
+      const savedId = response?.data?.data?.id ?? editListingId
+      if (videoFile && savedId) {
+        try {
+          const fd = new FormData()
+          fd.append("video", videoFile)
+          if (videoProbe?.thumbnail) fd.append("thumbnail", videoProbe.thumbnail, "thumbnail.jpg")
+          if (videoProbe?.duration) fd.append("duration_sec", String(videoProbe.duration))
+          setVideoProgress(0)
+          await uploadListingVideo(savedId, fd, setVideoProgress)
+        } catch (err) {
+          toast.error(err?.response?.data?.message ?? t("addListing.video.uploadFailed", "تم حفظ الإعلان لكن تعذر رفع الفيديو — يمكنك رفعه من تعديل الإعلان."))
+        } finally {
+          setVideoProgress(null)
+        }
+      }
+      return response
+    },
     onSuccess: (response) => {
       const newId = response?.data?.data?.id
       if (isEditMode) {
@@ -380,7 +414,13 @@ export function AddOfferPage() {
     if (!title?.trim()) err.title = t("addListing.errors.titleRequired")
     if (!description?.trim()) err.description = t("addListing.errors.descriptionRequired")
     const validUrls = (imageUrls || []).filter(isValidUrl)
-    if (priceEnabled) {
+    if (isRealEstateOffer) {
+      // «على السوم» isn't accepted for real estate: total price and price per metre are required.
+      const n = parseFloat(String(price).replace(",", "."))
+      if (!Number.isFinite(n) || n <= 0) err.price = t("addListing.errors.rePriceRequired", "سعر العقار مطلوب")
+      const m = parseFloat(String(pricePerMeter).replace(",", "."))
+      if (!Number.isFinite(m) || m <= 0) err.pricePerMeter = t("addListing.errors.rePerMeterRequired", "سعر المتر مطلوب")
+    } else if (priceEnabled) {
       const n = parseFloat(String(price).replace(",", "."))
       if (!Number.isFinite(n) || n <= 0) err.price = t("addListing.errors.priceInvalid")
     }
@@ -484,12 +524,15 @@ export function AddOfferPage() {
 
     const validUrls = (imageUrls || []).filter(isValidUrl)
     const priceNum =
-      priceEnabled && price !== "" ? parseFloat(String(price).replace(",", ".")) : null
+      (priceEnabled || isRealEstateOffer) && price !== "" ? parseFloat(String(price).replace(",", ".")) : null
+    const perMeterNum = isRealEstateOffer && pricePerMeter !== "" ? parseFloat(String(pricePerMeter).replace(",", ".")) : null
     const payload = {
       type,
       title: title.trim(),
       description: description.trim(),
-      price: priceEnabled && priceNum != null && Number.isFinite(priceNum) && priceNum > 0 ? priceNum : null,
+      price: (priceEnabled || isRealEstateOffer) && priceNum != null && Number.isFinite(priceNum) && priceNum > 0 ? priceNum : null,
+      price_per_meter: perMeterNum != null && Number.isFinite(perMeterNum) && perMeterNum > 0 ? perMeterNum : null,
+      map_display: mapDisplay,
       category_id: categoryId ?? null,
       subcategory_id: isOtherSubcategorySelection(subcategoryId) ? null : (subcategoryId ?? null),
       subcategory_other: isOtherSubcategorySelection(subcategoryId) ? subcategoryOther.trim() : null,
@@ -507,7 +550,7 @@ export function AddOfferPage() {
       contact_messages: contactMessages,
       free_shipping: freeShipping,
       free_return: freeReturn,
-      district: isRealEstateCategory ? district.trim() || null : null,
+      district: cityId ? district.trim() || null : null,
       needs_marketer: Boolean(isRealEstateCategory && !isRequest && needsMarketer),
       ad_license_no: isRealEstateCategory && !isRequest ? adLicenseNo.trim() || null : null,
       ...(usesDynamicSchema
@@ -677,9 +720,24 @@ export function AddOfferPage() {
           </>
         ) : null}
 
+        {cityId ? (
+          <div className="mb-3 space-y-1.5">
+            <Label htmlFor="listing-district" className="text-sm font-medium">
+              {t("realEstate.district", "الحي")}
+            </Label>
+            <DistrictCombobox
+              id="listing-district"
+              cityId={cityId}
+              value={district || null}
+              onChange={(d) => setDistrict(d ?? "")}
+              allowCustom
+              triggerClassName="h-11"
+            />
+          </div>
+        ) : null}
+
         {isRealEstateCategory ? (
           <RealEstateMarketingFields
-            district={district}
             needsMarketer={needsMarketer}
             adLicenseNo={adLicenseNo}
             showNeedsMarketer={!isRequest}
@@ -698,11 +756,15 @@ export function AddOfferPage() {
           priceEnabled={priceEnabled}
           price={price}
           type={type}
+          realEstatePricing={isRealEstateOffer}
+          pricePerMeter={pricePerMeter}
+          awaitingMarketer={isRealEstateOffer && needsMarketer}
           errors={{
             title: fieldErrors.title,
             description: fieldErrors.description,
             imageUrls: fieldErrors.imageUrls,
             price: fieldErrors.price,
+            pricePerMeter: fieldErrors.pricePerMeter ?? fieldErrors.price_per_meter,
           }}
           onChange={(updates) => {
             if ("title" in updates) {
@@ -726,10 +788,34 @@ export function AddOfferPage() {
               clearFieldError("price")
             }
             if ("price" in updates) {
-              setPrice(String(updates.price ?? ""))
+              const next = String(updates.price ?? "")
+              setPrice(next)
               clearFieldError("price")
+              // Suggest the price per metre from the area until the owner types their own.
+              const area = Number(listingAttributes?.area_sqm)
+              if (isRealEstateOffer && !pricePerMeterTouchedRef.current && area > 0 && Number(next) > 0) {
+                setPricePerMeter(String(Math.round(Number(next) / area)))
+              }
+            }
+            if ("pricePerMeter" in updates) {
+              pricePerMeterTouchedRef.current = true
+              setPricePerMeter(String(updates.pricePerMeter ?? ""))
+              clearFieldError("pricePerMeter")
             }
           }}
+        />
+
+        <ListingVideoField
+          productId={isEditMode ? editListingId : null}
+          file={videoFile}
+          probe={videoProbe}
+          onFileChange={(f, info) => {
+            setVideoFile(f)
+            setVideoProbe(info)
+          }}
+          mapDisplay={mapDisplay}
+          onMapDisplayChange={setMapDisplay}
+          uploadProgress={videoProgress}
         />
 
         <OptionsCheckboxes

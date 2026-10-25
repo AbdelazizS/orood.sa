@@ -21,4 +21,7 @@ return [
     | Off by default so existing flows keep working; turn on before the commercial launch.
     */
     'require_ad_license' => (bool) env('LISTINGS_REQUIRE_AD_LICENSE', false),
+
+    /** Real-estate offers need a total price and a price per metre (no "على السوم"). */
+    'require_real_estate_price' => (bool) env('LISTINGS_REQUIRE_RE_PRICE', true),
 ];

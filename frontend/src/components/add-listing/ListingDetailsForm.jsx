@@ -25,6 +25,9 @@ export function ListingDetailsForm({
   onChange,
   errors = {},
   type = "offer",
+  realEstatePricing = false,
+  pricePerMeter = "",
+  awaitingMarketer = false,
 }) {
   const { t } = useTranslation()
   const { direction } = useAppDirection()
@@ -111,6 +114,63 @@ export function ListingDetailsForm({
           )}
         </div>
 
+        {/* Real-estate offers: total price + price per metre, both required (no «على السوم»). */}
+        {realEstatePricing ? (
+          <div className={BOX_STYLE}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label htmlFor="re-price" className="text-[14px] font-bold text-foreground">
+                  {t("addListing.rePrice.total", "سعر العقار")} <span className="text-destructive">*</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="re-price"
+                    type="number"
+                    min="0"
+                    step="1"
+                    inputMode="numeric"
+                    value={price}
+                    onChange={(e) => onChange({ price: e.target.value })}
+                    placeholder="0"
+                    className="h-11 w-full max-w-[200px] rounded-md text-center text-[16px]"
+                    dir="ltr"
+                    aria-invalid={!!errors.price}
+                  />
+                  <span className="text-[13px] text-muted-foreground">{t("addListing.priceCurrency")}</span>
+                </div>
+                {errors.price ? <p className="text-sm text-destructive" role="alert">{errors.price}</p> : null}
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="re-price-per-meter" className="text-[14px] font-bold text-foreground">
+                  {t("addListing.rePrice.perMeter", "سعر المتر")} <span className="text-destructive">*</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="re-price-per-meter"
+                    type="number"
+                    min="0"
+                    step="1"
+                    inputMode="numeric"
+                    value={pricePerMeter}
+                    onChange={(e) => onChange({ pricePerMeter: e.target.value })}
+                    placeholder="0"
+                    className="h-11 w-full max-w-[200px] rounded-md text-center text-[16px]"
+                    dir="ltr"
+                    aria-invalid={!!errors.pricePerMeter}
+                  />
+                  <span className="text-[13px] text-muted-foreground">{t("addListing.rePrice.perMeterUnit", "ريال / م²")}</span>
+                </div>
+                {errors.pricePerMeter ? <p className="text-sm text-destructive" role="alert">{errors.pricePerMeter}</p> : null}
+              </div>
+            </div>
+            <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">
+              {awaitingMarketer
+                ? t("addListing.rePrice.awaitingHint", "إعلان «طلب تسويق»: السعر الإجمالي يظهر للإدارة والمشتركين فقط، وسعر المتر يظهر للجميع.")
+                : t("addListing.rePrice.requiredHint", "السعر وسعر المتر إلزاميان لجميع الإعلانات العقارية ويظهران على الخارطة.")}
+            </p>
+          </div>
+        ) : (
+        <>
         {/* Price — optional toggle on retail; amount only on wholesale */}
         <div className={BOX_STYLE}>
           {showPriceToggle ? (
@@ -166,6 +226,8 @@ export function ListingDetailsForm({
             </p>
           )}
         </div>
+        </>
+        )}
       </div>
     </TooltipProvider>
   )

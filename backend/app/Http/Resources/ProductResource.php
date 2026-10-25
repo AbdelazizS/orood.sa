@@ -60,6 +60,10 @@ class ProductResource extends JsonResource
             'marketing_status' => $this->marketing_status,
             'district' => $this->district,
             'price_per_sqm' => $this->pricePerSqm(),
+            // Price per metre as entered by the owner (always public, also for "طلب تسويق" listings).
+            'price_per_meter' => $this->price_per_meter !== null ? (float) $this->price_per_meter : null,
+            'map_display' => $this->map_display ?? 'price',
+            'has_video' => (bool) ($this->resource->getAttribute('has_published_video') ?? false),
             'ad_license_no' => $this->ad_license_no,
             'condition' => $this->condition,
             'warranty' => $this->warranty,
@@ -320,6 +324,11 @@ class ProductResource extends JsonResource
     /** Price per m² for real-estate listings with a price and an area (shown even when the total is hidden). */
     protected function pricePerSqm(): ?int
     {
+        // The owner's own price per metre wins over the computed one.
+        $stored = (float) ($this->resource->getRawOriginal('price_per_meter') ?? 0);
+        if ($stored > 0 && $this->isRealEstateListing()) {
+            return (int) round($stored);
+        }
         $price = (float) ($this->resource->getRawOriginal('price') ?? 0);
         if ($price <= 0 || ! $this->isRealEstateListing()) {
             return null;

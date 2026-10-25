@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { TileLayer, useMap, useMapEvents } from "react-leaflet"
+import { CircleMarker, TileLayer, useMap, useMapEvents } from "react-leaflet"
 import Supercluster from "supercluster"
 import { MapContainerSafe } from "@/components/maps/MapContainerSafe.jsx"
 import { DeferredLeafletMarker } from "@/components/maps/DeferredLeafletMarker.jsx"
 import { L, ensureLeafletDefaults } from "@/lib/maps/leafletSetup"
 import { useMapRasterTiles } from "@/hooks/maps/useMapTheme"
 import { getDefaultCenterFromEnv } from "@/lib/maps/constants"
-import { isAwaitingMarker, priceMarkerLabel } from "@/components/maps/PriceMarker"
+import { isAwaitingMarker, isVideoMarker, priceMarkerLabel, videoMarkerHtml } from "@/components/maps/PriceMarker"
+import { MapControls } from "@/components/maps/MapControls"
 import { PRICE_CLUSTER_MAX_ZOOM, PRICE_CLUSTER_RADIUS, clusterBubbleSize } from "@/lib/maps/priceClusters"
 import { cn } from "@/lib/utils"
 
@@ -98,6 +99,7 @@ export default function LeafletPriceMap({
   }, [])
   const [map, setMap] = useState(null)
   const [view, setView] = useState(null)
+  const [userPos, setUserPos] = useState(null)
 
   const valid = useMemo(
     () => markers.filter((m) => Number.isFinite(m?.lat) && Number.isFinite(m?.lng)),
@@ -179,10 +181,12 @@ export default function LeafletPriceMap({
   }, [i18n.language])
 
   return (
+    <div className="relative h-full w-full">
     <MapContainerSafe
       center={center}
       zoom={10}
       maxZoom={MAP_MAX_ZOOM}
+      zoomControl={false}
       className={cn("h-full w-full touch-manipulation", className)}
     >
       <TileLayer
@@ -199,13 +203,24 @@ export default function LeafletPriceMap({
         const [lng, lat] = f.geometry.coordinates
         if (f.properties.cluster) {
           const count = f.properties.point_count
+          // Video groups look like Snap Map: the newest video's thumbnail with the count on it.
+          let cover = null
+          try {
+            const first = index.getLeaves(f.properties.cluster_id, 1)[0]
+            const leaf = first ? byId.get(String(first.properties.id)) : null
+            cover = leaf && isVideoMarker(leaf) ? leaf : null
+          } catch {
+            cover = null
+          }
           const size = clusterBubbleSize(count)
-          const html = `<div class="map-price-cluster" style="width:${size}px;height:${size}px;transform:translate(-50%,-50%)">${count}</div>`
+          const html = cover
+            ? `<div style="transform:translate(-50%,calc(-100% - 4px));position:relative">${videoMarkerHtml(cover)}<span class="map-video-count">${count}</span></div>`
+            : `<div class="map-price-cluster" style="width:${size}px;height:${size}px;transform:translate(-50%,-50%)">${count}</div>`
           return (
             <DeferredLeafletMarker
               key={`c-${f.properties.cluster_id}`}
               position={[lat, lng]}
-              icon={iconFor(`c-${count}`, html)}
+              icon={iconFor(cover ? `cv-${cover.id}-${count}` : `c-${count}`, html)}
               zIndexOffset={500}
               title={t("listingsMap.clusterTitle", { count, defaultValue: "{{count}} إعلانات" })}
               eventHandlers={{
@@ -220,6 +235,24 @@ export default function LeafletPriceMap({
         const m = byId.get(String(f.properties.id))
         if (!m) return null
         const active = String(selectedId) === String(m.id)
+        if (isVideoMarker(m)) {
+          const html = `<div style="transform:translate(-50%,calc(-100% - 4px))">${videoMarkerHtml(m, { active })}</div>`
+          return (
+            <DeferredLeafletMarker
+              key={`v-${m.id}`}
+              position={[m.lat, m.lng]}
+              icon={iconFor(`v-${m.id}-${m.video.id}-${active}`, html)}
+              zIndexOffset={active ? 1000 : 100}
+              title={m.title}
+              eventHandlers={{
+                click: (e) => {
+                  e.originalEvent?.stopPropagation?.()
+                  onSelect?.(m)
+                },
+              }}
+            />
+          )
+        }
         const cls = cn("map-price-pin", isAwaitingMarker(m) && "map-price-pin--awaiting", active && "is-active")
         const label = priceMarkerLabel(m, t, i18n.language)
         const html = `<div style="transform:translate(-50%,calc(-100% - 6px));width:max-content"><span class="${cls}">${escapeHtml(label)}</span></div>`
@@ -239,6 +272,23 @@ export default function LeafletPriceMap({
           />
         )
       })}
+      {userPos ? (
+        <CircleMarker
+          center={[userPos.lat, userPos.lng]}
+          radius={8}
+          pathOptions={{ color: "#fff", weight: 3, fillColor: "#2563eb", fillOpacity: 1 }}
+        />
+      ) : null}
     </MapContainerSafe>
+    <MapControls
+      className="absolute end-3 top-1/2 z-[5] -translate-y-1/2"
+      onZoomIn={() => map?.zoomIn()}
+      onZoomOut={() => map?.zoomOut()}
+      onLocate={(pos) => {
+        setUserPos(pos)
+        map?.flyTo([pos.lat, pos.lng], 14, { duration: 0.6 })
+      }}
+    />
+    </div>
   )
 }

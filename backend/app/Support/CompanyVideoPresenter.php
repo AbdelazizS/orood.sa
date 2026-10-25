@@ -60,9 +60,17 @@ class CompanyVideoPresenter
                 'is_verified' => $company->verification_status === 'approved',
                 'activities' => $company->activities ?? [],
             ] : null,
+            // Who posted it — a company channel, or an individual's listing video (company is null).
+            'owner' => $owner ? [
+                'id' => $owner->id,
+                'name' => $company?->name ?? $owner->name,
+                'username' => $owner->username,
+                'avatar_url' => $owner->avatar_url,
+            ] : null,
             'product' => $product && ($product->isPubliclyListed() || $product->isPubliclyVisibleAwaiting()) ? [
                 'id' => $product->id,
                 'title' => $product->title,
+                'category' => $product->category?->slug,
                 // Awaiting-marketer listings keep their price hidden here too.
                 'price' => $product->hidesPriceFrom($viewer) ? null : $product->price,
                 'marketing_status' => $product->marketing_status,

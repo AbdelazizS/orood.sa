@@ -104,3 +104,26 @@ export async function adminSetCompanyVideoStatus(videoId, status, reason) {
   const { data } = await apiClient.patch(`/admin/company-videos/${videoId}/status`, { status, reason: reason || undefined })
   return data?.data
 }
+
+// ── A listing's own video (any section, any owner) ──────────────────
+
+export async function getMyListingVideos(productId) {
+  const { data } = await apiClient.get(`/products/${productId}/my-videos`)
+  return { items: data?.data ?? [], meta: data?.meta ?? {} }
+}
+
+/** @param {FormData} formData video, thumbnail?, duration_sec? */
+export async function uploadListingVideo(productId, formData, onProgress) {
+  const { data } = await apiClient.post(`/products/${productId}/videos`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+    timeout: 0,
+    onUploadProgress: (e) => {
+      if (onProgress && e.total) onProgress(Math.round((e.loaded / e.total) * 100))
+    },
+  })
+  return data?.data
+}
+
+export async function deleteListingVideo(productId, videoId) {
+  await apiClient.delete(`/products/${productId}/videos/${videoId}`)
+}

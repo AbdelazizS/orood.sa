@@ -17,10 +17,14 @@ class City extends Model
         'name_en',
         'slug',
         'is_active',
+        'lat',
+        'lng',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'lat' => 'float',
+        'lng' => 'float',
     ];
 
     public function region()
@@ -31,5 +35,10 @@ class City extends Model
     public function products()
     {
         return $this->hasMany(Product::class);
+    }
+
+    public function districts()
+    {
+        return $this->hasMany(District::class)->orderBy('sort_order')->orderBy('name');
     }
 }

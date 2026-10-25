@@ -6,7 +6,7 @@ import { getVideo, recordVideoView, toggleVideoLike } from "@/services/companyVi
 import { useAuthStore } from "@/store/useAuthStore"
 import { VideoComments } from "@/components/company/videos/VideoComments"
 import { VideoChannelRow } from "@/components/company/videos/VideoChannelRow"
-import { LinkedListingCard } from "@/components/company/videos/LinkedListingCard"
+import { ViewListingButton } from "@/components/company/videos/ViewListingButton"
 import { formatCount } from "@/lib/video/videoFormat"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { ArrowLeft, Home, MessageSquare, ThumbsUp, Volume2, VolumeX } from "lucide-react"
@@ -59,14 +59,10 @@ function ShortSlide({ video, active, muted, onToggleMute, onOpenComments, regist
       {/* Bottom overlay: channel, title, linked property */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-4 pb-6 pe-20 text-white">
         <div className="pointer-events-auto space-y-2">
-          <VideoChannelRow company={video.company} light />
+          <VideoChannelRow company={video.company} owner={video.owner} light />
           <p className="text-sm font-semibold leading-snug">{video.title}</p>
           {video.description ? <p className="line-clamp-2 text-xs text-white/80">{video.description}</p> : null}
-          {video.product ? (
-            <div className="max-w-sm text-foreground">
-              <LinkedListingCard product={video.product} company={video.company} />
-            </div>
-          ) : null}
+          {video.product ? <ViewListingButton product={video.product} className="mt-1" /> : null}
         </div>
       </div>
 

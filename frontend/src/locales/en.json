@@ -237,6 +237,16 @@
     "ariaLabel": "Breadcrumb navigation"
   },
   "filters": {
+    "district": "District",
+    "allDistricts": "All districts",
+    "pickDistrict": "Choose district",
+    "searchDistrict": "Search district…",
+    "noDistrictMatch": "No district with that name",
+    "useTypedDistrict": "Use “{{name}}”",
+    "allSections": "All sections",
+    "region": "Region",
+    "city": "City",
+    "category": "Section",
     "requests": "Browse Requests",
     "offers": "Browse Offers",
     "mostSold": "Most Sold This Week",
@@ -298,6 +308,11 @@
     "authRequired": "Please sign in to send a message."
   },
   "nav": {
+    "videos": "Videos",
+    "trackOrders": "Track orders",
+    "notifications": "Notifications",
+    "messages": "Messages",
+    "mobileBar": "Quick navigation",
     "map": "Map",
     "menu": "Menu",
     "home": "Home",
@@ -312,6 +327,7 @@
     "profileMenu": "Profile menu"
   },
   "feed": {
+    "hasVideo": "Has a video",
     "search": "Search",
     "images": "images",
     "companyPlaceholder": "Company",
@@ -340,6 +356,16 @@
     "cta": "List your offer for free"
   },
   "listingsMap": {
+    "perMeter": "{{value}} SAR/m²",
+    "watchVideo": "Video",
+    "videosHint": "Tap a video to watch it",
+    "emptyVideos": "No videos in this area",
+    "loadingListings": "Loading listings…",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "myLocation": "My location",
+    "locateUnsupported": "Your browser can't share location",
+    "locateDenied": "Couldn't get your location — allow location access",
     "tabOffers": "Offers",
     "tabProjects": "Projects",
     "tabList": "List",
@@ -966,6 +992,27 @@
     "companyVerificationPending": "Your company request is now pending review"
   },
   "addListing": {
+    "rePrice": {
+      "total": "Property price",
+      "perMeter": "Price per m²",
+      "perMeterUnit": "SAR / m²",
+      "awaitingHint": "“Needs a marketer” listing: the total price is visible to admins and subscribers only; the price per m² is public.",
+      "requiredHint": "Price and price per m² are required for all real-estate listings and show on the map."
+    },
+    "video": {
+      "title": "Listing video (optional)",
+      "hint": "Shown on the listing, in Videos and on the map. A short vertical clip works best.",
+      "pick": "Choose a video",
+      "addAnother": "Add another video",
+      "delete": "Delete video",
+      "deleted": "Video deleted",
+      "saved": "Saved video",
+      "badType": "Choose a video file (MP4 or MOV)",
+      "tooBig": "The video is larger than {{mb}} MB",
+      "showOnMap": "Show the video on the map instead of the price",
+      "showOnMapHint": "Your listing appears on the map as a video bubble; the price still shows when opened.",
+      "uploadFailed": "The listing was saved but the video failed to upload — add it from Edit listing."
+    },
     "guestBanner": "You can fill the form now. When you tap Publish, you will be asked to sign in to complete posting.",
     "title": "Add Offer or Request",
     "typeLabel": "Type",
@@ -1052,6 +1099,8 @@
     "propertyLocationHint": "Search for an address, or tap the map and drag the pin to adjust",
     "propertyLocationSearchPlaceholder": "Search neighborhood, street, or landmark…",
     "errors": {
+      "rePriceRequired": "Property price is required",
+      "rePerMeterRequired": "Price per m² is required",
       "categoryRequired": "Please select a category",
       "subcategoryRequired": "Please select a subcategory for this category",
       "subcategoriesLoading": "Loading subcategories — try again in a moment",
@@ -1536,6 +1585,11 @@
     }
   },
   "admin": {
+    "siteFeatures": {
+      "title": "Wholesale market visibility",
+      "hint": "Show or hide the “Wholesale market” button on the homepage and footer. The wholesale page itself is unchanged.",
+      "showWholesaleButton": "Show the “Wholesale market” button"
+    },
     "navOverview": "Overview",
     "navCommerce": "Commerce",
     "navFinance": "Finance",
@@ -4127,5 +4181,14 @@
       "areaRequired": "Enter area",
       "landDimensionsRequired": "Enter land dimensions"
     }
+  },
+  "videos": {
+    "pageTitle": "Arooth videos",
+    "viewDetails": "View details",
+    "onMap": "On the map",
+    "empty": "No videos for these choices yet"
+  },
+  "listingVideos": {
+    "title": "Listing videos"
   }
 }

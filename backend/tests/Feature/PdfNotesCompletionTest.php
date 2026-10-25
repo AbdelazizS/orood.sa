@@ -214,6 +214,7 @@ class PdfNotesCompletionTest extends TestCase
             'title' => 'أرض للبيع',
             'description' => 'وصف',
             'price' => 900000,
+            'price_per_meter' => 1500,
             'category_id' => $this->realEstate->id,
             'subcategory_id' => $sub->id,
             'image_urls' => ['https://example.com/a.jpg'],

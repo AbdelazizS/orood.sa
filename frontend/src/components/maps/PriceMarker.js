@@ -49,3 +49,47 @@ export function setPriceMarkerActive(el, active) {
   if (!el) return
   el.classList.toggle("is-active", Boolean(active))
 }
+
+/** Snap-style video bubble: true when this marker shows its video instead of a price pin. */
+export function isVideoMarker(marker) {
+  return marker?.pin_variant === "video" && Boolean(marker?.video)
+}
+
+function escapeAttr(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;")
+}
+
+/** HTML for a video bubble (Leaflet divIcon html and the Mapbox element share it). */
+export function videoMarkerHtml(marker, { active = false } = {}) {
+  const thumb = marker?.video?.thumbnail_url || marker?.thumbnail || ""
+  const img = thumb ? `<img src="${escapeAttr(thumb)}" alt="" loading="lazy" draggable="false" />` : ""
+  return `<span class="map-video-pin${active ? " is-active" : ""}">${img}<span class="map-video-pin__play" aria-hidden="true"></span></span>`
+}
+
+/**
+ * Marker element for Mapbox: a video bubble or a price pin depending on the marker.
+ * @returns {HTMLButtonElement}
+ */
+export function buildMapMarkerElement(marker, opts = {}) {
+  if (!isVideoMarker(marker)) return buildPriceMarkerElement(marker, opts)
+  const el = document.createElement("button")
+  el.type = "button"
+  el.className = "map-video-pin-btn"
+  el.dataset.listingId = String(marker.id)
+  el.innerHTML = videoMarkerHtml(marker)
+  el.setAttribute("aria-label", marker.title ?? "video")
+  if (typeof opts.onSelect === "function") {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation()
+      opts.onSelect(marker)
+    })
+  }
+  return el
+}
+
+/** Toggle the selected state on a pin element (price pin or video bubble). */
+export function setMapMarkerActive(el, active) {
+  if (!el) return
+  el.classList.toggle("is-active", Boolean(active))
+  el.querySelector(".map-video-pin")?.classList.toggle("is-active", Boolean(active))
+}

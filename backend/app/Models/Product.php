@@ -66,6 +66,8 @@ class Product extends Model
         'location_address',
         'district',
         'ad_license_no',
+        'price_per_meter',
+        'map_display',
         'stats',
         'media',
         'image_url',
@@ -84,6 +86,15 @@ class Product extends Model
         'reviewed_at',
     ];
 
+    protected static function booted(): void
+    {
+        static::saving(function (Product $product) {
+            if ($product->map_lat === null || $product->isDirty(['location_lat', 'location_lng', 'city_id', 'district'])) {
+                $product->refreshMapCoordinates();
+            }
+        });
+    }
+
     protected $casts = [
         'is_offer' => 'boolean',
         'is_wholesale' => 'boolean',
@@ -101,6 +112,9 @@ class Product extends Model
         'wholesale_expires_at' => 'datetime',
         'location_lat' => 'float',
         'location_lng' => 'float',
+        'price_per_meter' => 'decimal:2',
+        'map_lat' => 'float',
+        'map_lng' => 'float',
         'contact_preferences' => 'array',
         'shipping_details' => 'array',
         'stats' => 'array',
@@ -363,6 +377,40 @@ class Product extends Model
     }
 
     /** Latest subscriber ad on this listing (older expired/cancelled ads are kept as history). */
+    /** Videos attached to this listing (company channel videos or the owner's own listing video). */
+    public function videos()
+    {
+        return $this->hasMany(CompanyVideo::class);
+    }
+
+    /** The newest published video — used for the video map and the "video" badge. */
+    public function latestVideo()
+    {
+        return $this->hasOne(CompanyVideo::class)->ofMany(['published_at' => 'max', 'id' => 'max'], fn ($q) => $q->where('status', CompanyVideo::STATUS_PUBLISHED));
+    }
+
+    /**
+     * Map position: exact location, else the district centre, else the city centre.
+     * Lets listings without a pinned location (cars, furniture…) still appear on the map.
+     */
+    public function refreshMapCoordinates(): void
+    {
+        if ($this->location_lat !== null && $this->location_lng !== null) {
+            $this->map_lat = $this->location_lat;
+            $this->map_lng = $this->location_lng;
+
+            return;
+        }
+
+        $district = $this->city_id && $this->district
+            ? District::query()->where('city_id', $this->city_id)->where('name', trim((string) $this->district))->whereNotNull('lat')->first()
+            : null;
+        $city = $district ? null : ($this->city_id ? City::query()->find($this->city_id) : null);
+
+        $this->map_lat = $district?->lat ?? $city?->lat;
+        $this->map_lng = $district?->lng ?? $city?->lng;
+    }
+
     public function subscriberListing()
     {
         return $this->hasOne(SubscriberListing::class)->latestOfMany();
@@ -386,6 +434,8 @@ class Product extends Model
             ->when(data_get($filters, 'subcategory_id'), fn ($q, $id) => $q->where('subcategory_id', $id))
             ->when(data_get($filters, 'region_id'), fn ($q, $id) => $q->where('region_id', $id))
             ->when(data_get($filters, 'city_id'), fn ($q, $id) => $q->where('city_id', $id))
+            ->when(data_get($filters, 'district'), fn ($q, $district) => $q->where('district', trim((string) $district)))
+            ->when(filter_var(data_get($filters, 'has_video'), FILTER_VALIDATE_BOOLEAN), fn ($q) => $q->whereHas('videos', fn ($v) => $v->published()))
             ->when(data_get($filters, 'category_id') && data_get($filters, 'region_id'), function ($q) use ($filters) {
                 $q->where(function ($q2) use ($filters) {
                     $q2->whereDoesntHave('category.regions')

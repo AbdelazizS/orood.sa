@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 import { FooterLegalBar } from "@/components/layout/FooterLegalBar"
 import { FooterLogoColumn } from "@/components/layout/FooterLogoColumn"
 import { useAppDirection } from "@/providers/DirectionProvider"
+import { useSiteFeatures } from "@/hooks/useSiteFeatures"
 
 function FooterLinkGroup({ title, links, className }) {
   if (!links?.length) return null
@@ -28,6 +29,7 @@ function FooterLinkGroup({ title, links, className }) {
 export function Footer() {
   const { t } = useTranslation()
   const { direction } = useAppDirection()
+  const { showWholesaleButton } = useSiteFeatures()
 
   const categoryLinks = [
     { key: "real-estate", to: "/?cat=real-estate", label: t("footer.compact.categories.realEstate", "عقارات") },
@@ -37,8 +39,10 @@ export function Footer() {
   ]
 
   const quickLinks = [
-    { key: "wholesale", to: "/wholesale", label: t("footer.compact.quick.wholesale", "سوق الجملة") },
+    ...(showWholesaleButton ? [{ key: "wholesale", to: "/wholesale", label: t("footer.compact.quick.wholesale", "سوق الجملة") }] : []),
     { key: "add", to: "/add", label: t("footer.compact.quick.addListing", "أضف عرض") },
+    { key: "videos", to: "/videos", label: t("nav.videos", "فيديوهات") },
+    { key: "map", to: "/listings/map", label: t("nav.map", "الخريطة") },
     { key: "requests", to: "/requests", label: t("footer.compact.quick.requests", "طلبات الشراء") },
     { key: "my-listings", to: "/dashboard/listings", label: t("footer.compact.quick.myListings", "إعلاناتي") },
   ]

@@ -48,12 +48,15 @@ export function VideoCard({ video, showChannel = false }) {
 }
 
 /** Vertical 9:16 card for a Short. */
-export function ShortCard({ video }) {
+export function ShortCard({ video, className }) {
   const { t, i18n } = useTranslation()
   return (
     <Link
       to={`/shorts/${video.id}`}
-      className="group block w-[150px] shrink-0 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-[170px]"
+      className={cn(
+        "group block w-[150px] shrink-0 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-[170px]",
+        className,
+      )}
     >
       <div className="relative aspect-[9/16] overflow-hidden rounded-xl bg-muted">
         <Thumb video={video} className="transition-transform duration-300 group-hover:scale-[1.03]" />

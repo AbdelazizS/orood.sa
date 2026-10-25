@@ -95,6 +95,8 @@ class SubcategoryOtherTest extends TestCase
                 'type' => 'offer',
                 'title' => 'مزرعة للبيع',
                 'description' => 'مزرعة في موقع مميز مع مساحة واسعة.',
+                'price' => 2400000,
+                'price_per_meter' => 1000,
                 'category_id' => $category->id,
                 'subcategory_id' => $subcategory->id,
                 'listing_attributes' => [

@@ -82,12 +82,15 @@ Route::prefix('v1')->group(function () {
         Route::get('/listings/map', [ListingMapController::class, 'index']);
     });
     Route::get('/listings/map/districts', [ListingMapController::class, 'districts']);
+    Route::get('/districts', [\App\Http\Controllers\Api\DistrictController::class, 'index']);
     Route::middleware(['optional.auth.api'])->group(function () {
         Route::get('/listings/{listing}', [ListingController::class, 'show']);
         Route::get('/listings/{listing}/reviews', [ReviewController::class, 'forListing']);
         Route::get('/products/{product}', ProductShowController::class);
         Route::get('/companies/{company}/videos', [\App\Http\Controllers\Api\CompanyVideoController::class, 'channel']);
         Route::get('/videos/shorts/latest', [\App\Http\Controllers\Api\CompanyVideoController::class, 'latestShorts']);
+        // Before /videos/{video} so "feed" isn't read as a video id.
+        Route::get('/videos/feed', [\App\Http\Controllers\Api\ListingVideoController::class, 'feed']);
         Route::get('/products/{product}/videos', [\App\Http\Controllers\Api\CompanyVideoController::class, 'forProduct']);
         Route::get('/videos/{video}', [\App\Http\Controllers\Api\CompanyVideoController::class, 'show']);
         Route::get('/videos/{video}/comments', [\App\Http\Controllers\Api\CompanyVideoController::class, 'comments']);
@@ -190,6 +193,10 @@ Route::prefix('v1')->group(function () {
             Route::post('/products', [ProductController::class, 'store']);
             Route::put('/products/{product}', [ProductController::class, 'update']);
             Route::post('/products/{product}/publish', [ProductController::class, 'publish']);
+            // Owner's video on a listing (any section).
+            Route::get('/products/{product}/my-videos', [\App\Http\Controllers\Api\ListingVideoController::class, 'mine']);
+            Route::post('/products/{product}/videos', [\App\Http\Controllers\Api\ListingVideoController::class, 'store'])->middleware('throttle:20,1');
+            Route::delete('/products/{product}/videos/{video}', [\App\Http\Controllers\Api\ListingVideoController::class, 'destroy']);
         });
         Route::get('/products', [ProductController::class, 'index']);
         Route::get('/favorites', [FavoriteController::class, 'index']);
@@ -498,6 +505,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/security/password-policy', [AdminSecuritySettingsController::class, 'showPasswordPolicy']);
         Route::put('/security/password-policy', [AdminSecuritySettingsController::class, 'updatePasswordPolicy']);
         Route::get('/settings', [AdminSettingsController::class, 'index'])->middleware('permission:settings.view');
+        Route::get('/site-features', [\App\Http\Controllers\Api\Admin\AdminSiteFeaturesController::class, 'show'])->middleware('permission:settings.view');
+        Route::put('/site-features', [\App\Http\Controllers\Api\Admin\AdminSiteFeaturesController::class, 'update'])->middleware('permission:settings.update');
         Route::put('/settings/security', [AdminSettingsController::class, 'updateSecurity'])->middleware('permission:settings.update');
         Route::put('/settings/account', [AdminSettingsController::class, 'updateAccount'])->middleware('permission:settings.update');
         Route::put('/settings/auth', [AdminSettingsController::class, 'updateAuth'])->middleware('permission:settings.update');

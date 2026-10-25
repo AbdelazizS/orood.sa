@@ -46,6 +46,7 @@ export const useFiltersStore = create((set) => ({
     set((state) => ({
       regionId,
       cityId: regionId === state.regionId ? state.cityId : null,
+      district: regionId === state.regionId ? state.district : null,
     })),
   setCity: (cityId) =>
     set((state) => ({ cityId, district: cityId === state.cityId ? state.district : null })),

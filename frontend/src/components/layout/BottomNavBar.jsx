@@ -1,14 +1,14 @@
 import { Link, useLocation } from "react-router-dom"
 import { useTranslation } from "react-i18next"
-import { Home, Plus, Mail, Package, LayoutDashboard } from "lucide-react"
+import { Bell, Home, Mail, Package, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAppDirection } from "@/providers/DirectionProvider"
 import { useAuthStore } from "@/store/useAuthStore"
 import { isStaffUser } from "@/lib/accountSectionPaths"
 
 /**
- * Fixed bottom nav bar — visible when authenticated, hidden on lg+.
- * Uses shadcn primary colors.
+ * Fixed mobile bottom bar (hidden on lg+), shown to everyone — visitors are sent to login by the
+ * protected pages. Order (RTL): الرئيسية · تتبع الطلبات · إضافة عرض · الإشعارات · الرسائل.
  */
 export function BottomNavBar() {
   const { t } = useTranslation()
@@ -16,84 +16,71 @@ export function BottomNavBar() {
   const location = useLocation()
   const user = useAuthStore((s) => s.user)
   const staff = isStaffUser(user)
-  const inboxPath = staff ? "/admin/messages" : "/dashboard/messages"
-  const dashboardPath = staff ? "/admin" : "/dashboard"
-  const ordersPath = staff ? "/admin/orders" : "/dashboard/orders"
-  const isAddPage = location.pathname === "/add"
-  const isHome = location.pathname === "/"
-  const isDashboard =
-    staff ? location.pathname === "/admin" : location.pathname === "/dashboard"
-  const isInbox = staff
-    ? location.pathname.startsWith("/admin/messages") || location.pathname.startsWith("/admin/notifications")
-    : location.pathname.startsWith("/dashboard/messages")
-  const isOrders = location.pathname.startsWith(ordersPath)
+  const path = location.pathname
+  const search = location.search
 
-  const linkClass = "flex flex-1 flex-col items-center justify-center gap-0.5 pt-2 transition-colors"
-  const activeClass = "text-primary"
-  const inactiveClass = "text-muted-foreground"
+  const ordersPath = staff ? "/admin/orders" : "/dashboard/orders"
+  const notificationsPath = staff ? "/admin/notifications" : "/dashboard/messages?hub=notifications"
+  const inboxPath = staff ? "/admin/messages" : "/dashboard/messages"
+
+  const isNotifications = staff
+    ? path.startsWith("/admin/notifications")
+    : path.startsWith("/dashboard/messages") && search.includes("hub=notifications")
+  const items = [
+    { key: "home", to: "/", icon: Home, label: t("nav.home", "الرئيسية"), active: path === "/" },
+    { key: "orders", to: ordersPath, icon: Package, label: t("nav.trackOrders", "تتبع الطلبات"), active: path.startsWith(ordersPath) },
+    { key: "add" },
+    { key: "notifications", to: notificationsPath, icon: Bell, label: t("nav.notifications", "الإشعارات"), active: isNotifications },
+    {
+      key: "inbox",
+      to: inboxPath,
+      icon: Mail,
+      label: t("nav.messages", "الرسائل"),
+      active: staff ? path.startsWith("/admin/messages") : path.startsWith("/dashboard/messages") && !isNotifications,
+    },
+  ]
 
   return (
     <nav
-      className="fixed bottom-0 start-0 end-0 z-[9999] flex items-end justify-center border-t border-border bg-background lg:hidden"
+      data-bottom-nav
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85 lg:hidden"
       dir={direction}
+      aria-label={t("nav.mobileBar", "التنقل السريع")}
     >
       <div
-        className="flex w-full items-end justify-around px-2"
+        className="mx-auto flex w-full max-w-lg items-end justify-around px-1"
         style={{ minHeight: "60px", paddingBottom: "env(safe-area-inset-bottom, 0)" }}
       >
-        <Link
-          to="/"
-          className={cn(linkClass, "min-w-0 max-w-[22%] flex-1", isHome ? activeClass : inactiveClass)}
-        >
-          <Home className="size-6 shrink-0" />
-          <span className={cn("max-w-full truncate text-[11px]", isHome ? "text-primary font-medium" : "text-muted-foreground")}>
-            {t("nav.home", "الرئيسية")}
-          </span>
-        </Link>
-
-        <Link
-          to={dashboardPath}
-          className={cn(linkClass, "min-w-0 max-w-[22%] flex-1", isDashboard ? activeClass : inactiveClass)}
-        >
-          <LayoutDashboard className="size-6 shrink-0" />
-          <span
-            className={cn(
-              "max-w-full truncate text-[11px]",
-              isDashboard ? "text-primary font-medium" : "text-muted-foreground",
-            )}
-          >
-            {staff ? t("admin.dashboardTitle", "Admin") : t("dashboard.overview", "Overview")}
-          </span>
-        </Link>
-
-        <Link to="/add" className="flex max-w-[22%] flex-1 flex-col items-center justify-center -mt-5 min-w-0">
-          <div className="flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition-transform active:scale-95">
-            <Plus className="size-7" strokeWidth={2.5} />
-          </div>
-          <span className={cn("mt-1 max-w-full truncate text-[11px] font-medium", isAddPage ? "text-primary" : "text-muted-foreground")}>
-            {t("nav.addOffer", "إضافة عرض")}
-          </span>
-        </Link>
-
-        <Link
-          to={ordersPath}
-          className={cn(linkClass, "min-w-0 max-w-[22%] flex-1", isOrders ? activeClass : inactiveClass)}
-        >
-          <Package className="size-6 shrink-0" />
-          <span className={cn("max-w-full truncate text-[11px]", isOrders ? "text-primary font-medium" : "text-muted-foreground")}>
-            {t("dashboard.nav.orderCenter", "الطلبات")}
-          </span>
-        </Link>
-
-        <Link
-          to={inboxPath}
-          className={cn(linkClass, "min-w-0 max-w-[22%] flex-1", isInbox ? activeClass : inactiveClass)}
-        >
-          <Mail className="size-6 shrink-0" />
-          <span className={cn("max-w-full truncate text-[11px]", isInbox ? "text-primary font-medium" : "text-muted-foreground")}>
-            {t("dashboard.nav.inbox", "المراسلة")}
-          </span>
-        </Link>
+        {items.map((item) => {
+          if (item.key === "add") {
+            const active = path === "/add"
+            return (
+              <Link key="add" to="/add" className="-mt-5 flex min-w-0 flex-1 flex-col items-center justify-center">
+                <span className="flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg ring-4 ring-background transition-transform active:scale-95">
+                  <Plus className="size-7" strokeWidth={2.5} aria-hidden />
+                </span>
+                <span className={cn("mt-1 max-w-full truncate text-[11px] font-medium", active ? "text-primary" : "text-muted-foreground")}>
+                  {t("nav.addOffer", "إضافة عرض")}
+                </span>
+              </Link>
+            )
+          }
+          const Icon = item.icon
+          return (
+            <Link
+              key={item.key}
+              to={item.to}
+              aria-current={item.active ? "page" : undefined}
+              className={cn(
+                "flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 pb-1.5 pt-2 transition-colors",
+                item.active ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              <Icon className="size-6 shrink-0" aria-hidden />
+              <span className={cn("max-w-full truncate text-[11px]", item.active && "font-medium")}>{item.label}</span>
+            </Link>
+          )
+        })}
       </div>
     </nav>
   )

@@ -6,9 +6,10 @@ import { CompanyActivityChips } from "@/components/company/CompanyActivityChips"
 import { BadgeCheck } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-/** Channel line under a video: avatar, company name, verified badge, activities. */
-export function VideoChannelRow({ company, className, light = false }) {
+/** Channel line under a video: avatar, company name, verified badge, activities (or the individual owner). */
+export function VideoChannelRow({ company: companyProp, owner, className, light = false }) {
   const { t } = useTranslation()
+  const company = companyProp ?? (owner ? { name: owner.name, username: owner.username, user_id: owner.id, avatar_url: owner.avatar_url } : null)
   if (!company) return null
   const href = publicProfilePath({ username: company.username, id: company.user_id }) ?? "#"
 

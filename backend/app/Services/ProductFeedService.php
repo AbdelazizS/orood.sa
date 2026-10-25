@@ -16,6 +16,8 @@ class ProductFeedService
         $query = $this->product
             ->query()
             ->with(['category', 'subcategory', 'region', 'city', 'seller', 'realEstateDetail'])
+            // Listing cards show a play badge when the listing has a video.
+            ->withExists(['videos as has_published_video' => fn ($v) => $v->published()])
             ->published()
             ->approved()
             ->filterByRequest($filters);

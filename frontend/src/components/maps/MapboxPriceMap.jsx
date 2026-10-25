@@ -2,7 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useTheme } from "@/providers/ThemeProvider"
 import { createMap, loadManfithMapSdk, createMarker } from "@/lib/maps/manfithAdapter"
-import { buildPriceMarkerElement, setPriceMarkerActive } from "@/components/maps/PriceMarker"
+import { buildMapMarkerElement, setMapMarkerActive } from "@/components/maps/PriceMarker"
+import { MapControls } from "@/components/maps/MapControls"
 import { PRICE_CLUSTER_COLOR, PRICE_CLUSTER_MAX_ZOOM, PRICE_CLUSTER_RADIUS } from "@/lib/maps/priceClusters"
 import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -96,12 +97,12 @@ export default function MapboxPriceMap({
       const data = dataRef.current.get(id)
       if (!data) continue
       const { t: tr, lang } = labelCtxRef.current
-      const el = buildPriceMarkerElement(data, {
+      const el = buildMapMarkerElement(data, {
         t: tr,
         lang,
         onSelect: (m) => callbacksRef.current.onSelect?.(m),
       })
-      setPriceMarkerActive(el, String(selectedIdRef.current) === id)
+      setMapMarkerActive(el, String(selectedIdRef.current) === id)
       const marker = createMarker(mapboxgl, map, { lat: data.lat, lng: data.lng, element: el, anchor: "bottom" })
       if (marker) pinsRef.current.set(id, { marker, el, data })
     }
@@ -135,7 +136,14 @@ export default function MapboxPriceMap({
     // Drop pins whose listing disappeared or whose label would change.
     pinsRef.current.forEach((p, id) => {
       const d = next.get(id)
-      if (!d || d.price !== p.data.price || d.marketing_status !== p.data.marketing_status || d.pin_label !== p.data.pin_label) {
+      if (
+        !d ||
+        d.price !== p.data.price ||
+        d.marketing_status !== p.data.marketing_status ||
+        d.pin_label !== p.data.pin_label ||
+        d.pin_variant !== p.data.pin_variant ||
+        d.video?.id !== p.data.video?.id
+      ) {
         p.marker?.remove()
         pinsRef.current.delete(id)
       }
@@ -282,12 +290,33 @@ export default function MapboxPriceMap({
   }, [i18n.language])
 
   useEffect(() => {
-    pinsRef.current.forEach((p, id) => setPriceMarkerActive(p.el, String(selectedId) === id))
+    pinsRef.current.forEach((p, id) => setMapMarkerActive(p.el, String(selectedId) === id))
   }, [selectedId])
+
+  const userMarkerRef = useRef(null)
+  const locate = (pos) => {
+    const map = apiRef.current?.map
+    const mapboxgl = sdkRef.current
+    if (!map || !mapboxgl) return
+    userMarkerRef.current?.remove()
+    const dot = document.createElement("span")
+    dot.className = "block size-4 rounded-full border-[3px] border-white bg-blue-600 shadow"
+    userMarkerRef.current = createMarker(mapboxgl, map, { lat: pos.lat, lng: pos.lng, element: dot, anchor: "center" })
+    map.flyTo({ center: [pos.lng, pos.lat], zoom: 14, duration: 600 })
+  }
+  useEffect(() => () => userMarkerRef.current?.remove(), [])
 
   return (
     <div className={cn("relative h-full w-full", className)}>
       <div ref={containerRef} className="h-full w-full touch-manipulation" aria-label="Map" />
+      {mapReady ? (
+        <MapControls
+          className="absolute end-3 top-1/2 z-[5] -translate-y-1/2"
+          onZoomIn={() => apiRef.current?.map?.zoomIn()}
+          onZoomOut={() => apiRef.current?.map?.zoomOut()}
+          onLocate={locate}
+        />
+      ) : null}
       {mapReady ? null : (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-muted/60 text-sm text-muted-foreground">
           <Loader2 className="size-7 animate-spin" aria-hidden />

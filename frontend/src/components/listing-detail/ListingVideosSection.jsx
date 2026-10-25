@@ -3,8 +3,9 @@ import { useTranslation } from "react-i18next"
 import apiClient from "@/lib/apiClient"
 import { ShortCard, VideoCard } from "@/components/company/videos/VideoCards"
 import { Clapperboard } from "lucide-react"
+import { cn } from "@/lib/utils"
 
-/** "فيديوهات العقار": company channel videos linked to this listing (hidden when there are none). */
+/** «فيديوهات الإعلان»: the listing's own video and channel videos linked to it (hidden when there are none). */
 export function ListingVideosSection({ productId }) {
   const { t } = useTranslation()
   const { data = [] } = useQuery({
@@ -22,10 +23,10 @@ export function ListingVideosSection({ productId }) {
   const videos = data.filter((v) => !v.is_short)
 
   return (
-    <section className="border-b border-border px-4 py-4" aria-label={t("companyChannel.listingVideos", "فيديوهات العقار")}>
+    <section className="border-b border-border px-4 py-4" aria-label={t("listingVideos.title", "فيديوهات الإعلان")}>
       <h2 className="mb-3 flex items-center gap-2 text-base font-bold">
         <Clapperboard className="size-5 text-primary" aria-hidden />
-        {t("companyChannel.listingVideos", "فيديوهات العقار")}
+        {t("listingVideos.title", "فيديوهات الإعلان")}
       </h2>
       {videos.length ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -35,9 +36,16 @@ export function ListingVideosSection({ productId }) {
         </div>
       ) : null}
       {shorts.length ? (
-        <div className={videos.length ? "mt-4 flex gap-3 overflow-x-auto pb-2" : "flex gap-3 overflow-x-auto pb-2"}>
+        // One Short is centred at a comfortable size; several sit in an even grid.
+        <div
+          className={cn(
+            "grid gap-3",
+            shorts.length === 1 ? "grid-cols-1 justify-items-center" : "grid-cols-2 sm:grid-cols-3",
+            videos.length && "mt-4",
+          )}
+        >
           {shorts.map((v) => (
-            <ShortCard key={v.id} video={v} />
+            <ShortCard key={v.id} video={v} className={shorts.length === 1 ? "w-full max-w-[280px] sm:w-full" : "w-full sm:w-full"} />
           ))}
         </div>
       ) : null}

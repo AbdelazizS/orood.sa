@@ -101,6 +101,7 @@ import { AdminSubscriberListingsPage } from "@/pages/admin/AdminSubscriberListin
 import { AdminCompanyVideosPage } from "@/pages/admin/AdminCompanyVideosPage"
 import { VideoPlayerPage } from "@/pages/VideoPlayerPage"
 import { ShortsViewerPage } from "@/pages/ShortsViewerPage"
+import { VideosFeedPage } from "@/pages/VideosFeedPage"
 import { CompanyVideosPage } from "@/pages/dashboard/CompanyVideosPage"
 
 function RedirectMemberNotificationDetail() {
@@ -109,23 +110,28 @@ function RedirectMemberNotificationDetail() {
   return <Navigate to={`/dashboard/messages?hub=notifications&nid=${id}`} replace />
 }
 
+/** Full-screen pages (map, videos): no footer, the page fills the screen down to the bottom bar. */
+const IMMERSIVE_PATHS = ["/listings/map", "/videos"]
+
 function MainLayout() {
-  const { token, user } = useAuthStore()
-  const isAuthenticated = Boolean(token && user)
-  // Subscribers have their own area; the member bottom bar (add listing, orders…) doesn't apply.
-  const showBottomNav = isAuthenticated && user?.role !== "subscriber"
+  const { user } = useAuthStore()
+  const { pathname } = useLocation()
+  // Everyone gets the mobile bottom bar (visitors are sent to login by protected pages);
+  // subscribers have their own area where the member bar (add listing, orders…) doesn't apply.
+  const showBottomNav = user?.role !== "subscriber"
+  const immersive = IMMERSIVE_PATHS.includes(pathname)
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <VisitorTracker />
       <TopNavigation />
       <DemoBanner />
-      <main className={`flex-1 ${showBottomNav ? "pb-20 lg:pb-0" : ""}`}>
+      <main className={`flex-1 ${showBottomNav && !immersive ? "pb-20 lg:pb-0" : ""}`}>
         <AppLayout>
           <Outlet />
         </AppLayout>
       </main>
-      <Footer />
+      {immersive ? null : <Footer />}
       {showBottomNav && <BottomNavBar />}
     </div>
   )
@@ -211,6 +217,7 @@ export const router = createBrowserRouter([
       { path: "about", element: <LegalPage slug="about" /> },
       { path: "help", element: <LegalPage slug="help" /> },
       { path: "profile/:identifier", element: <PublicProfilePage /> },
+      { path: "videos", element: <VideosFeedPage /> },
       { path: "videos/:id", element: <VideoPlayerPage /> },
       { path: "shorts/:id", element: <ShortsViewerPage /> },
     ],

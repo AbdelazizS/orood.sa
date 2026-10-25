@@ -229,6 +229,7 @@ class ListingMapPhase1Test extends TestCase
             'title' => 'فيلا تحتاج مسوق',
             'description' => 'وصف تجريبي للعقار',
             'price' => 1500000,
+            'price_per_meter' => 3750,
             'category_id' => $this->realEstate->id,
             'subcategory_id' => $reSub->id,
             'city_id' => $this->city->id,

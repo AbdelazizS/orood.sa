@@ -32,6 +32,8 @@ class ListingMapController extends Controller
             'street_width_min' => ['nullable', 'numeric', 'min:0'],
             'include_awaiting' => ['nullable', 'boolean'],
             'user_id' => ['nullable', 'integer'],
+            // Video map (فيديوهات على الخارطة): only listings with a published video.
+            'has_video' => ['nullable', 'boolean'],
         ]);
 
         $perPage = (int) ($validated['per_page'] ?? 200);
@@ -49,9 +51,14 @@ class ListingMapController extends Controller
                 }
             })
             ->where('is_wholesale', false)
-            ->whereNotNull('location_lat')
-            ->whereNotNull('location_lng')
-            ->with(['category', 'city', 'realEstateDetail']);
+            // map_lat/lng = exact location, else district centre, else city centre (all sections can be mapped).
+            ->whereNotNull('map_lat')
+            ->whereNotNull('map_lng')
+            ->with(['category', 'city', 'realEstateDetail', 'latestVideo']);
+
+        if ($request->boolean('has_video')) {
+            $query->whereHas('videos', fn ($v) => $v->published());
+        }
 
         if ($request->boolean('real_estate_only')) {
             $slugs = config('listings.real_estate_category_slugs', ['real-estate']);
@@ -101,8 +108,8 @@ class ListingMapController extends Controller
             $south = (float) $validated['south'];
             $east = (float) $validated['east'];
             $west = (float) $validated['west'];
-            $query->whereBetween('location_lat', [min($south, $north), max($south, $north)])
-                ->whereBetween('location_lng', [min($west, $east), max($west, $east)]);
+            $query->whereBetween('map_lat', [min($south, $north), max($south, $north)])
+                ->whereBetween('map_lng', [min($west, $east), max($west, $east)]);
         }
 
         $listings = $query->orderByDesc('published_at')->orderByDesc('id')->limit($perPage)->get();
@@ -113,8 +120,10 @@ class ListingMapController extends Controller
             'title' => $p->title,
             // Never leak the price of a listing that is still waiting for a marketer.
             'price' => $p->hidesPriceFrom($viewer) ? null : $p->price,
-            'lat' => (float) $p->location_lat,
-            'lng' => (float) $p->location_lng,
+            'lat' => (float) $p->map_lat,
+            'lng' => (float) $p->map_lng,
+            // false when the pin sits on a district/city centre rather than the exact spot.
+            'exact_location' => $p->location_lat !== null && $p->location_lng !== null,
             'thumbnail' => $p->image_url ?? data_get($p->media, 'cover'),
             'url' => '/products/'.$p->id,
             'purpose' => $p->realEstateDetail?->purpose,
@@ -123,6 +132,16 @@ class ListingMapController extends Controller
             'district' => $p->district,
             'street_width' => $p->realEstateDetail?->street_width_m,
             'city' => $p->city?->getLocalizedName($request->header('Accept-Language')),
+            'category' => $p->category?->slug,
+            'price_per_meter' => $p->price_per_meter !== null ? (float) $p->price_per_meter : null,
+            'map_display' => $p->map_display ?? 'price',
+            'video' => $p->latestVideo ? [
+                'id' => $p->latestVideo->id,
+                'thumbnail_url' => $p->latestVideo->thumbnail_url ?? ($p->image_url ?? data_get($p->media, 'cover')),
+                'url' => $p->latestVideo->playbackUrl(),
+                'is_short' => (bool) $p->latestVideo->is_short,
+                'duration_sec' => $p->latestVideo->duration_sec,
+            ] : null,
         ]);
 
         return response()->json([
