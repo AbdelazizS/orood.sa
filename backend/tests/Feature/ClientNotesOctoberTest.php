@@ -173,7 +173,10 @@ class ClientNotesOctoberTest extends TestCase
     {
         Storage::fake('public');
         $owner = User::factory()->create(['role' => 'seller']);
-        $car = $this->listing(['user_id' => $owner->id, 'title' => 'كامري 2022']);
+        // A non-real-estate section, so editing it doesn't need the real-estate prices.
+        $cars = Category::query()->where('slug', 'cars')->first() ?? Category::factory()->create(['slug' => 'cars']);
+        $carSub = Subcategory::query()->where('category_id', $cars->id)->first() ?? Subcategory::factory()->create(['category_id' => $cars->id]);
+        $car = $this->listing(['user_id' => $owner->id, 'title' => 'كامري 2022', 'category_id' => $cars->id, 'subcategory_id' => $carSub->id]);
 
         $res = $this->as($owner)->post('/api/v1/products/'.$car->id.'/videos', [
             'video' => UploadedFile::fake()->create('car.mp4', 1024, 'video/mp4'),

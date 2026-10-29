@@ -26,16 +26,26 @@ export function LeaveReviewModal({
   listingProductId = null,
   /** TanStack query key prefix for public profile (e.g. getProfileQueryKey(identifier)). */
   profileQueryKey = null,
+  /** Buyer rating the seller after delivery: also ask «مطابق للصور؟» and «سرعة التوصيل». */
+  askListingQuestions = false,
   onSuccess,
 }) {
   const [rating, setRating] = useState(existingReview?.rating ?? 0)
   const [comment, setComment] = useState(existingReview?.comment ?? "")
+  const [matchesPhotos, setMatchesPhotos] = useState(null)
+  const [deliverySpeed, setDeliverySpeed] = useState(null)
   const queryClient = useQueryClient()
   const { direction } = useAppDirection()
 
   const submit = useMutation({
     mutationFn: async () => {
-      const payload = { target_id: targetUser.id, rating, comment }
+      const payload = {
+        target_id: targetUser.id,
+        rating,
+        comment,
+        ...(askListingQuestions && matchesPhotos !== null ? { matches_photos: matchesPhotos } : {}),
+        ...(askListingQuestions && deliverySpeed ? { delivery_speed: deliverySpeed } : {}),
+      }
       if (existingReview) {
         const { data } = await apiClient.put(`/reviews/${existingReview.id}`, payload)
         return data
@@ -133,6 +143,58 @@ export function LeaveReviewModal({
             {ratingLabels[rating]}
           </p>
         </div>
+
+        {askListingQuestions ? (
+          <div className="space-y-3 rounded-lg border border-border p-3">
+            <div className="space-y-1.5">
+              <p className="text-start text-sm font-medium">هل المنتج / الخدمة مطابق للصور؟</p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { v: true, label: "نعم، مطابق" },
+                  { v: false, label: "غير مطابق" },
+                ].map((o) => (
+                  <button
+                    key={String(o.v)}
+                    type="button"
+                    onClick={() => setMatchesPhotos(o.v)}
+                    aria-pressed={matchesPhotos === o.v}
+                    className={cn(
+                      "h-9 rounded-md border text-sm font-semibold transition-colors",
+                      matchesPhotos === o.v
+                        ? o.v ? "border-primary bg-primary/10 text-primary" : "border-destructive bg-destructive/10 text-destructive"
+                        : "border-input hover:bg-muted",
+                    )}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-start text-sm font-medium">سرعة التوصيل / الإنجاز</p>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { v: "fast", label: "سريع" },
+                  { v: "normal", label: "متوسط" },
+                  { v: "slow", label: "بطيء" },
+                ].map((o) => (
+                  <button
+                    key={o.v}
+                    type="button"
+                    onClick={() => setDeliverySpeed(o.v)}
+                    aria-pressed={deliverySpeed === o.v}
+                    className={cn(
+                      "h-9 rounded-md border text-sm font-semibold transition-colors",
+                      deliverySpeed === o.v ? "border-primary bg-primary/10 text-primary" : "border-input hover:bg-muted",
+                    )}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <div className="space-y-1">
           <label className="block text-start text-sm font-medium">

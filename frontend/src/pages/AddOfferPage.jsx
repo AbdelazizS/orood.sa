@@ -35,6 +35,7 @@ import { ListingVideoField } from "@/components/add-listing/ListingVideoField"
 import { DistrictCombobox } from "@/components/filters/DistrictCombobox"
 import { getMyListingVideos, uploadListingVideo } from "@/services/companyVideoService"
 import { Label } from "@/components/ui/label"
+import { SmartLocationPicker } from "@/components/location/SmartLocationPicker"
 import { toast } from "sonner"
 import { SubmitSection } from "@/components/add-listing/SubmitSection"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -238,9 +239,6 @@ export function AddOfferPage() {
     // Wait for the category list: before it loads every category looks "not real estate",
     // which wiped the saved values of a real-estate listing being edited.
     if (isRealEstateCategory || !mainCategories.length) return
-    setPropertyLat(null)
-    setPropertyLng(null)
-    setPropertyAddress("")
     setNeedsMarketer(false)
     setAdLicenseNo("")
   }, [isRealEstateCategory, categoryId, mainCategories.length])
@@ -563,13 +561,21 @@ export function AddOfferPage() {
       ...(usesDynamicSchema
         ? {
             listing_attributes: buildListingAttributesPayload(activeSchema, listingAttributes),
-            ...(isRealEstateCategory && locationPolicy?.mode === "exact_map"
+            ...((isRealEstateCategory && locationPolicy?.mode === "exact_map") || (!isRealEstateCategory && propertyLat != null && propertyLng != null)
               ? {
                   location_lat: propertyLat != null ? Number(propertyLat) : null,
                   location_lng: propertyLng != null ? Number(propertyLng) : null,
                   location_address: propertyAddress.trim() || null,
                 }
               : {}),
+          }
+        : {}),
+      // Sections without a listing schema: optional exact pin for the map.
+      ...(!usesDynamicSchema && propertyLat != null && propertyLng != null
+        ? {
+            location_lat: Number(propertyLat),
+            location_lng: Number(propertyLng),
+            location_address: propertyAddress.trim() || null,
           }
         : {}),
     }
@@ -692,6 +698,7 @@ export function AddOfferPage() {
             <DynamicLocationField
               locationPolicy={locationPolicy}
               mapEnabled={isRealEstateCategory}
+              optionalMap={!isRealEstateCategory}
               regionId={regionId}
               cityId={cityId}
               onRegionCityChange={(rId, cId) => {
@@ -722,6 +729,17 @@ export function AddOfferPage() {
                 setRegionId(rId)
                 setCityId(cId)
                 clearFieldError("location")
+              }}
+            />
+            <SmartLocationPicker
+              lat={propertyLat}
+              lng={propertyLng}
+              address={propertyAddress}
+              label={t("addListing.itemLocationOptional", "حدد الموقع على الخارطة (اختياري)")}
+              onChange={({ lat, lng, address }) => {
+                setPropertyLat(lat)
+                setPropertyLng(lng)
+                if (address !== undefined) setPropertyAddress(address ?? "")
               }}
             />
           </>

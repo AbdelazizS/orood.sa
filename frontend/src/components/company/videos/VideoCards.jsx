@@ -52,7 +52,7 @@ export function ShortCard({ video, className }) {
   const { t, i18n } = useTranslation()
   return (
     <Link
-      to={`/shorts/${video.id}`}
+      to={`/videos/${video.id}`}
       className={cn(
         "group block w-[150px] shrink-0 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-[170px]",
         className,

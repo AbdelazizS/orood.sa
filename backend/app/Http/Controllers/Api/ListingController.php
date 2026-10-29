@@ -50,6 +50,7 @@ class ListingController extends Controller
         }
 
         $listing->is_owner = $isOwner;
+        $listing->setAttribute('quality_summary', $listing->qualitySummary());
         $snapshot = $listing->bidSnapshot($user);
         $listing->can_view_bid_details = $snapshot['can_view_bid_details'];
         $listing->highest_bid = $snapshot['highest_bid'];

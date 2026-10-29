@@ -1,7 +1,7 @@
 import { createElement } from "react"
 import { useTranslation } from "react-i18next"
 import { useAppDirection } from "@/providers/DirectionProvider"
-import { ShoppingBag, Eye, MessageCircle, Users, Check } from "lucide-react"
+import { ShoppingBag, Eye, MessageCircle, Users, Check, Image as ImageIcon, Truck, ShieldAlert } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 
@@ -20,6 +20,35 @@ export function ListingStatsRow({ product }) {
   const activeBuyerCount = Number(product?.active_buyer_count ?? 0)
   const freeShipping = product?.free_shipping ?? product?.shipping_details?.free_shipping ?? false
   const freeReturn = product?.free_return ?? product?.shipping_details?.free_return ?? false
+
+  // Buyer feedback after delivery (API: data.quality).
+  const quality = product?.quality ?? null
+  const pct = (v) => (v == null ? "—" : `${v}%`)
+  const qualityItems = quality
+    ? [
+        {
+          id: "photos",
+          label: t("listingDetail.quality.matchesPhotos", "المنتج / الخدمة مطابقة للصور"),
+          value: pct(quality.matches_photos_pct),
+          icon: ImageIcon,
+          tone: "text-primary",
+        },
+        {
+          id: "speed",
+          label: t("listingDetail.quality.deliverySpeed", "سرعة التوصيل / الإنجاز"),
+          value: pct(quality.delivery_speed_pct),
+          icon: Truck,
+          tone: "text-primary",
+        },
+        {
+          id: "complaints",
+          label: t("listingDetail.quality.complaints", "عدد الشكاوى على المنتج / الخدمة"),
+          value: quality.complaints_count ?? 0,
+          icon: ShieldAlert,
+          tone: quality.complaints_count ? "text-destructive" : "text-muted-foreground",
+        },
+      ]
+    : []
 
   const statItems = [
     {
@@ -93,6 +122,34 @@ export function ListingStatsRow({ product }) {
           </div>
         )}
       </div>
+
+      {!isWholesale && quality ? (
+        <div dir={direction} className="border-t border-border/60 px-4 py-3 sm:px-6">
+          <p className="mb-2 text-center text-xs font-semibold text-muted-foreground">
+            {t("listingDetail.quality.title", "بعد استلام واكتمال الطلب")}
+          </p>
+          <div className="grid grid-cols-3 gap-x-2 gap-y-2 sm:gap-x-4">
+            {qualityItems.map(({ id, label, value, icon: IconComponent, tone }) => (
+              <div key={id} className="flex min-w-0 flex-col items-center justify-center gap-1 text-center">
+                <div className="flex items-center justify-center gap-1.5">
+                  {createElement(IconComponent, { className: cn("size-5 shrink-0", tone) })}
+                  <p className="text-lg font-bold tabular-nums text-foreground">{value}</p>
+                </div>
+                <p className="max-w-full text-[11px] leading-snug text-muted-foreground sm:text-xs">{label}</p>
+              </div>
+            ))}
+          </div>
+          {quality.ratings_count ? (
+            <p className="mt-2 text-center text-[11px] text-muted-foreground">
+              {t("listingDetail.quality.basedOn", { count: quality.ratings_count, defaultValue: "حسب تقييم {{count}} مشترٍ" })}
+            </p>
+          ) : (
+            <p className="mt-2 text-center text-[11px] text-muted-foreground">
+              {t("listingDetail.quality.none", "لا توجد تقييمات بعد — يقيّم المشتري بعد استلام الطلب")}
+            </p>
+          )}
+        </div>
+      ) : null}
 
       <Separator />
     </>

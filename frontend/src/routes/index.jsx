@@ -110,8 +110,8 @@ function RedirectMemberNotificationDetail() {
   return <Navigate to={`/dashboard/messages?hub=notifications&nid=${id}`} replace />
 }
 
-/** Full-screen pages (map, videos): no footer, the page fills the screen down to the bottom bar. */
-const IMMERSIVE_PATHS = ["/listings/map", "/videos"]
+/** Full-screen pages (the map): no footer, the page fills the screen down to the bottom bar. */
+const IMMERSIVE_PATHS = ["/listings/map"]
 
 function MainLayout() {
   const { user } = useAuthStore()

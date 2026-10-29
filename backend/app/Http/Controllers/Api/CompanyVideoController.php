@@ -97,6 +97,45 @@ class CompanyVideoController extends Controller
         ]);
     }
 
+    /**
+     * «فيديوهات مقترحة» next to the player: more from the same uploader, then the same section
+     * (same city first), then the newest on the platform — only for listings still visible.
+     *
+     * @return \Illuminate\Support\Collection<int, CompanyVideo>
+     */
+    private function suggestedVideos(CompanyVideo $video, int $limit = 12)
+    {
+        $visible = fn ($q) => $q->where(fn ($v) => $v->whereNull('product_id')->orWhereHas(
+            'product',
+            fn ($p) => $p->where(fn ($pp) => $pp->publiclyListed()->orWhere(fn ($a) => $a->publiclyVisibleAwaiting()))
+        ));
+        $base = fn () => CompanyVideo::query()->published()->whereKeyNot($video->id)->tap($visible)->with(self::VIDEO_RELATIONS);
+
+        $picked = $base()->where('user_id', $video->user_id)->orderByDesc('published_at')->limit(6)->get();
+
+        $product = $video->product;
+        if ($product?->category_id && $picked->count() < $limit) {
+            $sameSection = $base()
+                ->whereNotIn('id', $picked->pluck('id'))
+                ->whereHas('product', fn ($p) => $p->where('category_id', $product->category_id))
+                ->orderByDesc('published_at')
+                ->limit(40)
+                ->get()
+                // Same city first, newest first within each group.
+                ->sortBy(fn (CompanyVideo $v) => (int) ($v->product?->city_id !== $product->city_id))
+                ->take($limit - $picked->count());
+            $picked = $picked->concat($sameSection);
+        }
+
+        if ($picked->count() < $limit) {
+            $picked = $picked->concat(
+                $base()->whereNotIn('id', $picked->pluck('id'))->orderByDesc('published_at')->limit($limit - $picked->count())->get()
+            );
+        }
+
+        return $picked->values();
+    }
+
     /** GET /videos/{video} — published, or the owner / staff viewing a hidden one. */
     public function show(Request $request, CompanyVideo $video): JsonResponse
     {
@@ -104,16 +143,7 @@ class CompanyVideoController extends Controller
         $this->ensureVisible($video, $viewer);
         $video->load(self::VIDEO_RELATIONS);
 
-        // "Up next": the rest of this channel, same kind (Shorts with Shorts).
-        $next = CompanyVideo::query()
-            ->published()
-            ->where('company_id', $video->company_id)
-            ->where('is_short', $video->is_short)
-            ->whereKeyNot($video->id)
-            ->with(self::VIDEO_RELATIONS)
-            ->orderByDesc('published_at')
-            ->limit(12)
-            ->get();
+        $next = $this->suggestedVideos($video);
         $locale = $request->header('Accept-Language');
         $liked = P::likedVideoIds($viewer, $next->pluck('id')->all());
 

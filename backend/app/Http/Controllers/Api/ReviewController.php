@@ -88,6 +88,9 @@ class ReviewController extends Controller
             'comment' => ['nullable', 'string', 'max:1000'],
             'order_id' => ['nullable', 'integer', 'exists:purchases,id'],
             'purchase_id' => ['nullable', 'integer', 'exists:purchases,id'],
+            // Buyer's quick questions about the listing (optional).
+            'matches_photos' => ['nullable', 'boolean'],
+            'delivery_speed' => ['nullable', 'in:fast,normal,slow'],
         ], [
             'rating.required' => 'التقييم مطلوب',
             'rating.min' => 'التقييم يجب أن يكون بين 1 و 5',
@@ -150,6 +153,15 @@ class ReviewController extends Controller
         }
         if (\Schema::hasColumn('reviews', 'product_id')) {
             $data['product_id'] = $purchase->product_id;
+        }
+        // Only the buyer rates how the listing matched its photos and how fast it was delivered.
+        if ($reviewer->id === (int) $purchase->buyer_id) {
+            if (array_key_exists('matches_photos', $validated)) {
+                $data['matches_photos'] = $validated['matches_photos'];
+            }
+            if (array_key_exists('delivery_speed', $validated)) {
+                $data['delivery_speed'] = $validated['delivery_speed'];
+            }
         }
 
         $review = Review::updateOrCreate($uniqueKeys, $data);

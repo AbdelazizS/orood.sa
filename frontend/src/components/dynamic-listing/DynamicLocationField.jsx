@@ -10,6 +10,8 @@ export function DynamicLocationField({
   locationPolicy,
   /** Pin map only for real-estate listings (ignores optional/exact_map on other categories). */
   mapEnabled = false,
+  /** Other sections (cars, electronics…): an optional pin so the listing shows exactly on the map. */
+  optionalMap = false,
   regionId,
   cityId,
   onRegionCityChange,
@@ -27,7 +29,7 @@ export function DynamicLocationField({
   if (mode === "hidden") return null
 
   const showRegionCity = mode === "region_only" || mode === "city_only" || mode === "exact_map" || mode === "optional"
-  const showMap = mapEnabled && mode === "exact_map"
+  const showMap = (mapEnabled && mode === "exact_map") || optionalMap
 
   return (
     <>
@@ -44,8 +46,12 @@ export function DynamicLocationField({
           lat={lat}
           lng={lng}
           address={address}
-          required={required && mode === "exact_map"}
-          label={t("addListing.propertyLocation", "موقع العقار")}
+          required={!optionalMap && required && mode === "exact_map"}
+          label={
+            optionalMap
+              ? t("addListing.itemLocationOptional", "حدد الموقع على الخارطة (اختياري)")
+              : t("addListing.propertyLocation", "موقع العقار")
+          }
           error={mapError}
           onChange={onMapChange}
         />

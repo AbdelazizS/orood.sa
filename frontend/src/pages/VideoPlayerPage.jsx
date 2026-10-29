@@ -113,7 +113,7 @@ export function VideoPlayerPage() {
   if (isError || !video) {
     return <p className="px-4 py-16 text-center text-muted-foreground">{t("companyChannel.notFound", "الفيديو غير متاح.")}</p>
   }
-  if (video.is_short) return <Navigate to={`/shorts/${video.id}`} replace />
+  // Shorts play here too, next to the suggested videos (the layout the client approved).
 
   return (
     <div dir={direction} className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-6 px-4 py-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -190,7 +190,7 @@ export function VideoPlayerPage() {
       </div>
 
       <aside className="min-w-0 space-y-2">
-        <h2 className="text-sm font-bold">{t("companyChannel.upNext", "المزيد من القناة")}</h2>
+        <h2 className="text-sm font-bold">{t("videos.suggested", "فيديوهات مقترحة")}</h2>
         {data.upNext.length ? (
           data.upNext.map((v) => <UpNextItem key={v.id} video={v} />)
         ) : (

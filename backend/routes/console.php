@@ -60,3 +60,5 @@ Artisan::command('products:backfill-sold-count', function () {
 Schedule::command('seo:generate-sitemap')->dailyAt('02:00');
 // Subscriber ads past their duration → listing goes back to "awaiting a marketer".
 Schedule::command('subscribers:expire-ads')->hourly();
+Schedule::command('uploads:prune-video-chunks')->daily();
+Schedule::command('listings:expire-old')->dailyAt('03:30');

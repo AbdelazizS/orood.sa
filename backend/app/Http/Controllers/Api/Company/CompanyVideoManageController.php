@@ -49,7 +49,9 @@ class CompanyVideoManageController extends Controller
         $user = $request->user();
 
         $validated = $request->validate([
-            'video' => ['required', 'file', 'mimetypes:video/mp4,video/webm,video/quicktime,video/x-m4v', 'max:'.(int) config('videos.max_kb')],
+            'video' => ['required_without:upload_id', 'file', 'mimetypes:video/mp4,video/webm,video/quicktime,video/x-m4v', 'max:'.(int) config('videos.max_kb')],
+            'upload_id' => ['required_without:video', 'uuid'],
+            'original_name' => ['nullable', 'string', 'max:255'],
             'thumbnail' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:'.(int) config('videos.thumbnail_max_kb')],
             'title' => ['required', 'string', 'max:150'],
             'description' => ['nullable', 'string', 'max:5000'],
@@ -64,8 +66,13 @@ class CompanyVideoManageController extends Controller
 
         $disk = config('videos.disk', 'public');
         $folder = 'company-videos/'.$company->id;
-        $videoFile = $request->file('video');
-        $videoPath = $videoFile->storeAs($folder, Str::uuid().'.'.($videoFile->getClientOriginalExtension() ?: 'mp4'), $disk);
+        if ($request->hasFile('video')) {
+            $videoFile = $request->file('video');
+            $videoPath = $videoFile->storeAs($folder, Str::uuid().'.'.($videoFile->getClientOriginalExtension() ?: 'mp4'), $disk);
+        } else {
+            $videoPath = app(\App\Services\Videos\ChunkedVideoUploads::class)
+                ->assemble((int) $user->id, $validated['upload_id'], $folder, $validated['original_name'] ?? null)['path'];
+        }
 
         $thumbnailUrl = null;
         if ($request->hasFile('thumbnail')) {

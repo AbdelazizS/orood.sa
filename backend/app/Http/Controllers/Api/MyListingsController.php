@@ -128,6 +128,17 @@ class MyListingsController extends Controller
             return response()->json(['message' => 'غير مصرح لك'], 403);
         }
 
+        // Renewing a listing that expired for age (listings:expire-old) puts it back online.
+        if ($product->status === 'expired' && $product->expired_at && $product->moderation_status === 'approved') {
+            $product->update(['status' => 'published', 'expired_at' => null, 'bumped_at' => now(), 'published_at' => now()]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تم تجديد الإعلان وعاد للظهور',
+                'bumped_at' => $product->bumped_at->toIso8601String(),
+            ]);
+        }
+
         if ($product->status !== 'published') {
             return response()->json([
                 'error' => true,

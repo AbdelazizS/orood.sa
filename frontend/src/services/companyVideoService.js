@@ -1,4 +1,23 @@
 import apiClient from "@/lib/apiClient"
+import { uploadVideoInChunks, VIDEO_CHUNK_BYTES } from "@/lib/video/chunkedUpload"
+
+/**
+ * Big videos go up in 1 MB pieces first; the save request then carries upload_id instead of
+ * the file (so server body limits never reject it). Small ones are sent as-is.
+ * Progress: 0–95% while sending pieces, 100% when saved.
+ */
+async function withChunkedVideo(formData, onProgress) {
+  const file = formData.get("video")
+  if (!(file instanceof Blob) || file.size <= VIDEO_CHUNK_BYTES * 1.5) return { formData, chunked: false }
+  const uploadId = await uploadVideoInChunks(file, (p) => onProgress?.(Math.round(p * 0.95)))
+  const next = new FormData()
+  for (const [key, value] of formData.entries()) {
+    if (key !== "video") next.append(key, value)
+  }
+  next.append("upload_id", uploadId)
+  next.append("original_name", file.name ?? "video.mp4")
+  return { formData: next, chunked: true }
+}
 
 // ── Public channel ─────────────────────────────────────────────────
 
@@ -67,13 +86,15 @@ export async function getMyCompanyVideos() {
  * @param {(percent: number) => void} [onProgress]
  */
 export async function uploadCompanyVideo(formData, onProgress) {
-  const { data } = await apiClient.post("/company/videos", formData, {
+  const prepared = await withChunkedVideo(formData, onProgress)
+  const { data } = await apiClient.post("/company/videos", prepared.formData, {
     headers: { "Content-Type": "multipart/form-data" },
     timeout: 0,
     onUploadProgress: (e) => {
-      if (onProgress && e.total) onProgress(Math.round((e.loaded / e.total) * 100))
+      if (onProgress && e.total && !prepared.chunked) onProgress(Math.round((e.loaded / e.total) * 100))
     },
   })
+  onProgress?.(100)
   return data?.data
 }
 
@@ -114,13 +135,15 @@ export async function getMyListingVideos(productId) {
 
 /** @param {FormData} formData video, thumbnail?, duration_sec? */
 export async function uploadListingVideo(productId, formData, onProgress) {
-  const { data } = await apiClient.post(`/products/${productId}/videos`, formData, {
+  const prepared = await withChunkedVideo(formData, onProgress)
+  const { data } = await apiClient.post(`/products/${productId}/videos`, prepared.formData, {
     headers: { "Content-Type": "multipart/form-data" },
     timeout: 0,
     onUploadProgress: (e) => {
-      if (onProgress && e.total) onProgress(Math.round((e.loaded / e.total) * 100))
+      if (onProgress && e.total && !prepared.chunked) onProgress(Math.round((e.loaded / e.total) * 100))
     },
   })
+  onProgress?.(100)
   return data?.data
 }
 

@@ -35,6 +35,7 @@ export function DistrictCombobox({
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
+  const [other, setOther] = useState("")
   const { data: districts = [], isFetching } = useDistricts(cityId)
   const disabled = !cityId
 
@@ -42,6 +43,12 @@ export function DistrictCombobox({
     onChange(next || null)
     setOpen(false)
     setQuery("")
+    setOther("")
+  }
+
+  const submitOther = () => {
+    const name = other.trim()
+    if (name) pick(name)
   }
 
   const typed = query.trim()
@@ -114,6 +121,38 @@ export function DistrictCombobox({
             </CommandGroup>
           </CommandList>
         </Command>
+        {/* «أخرى — اكتب»: always at the end of the list, for a district that isn't listed. */}
+        {allowCustom ? (
+          <div className="border-t border-border bg-muted/30 p-2">
+            <label htmlFor={`${id ?? "district"}-other`} className="mb-1 block text-xs font-semibold text-foreground">
+              {t("filters.otherDistrict", "أخرى — اكتب اسم الحي")}
+            </label>
+            <div className="flex gap-1.5">
+              <input
+                id={`${id ?? "district"}-other`}
+                value={other}
+                maxLength={120}
+                onChange={(e) => setOther(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault()
+                    submitOther()
+                  }
+                }}
+                placeholder={t("filters.otherDistrictPlaceholder", "اسم الحي")}
+                className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+              />
+              <button
+                type="button"
+                onClick={submitOther}
+                disabled={!other.trim()}
+                className="h-9 shrink-0 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+              >
+                {t("common.add", "إضافة")}
+              </button>
+            </div>
+          </div>
+        ) : null}
       </PopoverContent>
     </Popover>
   )

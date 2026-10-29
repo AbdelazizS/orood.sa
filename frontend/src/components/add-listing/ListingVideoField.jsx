@@ -1,4 +1,4 @@
-import { useRef } from "react"
+import { useRef, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
@@ -7,8 +7,11 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { deleteListingVideo, getMyListingVideos } from "@/services/companyVideoService"
 import { formatDuration, probeVideoFile } from "@/lib/video/videoFormat"
+import { canCompressVideo, compressVideo } from "@/lib/video/compressVideo"
 
 const MAX_MB_FALLBACK = 200
+/** Above this size the video is compressed in the browser first (like Haraj). */
+const COMPRESS_ABOVE_MB = 20
 
 /**
  * «فيديو الإعلان» on the add / edit form (all sections). The file is uploaded right after the
@@ -28,6 +31,7 @@ export function ListingVideoField({ productId, file, probe, onFileChange, mapDis
   const { t } = useTranslation()
   const inputRef = useRef(null)
   const queryClient = useQueryClient()
+  const [compressing, setCompressing] = useState(null)
 
   const existingQuery = useQuery({
     queryKey: ["listing-videos", "mine", productId],
@@ -52,13 +56,20 @@ export function ListingVideoField({ productId, file, probe, onFileChange, mapDis
       toast.error(t("addListing.video.badType", "اختر ملف فيديو (MP4 أو MOV)"))
       return
     }
-    if (picked.size > maxMb * 1024 * 1024) {
+    let file = picked
+    if (file.size > COMPRESS_ABOVE_MB * 1024 * 1024 && canCompressVideo()) {
+      setCompressing(0)
+      const smaller = await compressVideo(file, { onProgress: setCompressing })
+      setCompressing(null)
+      if (smaller) file = smaller
+    }
+    if (file.size > maxMb * 1024 * 1024) {
       toast.error(t("addListing.video.tooBig", { mb: maxMb, defaultValue: "حجم الفيديو أكبر من {{mb}} ميجابايت" }))
       return
     }
-    onFileChange(picked, null)
-    const info = await probeVideoFile(picked)
-    onFileChange(picked, info)
+    onFileChange(file, null)
+    const info = await probeVideoFile(file)
+    onFileChange(file, info)
   }
 
   const hasVideo = Boolean(file) || existing.length > 0
@@ -101,7 +112,20 @@ export function ListingVideoField({ productId, file, probe, onFileChange, mapDis
         </ul>
       ) : null}
 
-      {file ? (
+      {compressing != null ? (
+        <div className="mt-3 rounded-md border border-primary/40 bg-primary/5 p-2.5 text-sm">
+          <div className="flex items-center gap-2">
+            <Loader2 className="size-4 animate-spin text-primary" aria-hidden />
+            {t("addListing.video.compressing", { percent: compressing, defaultValue: "جاري ضغط الفيديو… {{percent}}%" })}
+          </div>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+            <div className="h-full bg-primary transition-[width]" style={{ width: `${compressing}%` }} />
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {t("addListing.video.compressHint", "نصغّر الفيديو ليرفع بسرعة — أبقِ الصفحة مفتوحة.")}
+          </p>
+        </div>
+      ) : file ? (
         <div className="mt-3 flex items-center gap-3 rounded-md border border-primary/40 bg-primary/5 p-2">
           {probe ? null : <Loader2 className="size-4 animate-spin text-muted-foreground" aria-hidden />}
           <span className="min-w-0 flex-1 truncate text-sm">

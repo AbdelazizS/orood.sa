@@ -64,6 +64,8 @@ class ProductResource extends JsonResource
             'price_per_meter' => $this->price_per_meter !== null ? (float) $this->price_per_meter : null,
             'map_display' => $this->map_display ?? 'price',
             'has_video' => (bool) ($this->resource->getAttribute('has_published_video') ?? false),
+            // Listing page only: buyer feedback percentages + complaints (see Product::qualitySummary).
+            'quality' => $this->resource->getAttribute('quality_summary'),
             'ad_license_no' => $this->ad_license_no,
             'condition' => $this->condition,
             'warranty' => $this->warranty,

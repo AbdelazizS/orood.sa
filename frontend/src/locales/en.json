@@ -237,6 +237,8 @@
     "ariaLabel": "Breadcrumb navigation"
   },
   "filters": {
+    "otherDistrict": "Other — type the district",
+    "otherDistrictPlaceholder": "District name",
     "district": "District",
     "allDistricts": "All districts",
     "pickDistrict": "Choose district",
@@ -992,6 +994,7 @@
     "companyVerificationPending": "Your company request is now pending review"
   },
   "addListing": {
+    "itemLocationOptional": "Pin the location on the map (optional)",
     "mapDisplay": {
       "title": "Show the property on the map as",
       "price": "Price",
@@ -1006,6 +1009,8 @@
       "requiredHint": "Price and price per m² are required for all real-estate listings and show on the map."
     },
     "video": {
+      "compressing": "Compressing video… {{percent}}%",
+      "compressHint": "Making the video smaller so it uploads fast — keep this page open.",
       "upload": "Upload video",
       "title": "Listing video (optional)",
       "hint": "Shown on the listing, in Videos and on the map. A short vertical clip works best.",
@@ -3852,6 +3857,14 @@
     }
   },
   "listingDetail": {
+    "quality": {
+      "title": "After the order is received",
+      "matchesPhotos": "Product / service matches the photos",
+      "deliverySpeed": "Delivery / completion speed",
+      "complaints": "Complaints about the product / service",
+      "basedOn": "Based on {{count}} buyer ratings",
+      "none": "No ratings yet — buyers rate after receiving the order"
+    },
     "attributesTitle": "Listing details",
     "sellerTrustBadges": "Seller trust",
     "priceEmpty": "Not set",
@@ -4194,6 +4207,9 @@
     }
   },
   "videos": {
+    "suggested": "Suggested videos",
+    "latest": "Latest",
+    "mostViewed": "Most viewed",
     "pageTitle": "Arooth videos",
     "viewDetails": "View details",
     "onMap": "On the map",

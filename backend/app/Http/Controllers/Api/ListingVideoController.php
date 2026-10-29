@@ -46,7 +46,10 @@ class ListingVideoController extends Controller
         $user = $request->user();
 
         $validated = $request->validate([
-            'video' => ['required', 'file', 'mimetypes:video/mp4,video/webm,video/quicktime,video/x-m4v', 'max:'.(int) config('videos.max_kb')],
+            // Either the file itself (small videos) or the id of a chunked upload (large videos).
+            'video' => ['required_without:upload_id', 'file', 'mimetypes:video/mp4,video/webm,video/quicktime,video/x-m4v', 'max:'.(int) config('videos.max_kb')],
+            'upload_id' => ['required_without:video', 'uuid'],
+            'original_name' => ['nullable', 'string', 'max:255'],
             'thumbnail' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:'.(int) config('videos.thumbnail_max_kb')],
             'duration_sec' => ['nullable', 'integer', 'min:0', 'max:86400'],
             'title' => ['nullable', 'string', 'max:150'],
@@ -57,8 +60,13 @@ class ListingVideoController extends Controller
 
         $disk = config('videos.disk', 'public');
         $folder = 'listing-videos/'.$product->id;
-        $file = $request->file('video');
-        $videoPath = $file->storeAs($folder, Str::uuid().'.'.($file->getClientOriginalExtension() ?: 'mp4'), $disk);
+        if ($request->hasFile('video')) {
+            $file = $request->file('video');
+            $videoPath = $file->storeAs($folder, Str::uuid().'.'.($file->getClientOriginalExtension() ?: 'mp4'), $disk);
+        } else {
+            $videoPath = app(\App\Services\Videos\ChunkedVideoUploads::class)
+                ->assemble((int) $user->id, $validated['upload_id'], $folder, $validated['original_name'] ?? null)['path'];
+        }
 
         $thumbnailUrl = null;
         if ($request->hasFile('thumbnail')) {
@@ -117,7 +125,8 @@ class ListingVideoController extends Controller
             'category_id' => ['nullable', 'integer', 'exists:categories,id'],
             'city_id' => ['nullable', 'integer', 'exists:cities,id'],
             'district' => ['nullable', 'string', 'max:120'],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:20'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:30'],
+            'sort' => ['nullable', 'in:latest,most_viewed'],
         ]);
 
         $filtered = ! empty($validated['category_id']) || ! empty($validated['city_id']) || ! empty($validated['district']);
@@ -142,6 +151,9 @@ class ListingVideoController extends Controller
             $query->where(fn ($q) => $q->whereNull('product_id')->orWhereHas('product', $visibleProduct));
         }
 
+        if (($validated['sort'] ?? 'latest') === 'most_viewed') {
+            $query->orderByDesc('views_count');
+        }
         $page = $query->orderByDesc('published_at')->orderByDesc('id')->paginate((int) ($validated['per_page'] ?? 8));
         $viewer = $request->user();
         $liked = P::likedVideoIds($viewer, $page->getCollection()->pluck('id')->all());

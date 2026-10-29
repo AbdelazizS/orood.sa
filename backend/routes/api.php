@@ -194,6 +194,7 @@ Route::prefix('v1')->group(function () {
             Route::put('/products/{product}', [ProductController::class, 'update']);
             Route::post('/products/{product}/publish', [ProductController::class, 'publish']);
             // Owner's video on a listing (any section).
+            Route::post('/uploads/video-chunks', [\App\Http\Controllers\Api\VideoChunkController::class, 'store'])->middleware('throttle:600,1');
             Route::get('/products/{product}/my-videos', [\App\Http\Controllers\Api\ListingVideoController::class, 'mine']);
             Route::post('/products/{product}/videos', [\App\Http\Controllers\Api\ListingVideoController::class, 'store'])->middleware('throttle:20,1');
             Route::delete('/products/{product}/videos/{video}', [\App\Http\Controllers\Api\ListingVideoController::class, 'destroy']);

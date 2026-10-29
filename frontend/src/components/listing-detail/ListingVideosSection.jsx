@@ -29,7 +29,7 @@ export function ListingVideosSection({ productId }) {
         {t("listingVideos.title", "فيديوهات الإعلان")}
       </h2>
       {videos.length ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className={cn("grid grid-cols-1 gap-4", videos.length > 1 && "sm:grid-cols-2")}>
           {videos.map((v) => (
             <VideoCard key={v.id} video={v} />
           ))}

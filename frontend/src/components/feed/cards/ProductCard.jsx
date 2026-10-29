@@ -16,9 +16,9 @@ export const PRODUCT_CARD_ROW_HEIGHT_WITH_META = "h-[156px] sm:h-[164px]"
 /** Wholesale list row — taller than homepage default */
 export const WHOLESALE_LIST_ROW_HEIGHT = "min-h-[168px] sm:min-h-[188px]"
 
-/** Default list thumb — full row height, fluid width on mobile */
+/** Default list thumb — full row height; ~40% of the row on phones so photos stay clear */
 export const PRODUCT_CARD_THUMB_CLASS =
-  "h-full w-[clamp(5.5rem,32vw,8.75rem)] max-w-[38%] shrink-0 self-stretch sm:max-w-none sm:w-[140px] md:w-[160px]"
+  "h-full w-[clamp(7.5rem,40vw,11rem)] max-w-[42%] shrink-0 self-stretch sm:max-w-none sm:w-[150px] md:w-[170px]"
 
 /** Wholesale list thumb */
 export const WHOLESALE_LIST_THUMB_WIDTH =

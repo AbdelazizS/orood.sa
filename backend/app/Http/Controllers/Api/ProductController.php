@@ -311,7 +311,12 @@ class ProductController extends Controller
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
-        $product->update(['published_at' => now(), 'bumped_at' => now()]);
+        // «تحديث» on a listing that expired for age renews it.
+        if ($product->status === 'expired' && $product->expired_at && $product->moderation_status === 'approved') {
+            $product->update(['status' => 'published', 'expired_at' => null, 'published_at' => now(), 'bumped_at' => now()]);
+        } else {
+            $product->update(['published_at' => now(), 'bumped_at' => now()]);
+        }
 
         return response()->json([
             'message' => 'Product bumped to top',

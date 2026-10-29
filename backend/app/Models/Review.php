@@ -17,11 +17,14 @@ class Review extends Model
         'rating',
         'comment',
         'is_visible',
+        'matches_photos',
+        'delivery_speed',
     ];
 
     protected $casts = [
         'rating' => 'integer',
         'is_visible' => 'boolean',
+        'matches_photos' => 'boolean',
         'hidden_at' => 'datetime',
     ];
 
