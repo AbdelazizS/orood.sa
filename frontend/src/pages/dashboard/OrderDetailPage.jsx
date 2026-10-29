@@ -682,7 +682,6 @@ export function OrderDetailPage() {
           purchaseId={Number(id)}
           listingProductId={order.product?.id ?? null}
           existingReview={null}
-          askListingQuestions
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ["account", "orders", id] })
           }}
