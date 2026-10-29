@@ -1592,6 +1592,8 @@
     }
   },
   "admin": {
+    "accountNumber": "Account no.",
+    "searchUsersHint": "Name, email, phone or account no.",
     "siteFeatures": {
       "title": "Wholesale market visibility",
       "hint": "Show or hide the “Wholesale market” button on the homepage and footer. The wholesale page itself is unchanged.",
@@ -3993,6 +3995,8 @@
     "sizingHintBody": "Think about your typical daily sales exposure. Example: if you might sell about 10 phones at 500 SAR each in a day, a 5,000 SAR hold illustrates the same order of risk. This is a planning hint, not a strict formula. When you have an active guarantee, buyers see a checkmark on your profile."
   },
   "publicProfile": {
+    "accountNumber": "Account number",
+    "accountNumberShort": "Account no.",
     "breadcrumbHome": "Home",
     "breadcrumbProfile": "Account",
     "breadcrumbAccount": "Account {{username}}",

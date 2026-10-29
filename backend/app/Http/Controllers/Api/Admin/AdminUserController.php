@@ -31,6 +31,13 @@ class AdminUserController extends Controller
         $query = User::query()
             ->with('city')
             ->when($request->search, fn ($q) => $q->where(function ($q) use ($request) {
+                // رقم الحساب: "123456" or "#123456" finds the account directly.
+                $digits = ltrim(trim((string) $request->search), '#');
+                if (preg_match('/^\d{6}$/', $digits)) {
+                    $q->where('account_number', $digits)->orWhere('phone', 'like', '%' . $digits . '%');
+
+                    return;
+                }
                 $q->where('name', 'like', '%' . $request->search . '%')
                     ->orWhere('email', 'like', '%' . $request->search . '%')
                     ->orWhere('phone', 'like', '%' . $request->search . '%');
@@ -73,6 +80,7 @@ class AdminUserController extends Controller
 
         $data = $users->getCollection()->map(fn ($u) => [
             'id' => $u->id,
+            'account_number' => $u->account_number,
             'name' => $u->name,
             'email' => $u->email,
             'phone' => $u->phone,
@@ -157,6 +165,7 @@ class AdminUserController extends Controller
         return response()->json([
             'data' => [
                 'id' => $user->id,
+                'account_number' => $user->account_number,
                 'name' => $user->name,
                 'email' => $user->email,
                 'phone' => $user->phone,

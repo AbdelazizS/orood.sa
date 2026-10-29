@@ -18,6 +18,7 @@ class PublicProfileResource extends JsonResource
         return [
             'id' => $this->id,
             'username' => $this->username,
+            'account_number' => $this->account_number,
             'avatar_url' => $this->avatar_url,
             'cover_url' => $this->cover_photo_url ?? $this->cover_url ?? null,
             'bio' => $this->bio,

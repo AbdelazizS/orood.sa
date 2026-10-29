@@ -232,6 +232,15 @@ export function ProfileCoverAvatar({ user, profileIdentifier, isOwner }) {
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-start text-lg font-bold break-words sm:text-xl">{displayName}</h1>
                 <AccountKindBadge user={user} />
+                {user?.account_number ? (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/60 px-2 py-0.5 text-xs text-muted-foreground"
+                    title={t("publicProfile.accountNumber", "رقم الحساب")}
+                  >
+                    {t("publicProfile.accountNumberShort", "رقم الحساب")}
+                    <span className="font-semibold tabular-nums text-foreground" dir="ltr">{user.account_number}</span>
+                  </span>
+                ) : null}
                 {user?.is_verified ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
                     <ShieldCheck className="h-3 w-3" />

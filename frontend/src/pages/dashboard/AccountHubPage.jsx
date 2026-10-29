@@ -66,6 +66,12 @@ export function AccountHubPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("dashboard.nav.account")}</h1>
         <p className="mt-1 text-sm text-muted-foreground max-w-2xl">{t("dashboard.accountHubSubtitle")}</p>
+        {user?.account_number ? (
+          <p className="mt-2 inline-flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-sm">
+            {t("publicProfile.accountNumber", "رقم الحساب")}
+            <span className="font-bold tabular-nums tracking-wider" dir="ltr">{user.account_number}</span>
+          </p>
+        ) : null}
       </div>
 
       <Tabs value={tab} onValueChange={setTab} className="w-full">

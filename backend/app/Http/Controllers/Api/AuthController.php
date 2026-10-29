@@ -502,6 +502,7 @@ class AuthController extends Controller
             'id' => $user->id,
             'name' => $user->name,
             'username' => $user->username,
+            'account_number' => $user->account_number,
             'email' => $user->email,
             'pending_email' => $user->pending_email,
             'phone' => $user->phone,

@@ -59,6 +59,11 @@ const MEMBER_FILTERS = [
 
 function userColumns({ t, i18n, setEditingUser, setVerifyUser, modMutation, navigate, currentUserId }) {
   return [
+    {
+      id: "account_number",
+      header: t("admin.accountNumber", "رقم الحساب"),
+      cell: ({ row }) => <span className="font-medium tabular-nums" dir="ltr">{row.original.account_number ?? "—"}</span>,
+    },
     { id: "name", header: t("admin.name"), cell: ({ row }) => row.original.name },
     { id: "email", header: t("auth.email"), cell: ({ row }) => row.original.email },
     { id: "phone", header: t("admin.phone"), cell: ({ row }) => row.original.phone || "—" },
@@ -337,10 +342,10 @@ export function AdminUsersPage() {
           <div className="relative">
             <Search className="absolute start-2 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
-              placeholder={t("admin.search")}
+              placeholder={t("admin.searchUsersHint", "الاسم، البريد، الجوال أو رقم الحساب")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="ps-8 w-48"
+              className="ps-8 w-64 max-w-full"
             />
           </div>
           <Select value={roleFilter || "all"} onValueChange={(v) => setRoleFilter(v === "all" ? "" : v)}>

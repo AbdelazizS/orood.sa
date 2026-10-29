@@ -18,7 +18,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import apiClient from "@/lib/apiClient"
 import { VerificationBadge } from "@/components/auth/VerificationBadge"
-import { ArrowRight, User, Mail, Phone, MapPin, Shield, Wallet, Check } from "lucide-react"
+import { ArrowRight, User, Mail, Phone, MapPin, Shield, Wallet, Check, Hash } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useAuthStore } from "@/store/useAuthStore"
 import { publicProfilePath } from "@/lib/profileRoutes"
@@ -133,6 +133,13 @@ export function AdminUserDetailPage() {
               <div>
                 <p className="text-sm text-muted-foreground">{t("admin.name", "الاسم")}</p>
                 <p className="font-medium">{user.name}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Hash className="size-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm text-muted-foreground">{t("admin.accountNumber", "رقم الحساب")}</p>
+                <p className="font-semibold tabular-nums tracking-wider" dir="ltr">{user.account_number ?? "—"}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">

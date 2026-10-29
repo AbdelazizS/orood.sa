@@ -193,6 +193,26 @@ class User extends Authenticatable
         return (string) $this->role === 'company';
     }
 
+    protected static function booted(): void
+    {
+        // رقم الحساب: a unique 6-digit number for every new account.
+        static::creating(function (User $user) {
+            if (empty($user->account_number)) {
+                $user->account_number = self::generateAccountNumber();
+            }
+        });
+    }
+
+    /** A random unused 6-digit account number (100000–999999). */
+    public static function generateAccountNumber(): string
+    {
+        do {
+            $number = (string) random_int(100000, 999999);
+        } while (\Illuminate\Support\Facades\DB::table('users')->where('account_number', $number)->exists());
+
+        return $number;
+    }
+
     public function isSubscriber(): bool
     {
         return (string) $this->role === UserRole::SUBSCRIBER->value;
