@@ -3951,6 +3951,11 @@
   },
   "listingDetail": {
     "quality": {
+      "matchesPhotosShort": "مطابقة للصور",
+      "deliverySpeedShort": "سرعة التوصيل",
+      "complaintsShort": "الشكاوى",
+      "noComplaints": "لا توجد شكاوى",
+      "hasComplaints": "بلاغات قيد المتابعة",
       "verified": "{{count}} مشترٍ موثّق",
       "rate": "قيّم هذا المنتج",
       "editMine": "تعديل تقييمي",

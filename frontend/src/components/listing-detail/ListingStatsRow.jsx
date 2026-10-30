@@ -39,28 +39,42 @@ export function ListingStatsRow({ product }) {
   // Buyer feedback after delivery (API: data.quality).
   const quality = product?.quality ?? null
   const pct = (v) => (v == null ? "—" : `${v}%`)
+  // Bar colour by score: green ≥ 80%, amber ≥ 50%, red below.
+  const scoreTone = (v) =>
+    v == null ? "bg-muted-foreground/20" : v >= 80 ? "bg-emerald-500" : v >= 50 ? "bg-amber-500" : "bg-red-500"
   const qualityItems = quality
     ? [
         {
           id: "photos",
-          label: t("listingDetail.quality.matchesPhotos", "المنتج / الخدمة مطابقة للصور"),
+          label: t("listingDetail.quality.matchesPhotosShort", "مطابقة للصور"),
+          fullLabel: t("listingDetail.quality.matchesPhotos", "المنتج / الخدمة مطابقة للصور"),
           value: pct(quality.matches_photos_pct),
+          percent: quality.matches_photos_pct,
           icon: ImageIcon,
-          tone: "text-primary",
+          iconWrap: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
         },
         {
           id: "speed",
-          label: t("listingDetail.quality.deliverySpeed", "سرعة التوصيل / الإنجاز"),
+          label: t("listingDetail.quality.deliverySpeedShort", "سرعة التوصيل"),
+          fullLabel: t("listingDetail.quality.deliverySpeed", "سرعة التوصيل / الإنجاز"),
           value: pct(quality.delivery_speed_pct),
+          percent: quality.delivery_speed_pct,
           icon: Truck,
-          tone: "text-primary",
+          iconWrap: "bg-sky-500/10 text-sky-600 dark:text-sky-400",
         },
         {
           id: "complaints",
-          label: t("listingDetail.quality.complaints", "عدد الشكاوى على المنتج / الخدمة"),
+          label: t("listingDetail.quality.complaintsShort", "الشكاوى"),
+          fullLabel: t("listingDetail.quality.complaints", "عدد الشكاوى على المنتج / الخدمة"),
           value: quality.complaints_count ?? 0,
+          percent: null,
           icon: ShieldAlert,
-          tone: quality.complaints_count ? "text-destructive" : "text-muted-foreground",
+          iconWrap: quality.complaints_count
+            ? "bg-red-500/10 text-red-600 dark:text-red-400"
+            : "bg-muted text-muted-foreground",
+          note: quality.complaints_count
+            ? null
+            : t("listingDetail.quality.noComplaints", "لا توجد شكاوى"),
         },
       ]
     : []
@@ -139,40 +153,63 @@ export function ListingStatsRow({ product }) {
       </div>
 
       {!isWholesale && quality ? (
-        <div dir={direction} className="border-t border-border/60 px-4 py-3 sm:px-6">
-          <p className="mb-2 text-center text-xs font-semibold text-muted-foreground">
-            {t("listingDetail.quality.title", "بعد استلام واكتمال الطلب")}
-          </p>
-          <div className="grid grid-cols-3 gap-x-2 gap-y-2 sm:gap-x-4">
-            {qualityItems.map(({ id, label, value, icon: IconComponent, tone }) => (
-              <div key={id} className="flex min-w-0 flex-col items-center justify-center gap-1 text-center">
-                <div className="flex items-center justify-center gap-1.5">
-                  {createElement(IconComponent, { className: cn("size-5 shrink-0", tone) })}
-                  <p className="text-lg font-bold tabular-nums text-foreground">{value}</p>
-                </div>
-                <p className="max-w-full text-[11px] leading-snug text-muted-foreground sm:text-xs">{label}</p>
+        <section dir={direction} className="border-t border-border/60 px-4 py-5 sm:px-6 sm:py-6" aria-label={t("listingDetail.quality.title", "بعد استلام واكتمال الطلب")}>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="flex items-center gap-2 text-sm font-bold text-foreground sm:text-base">
+              <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <BadgeCheck className="size-4" aria-hidden />
+              </span>
+              {t("listingDetail.quality.title", "بعد استلام واكتمال الطلب")}
+            </h3>
+            {quality.ratings_count ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+                <Star className="size-3.5 fill-amber-400 text-amber-400" aria-hidden />
+                {t("listingDetail.quality.basedOn", { count: quality.ratings_count, defaultValue: "حسب تقييم {{count}} مشترٍ" })}
+                {quality.verified_count ? (
+                  <span className="text-primary">
+                    · {t("listingDetail.quality.verified", { count: quality.verified_count, defaultValue: "{{count}} مشترٍ موثّق" })}
+                  </span>
+                ) : null}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            {qualityItems.map(({ id, label, fullLabel, value, percent, icon: IconComponent, iconWrap, note }) => (
+              <div
+                key={id}
+                title={fullLabel}
+                className="flex min-w-0 flex-col items-center gap-2 rounded-2xl border border-border bg-muted/25 px-2 py-3.5 text-center shadow-[0_1px_2px_rgb(0_0_0/0.04)] sm:px-3 sm:py-4"
+              >
+                <span className={cn("flex size-10 items-center justify-center rounded-full", iconWrap)}>
+                  {createElement(IconComponent, { className: "size-5", "aria-hidden": true })}
+                </span>
+                <p className="text-xl font-extrabold leading-none tabular-nums text-foreground sm:text-2xl">{value}</p>
+                {id !== "complaints" ? (
+                  <div className="h-1.5 w-full max-w-[7rem] overflow-hidden rounded-full bg-muted" aria-hidden>
+                    <div className={cn("h-full rounded-full transition-[width]", scoreTone(percent))} style={{ width: `${percent ?? 0}%` }} />
+                  </div>
+                ) : (
+                  <p className={cn("text-[10px] font-semibold sm:text-[11px]", quality.complaints_count ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400")}>
+                    {note ?? t("listingDetail.quality.hasComplaints", "بلاغات قيد المتابعة")}
+                  </p>
+                )}
+                <p className="max-w-full text-xs font-medium leading-snug text-muted-foreground">{label}</p>
               </div>
             ))}
           </div>
-          {quality.ratings_count ? (
-            <p className="mt-2 flex flex-wrap items-center justify-center gap-x-2 text-center text-[11px] text-muted-foreground">
-              {t("listingDetail.quality.basedOn", { count: quality.ratings_count, defaultValue: "حسب تقييم {{count}} مشترٍ" })}
-              {quality.verified_count ? (
-                <span className="inline-flex items-center gap-1 text-primary">
-                  <BadgeCheck className="size-3.5" aria-hidden />
-                  {t("listingDetail.quality.verified", { count: quality.verified_count, defaultValue: "{{count}} مشترٍ موثّق" })}
-                </span>
-              ) : null}
-            </p>
-          ) : (
-            <p className="mt-2 text-center text-[11px] text-muted-foreground">
+
+          {!quality.ratings_count ? (
+            <p className="mx-auto mt-4 flex w-fit max-w-full items-center gap-1.5 rounded-full bg-muted/50 px-3 py-1.5 text-center text-[11px] text-muted-foreground sm:text-xs">
+              <Star className="size-3.5 shrink-0 text-amber-400" aria-hidden />
               {t("listingDetail.quality.none", "لا توجد تقييمات بعد — يقيّم المشتري بعد استلام الطلب")}
             </p>
-          )}
+          ) : null}
+
           {feedback?.can_rate ? (
-            <div className="mt-2 flex justify-center">
-              <Button size="sm" variant="outline" className="gap-1.5 rounded-full" onClick={() => setRateOpen(true)}>
-                <Star className="size-4 text-amber-500" aria-hidden />
+            <div className="mt-4 flex justify-center">
+              <Button className="h-10 w-full gap-2 rounded-full sm:w-auto sm:px-6" variant={feedback.mine ? "outline" : "default"} onClick={() => setRateOpen(true)}>
+                <Star className={cn("size-4", feedback.mine ? "text-amber-500" : "fill-current")} aria-hidden />
                 {feedback.mine
                   ? t("listingDetail.quality.editMine", "تعديل تقييمي")
                   : t("listingDetail.quality.rate", "قيّم هذا المنتج")}
@@ -188,7 +225,7 @@ export function ListingStatsRow({ product }) {
               verified={Boolean(feedback?.verified_purchase)}
             />
           ) : null}
-        </div>
+        </section>
       ) : null}
 
       <Separator />

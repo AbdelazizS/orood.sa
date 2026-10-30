@@ -3858,6 +3858,11 @@
   },
   "listingDetail": {
     "quality": {
+      "matchesPhotosShort": "Matches photos",
+      "deliverySpeedShort": "Delivery speed",
+      "complaintsShort": "Complaints",
+      "noComplaints": "No complaints",
+      "hasComplaints": "Reports under review",
       "verified": "{{count}} verified buyer(s)",
       "rate": "Rate this item",
       "editMine": "Edit my rating",
