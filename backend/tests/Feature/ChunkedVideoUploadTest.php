@@ -68,6 +68,23 @@ class ChunkedVideoUploadTest extends TestCase
         $this->assertDirectoryDoesNotExist(storage_path('app/video-chunks/'.$owner->id.'/'.$uploadId));
     }
 
+    /** Regression: the pieces used to share the user's throttle counter, so saving failed with "Too Many Attempts". */
+    public function test_many_pieces_do_not_block_saving_the_video(): void
+    {
+        Storage::fake('public');
+        $owner = User::factory()->create(['role' => 'seller']);
+        $listing = Product::factory()->create(['user_id' => $owner->id, 'status' => 'published', 'moderation_status' => 'approved']);
+        $uploadId = (string) Str::uuid();
+
+        $this->sendInChunks($owner, $this->fakeMp4(80 * 2048), $uploadId, 2048); // 80 pieces
+
+        $this->as($owner)->postJson('/api/v1/products/'.$listing->id.'/videos', ['upload_id' => $uploadId, 'duration_sec' => 30])
+            ->assertCreated();
+        // Other limited actions (likes, views…) still work right after.
+        $video = CompanyVideo::query()->latest('id')->firstOrFail();
+        $this->as($owner)->postJson('/api/v1/videos/'.$video->id.'/like')->assertOk();
+    }
+
     public function test_incomplete_or_wrong_uploads_are_rejected(): void
     {
         Storage::fake('public');

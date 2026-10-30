@@ -1,7 +1,7 @@
 import apiClient from "@/lib/apiClient"
 
-/** 1 MB pieces: well under PHP / nginx default body limits, so big videos never hit "POST data is too large". */
-export const VIDEO_CHUNK_BYTES = 1024 * 1024
+/** 512 KB pieces: under nginx's 1 MB and PHP's 2 MB default limits, so big videos never hit "POST data is too large". */
+export const VIDEO_CHUNK_BYTES = 512 * 1024
 
 function uuid() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID()

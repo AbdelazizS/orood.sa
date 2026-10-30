@@ -194,9 +194,9 @@ Route::prefix('v1')->group(function () {
             Route::put('/products/{product}', [ProductController::class, 'update']);
             Route::post('/products/{product}/publish', [ProductController::class, 'publish']);
             // Owner's video on a listing (any section).
-            Route::post('/uploads/video-chunks', [\App\Http\Controllers\Api\VideoChunkController::class, 'store'])->middleware('throttle:600,1');
+            Route::post('/uploads/video-chunks', [\App\Http\Controllers\Api\VideoChunkController::class, 'store'])->middleware('throttle:video-chunks');
             Route::get('/products/{product}/my-videos', [\App\Http\Controllers\Api\ListingVideoController::class, 'mine']);
-            Route::post('/products/{product}/videos', [\App\Http\Controllers\Api\ListingVideoController::class, 'store'])->middleware('throttle:20,1');
+            Route::post('/products/{product}/videos', [\App\Http\Controllers\Api\ListingVideoController::class, 'store'])->middleware('throttle:video-save');
             Route::delete('/products/{product}/videos/{video}', [\App\Http\Controllers\Api\ListingVideoController::class, 'destroy']);
         });
         Route::get('/products', [ProductController::class, 'index']);
@@ -214,7 +214,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/video-comments/{comment}/heart', [\App\Http\Controllers\Api\CompanyVideoController::class, 'toggleHeart']);
         Route::post('/video-comments/{comment}/hide', [\App\Http\Controllers\Api\CompanyVideoController::class, 'toggleHide']);
         Route::get('/company/videos', [\App\Http\Controllers\Api\Company\CompanyVideoManageController::class, 'index']);
-        Route::post('/company/videos', [\App\Http\Controllers\Api\Company\CompanyVideoManageController::class, 'store'])->middleware('throttle:20,1');
+        Route::post('/company/videos', [\App\Http\Controllers\Api\Company\CompanyVideoManageController::class, 'store'])->middleware('throttle:video-save');
         Route::put('/company/videos/{video}', [\App\Http\Controllers\Api\Company\CompanyVideoManageController::class, 'update']);
         Route::delete('/company/videos/{video}', [\App\Http\Controllers\Api\Company\CompanyVideoManageController::class, 'destroy']);
         Route::put('/company/activities', [\App\Http\Controllers\Api\Company\CompanyVideoManageController::class, 'updateActivities']);

@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Large videos arrive in small pieces (1 MB) so the server's PHP / nginx body limits never reject
+ * Large videos arrive in small pieces (512 KB) so the server's PHP / nginx body limits never reject
  * the upload ("The POST data is too large"). The pieces are joined when the listing / channel
  * video is saved with its upload_id.
  */
