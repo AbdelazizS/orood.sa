@@ -3858,6 +3858,24 @@
   },
   "listingDetail": {
     "quality": {
+      "verified": "{{count}} verified buyer(s)",
+      "rate": "Rate this item",
+      "editMine": "Edit my rating",
+      "rateTitle": "Rate this product / service",
+      "rateVerified": "Your rating counts as a verified buyer.",
+      "rateHint": "Rate after receiving the item or the service.",
+      "qMatches": "Does the product / service match the photos?",
+      "yesMatches": "Yes, it matches",
+      "notMatches": "Doesn't match",
+      "speed": {
+        "fast": "Fast",
+        "normal": "Average",
+        "slow": "Slow"
+      },
+      "comment": "Note (optional)",
+      "submit": "Send rating",
+      "update": "Update my rating",
+      "thanks": "Thanks, your rating was saved.",
       "title": "After the order is received",
       "matchesPhotos": "Product / service matches the photos",
       "deliverySpeed": "Delivery / completion speed",

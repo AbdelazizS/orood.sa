@@ -166,6 +166,20 @@ class ReviewController extends Controller
 
         $review = Review::updateOrCreate($uniqueKeys, $data);
 
+        // The buyer's answers about the listing also count on the listing page (verified purchase).
+        if ($reviewer->id === (int) $purchase->buyer_id && $purchase->product_id
+            && isset($validated['matches_photos'], $validated['delivery_speed'])) {
+            \App\Models\ListingFeedback::query()->updateOrCreate(
+                ['product_id' => $purchase->product_id, 'user_id' => $reviewer->id],
+                [
+                    'matches_photos' => (bool) $validated['matches_photos'],
+                    'delivery_speed' => $validated['delivery_speed'],
+                    'verified_purchase' => true,
+                    'purchase_id' => $purchase->id,
+                ],
+            );
+        }
+
         $target->recalculateRating();
 
         $review->load('reviewer');

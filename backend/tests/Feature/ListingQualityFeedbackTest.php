@@ -59,9 +59,40 @@ class ListingQualityFeedbackTest extends TestCase
         $quality = $this->withoutHeader('Authorization')->getJson('/api/v1/listings/'.$product->id)->assertOk()->json('data.quality');
 
         $this->assertSame(4, $quality['ratings_count']);
+        $this->assertSame(4, $quality['verified_count']);   // all from delivered orders
         $this->assertSame(75, $quality['matches_photos_pct']);       // 3 of 4
         $this->assertSame(63, $quality['delivery_speed_pct']);       // (100+50+0+100)/4 = 62.5
         $this->assertSame(1, $quality['complaints_count']);
+    }
+
+    public function test_people_who_messaged_the_seller_can_rate_others_cannot_and_rating_again_updates(): void
+    {
+        $seller = User::factory()->create(['role' => 'seller']);
+        $product = Product::factory()->create(['user_id' => $seller->id, 'status' => 'published', 'moderation_status' => 'approved']);
+        $asker = User::factory()->create(['role' => 'buyer']);
+        $stranger = User::factory()->create(['role' => 'buyer']);
+
+        $conversation = \App\Models\Conversation::query()->create(['product_id' => $product->id, 'buyer_id' => $asker->id, 'seller_id' => $seller->id]);
+        \App\Models\Message::query()->create(['conversation_id' => $conversation->id, 'user_id' => $asker->id, 'body' => 'هل ما زال متوفراً؟']);
+
+        $this->as($asker)->getJson('/api/v1/listings/'.$product->id.'/feedback/mine')
+            ->assertOk()->assertJsonPath('data.can_rate', true)->assertJsonPath('data.verified_purchase', false);
+        $this->as($stranger)->getJson('/api/v1/listings/'.$product->id.'/feedback/mine')->assertJsonPath('data.can_rate', false);
+
+        $this->as($asker)->postJson('/api/v1/listings/'.$product->id.'/feedback', ['matches_photos' => false, 'delivery_speed' => 'slow'])->assertOk();
+        // Changing my mind updates the same rating (no double counting).
+        $this->as($asker)->postJson('/api/v1/listings/'.$product->id.'/feedback', ['matches_photos' => true, 'delivery_speed' => 'fast'])
+            ->assertOk()->assertJsonPath('data.ratings_count', 1)->assertJsonPath('data.matches_photos_pct', 100);
+
+        $this->as($stranger)->postJson('/api/v1/listings/'.$product->id.'/feedback', ['matches_photos' => true, 'delivery_speed' => 'fast'])->assertForbidden();
+        $this->as($seller)->postJson('/api/v1/listings/'.$product->id.'/feedback', ['matches_photos' => true, 'delivery_speed' => 'fast'])->assertForbidden();
+        $this->as($asker)->postJson('/api/v1/listings/'.$product->id.'/feedback', ['delivery_speed' => 'fast'])->assertStatus(422);
+
+        $this->app['auth']->forgetGuards();
+        $quality = $this->withoutHeader('Authorization')->getJson('/api/v1/listings/'.$product->id)->json('data.quality');
+        $this->assertSame(1, $quality['ratings_count']);
+        $this->assertSame(0, $quality['verified_count']);
+        $this->assertSame(100, $quality['delivery_speed_pct']);
     }
 
     public function test_listing_without_feedback_has_empty_percentages_and_seller_answers_are_ignored(): void

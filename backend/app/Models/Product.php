@@ -415,25 +415,23 @@ class Product extends Model
 
     /**
      * Buyer feedback shown under the listing stats: «مطابق للصور» %, «سرعة التوصيل» %, complaints.
+     * Only real answers from people who received the item or dealt with the seller (ListingFeedback).
      *
-     * @return array{ratings_count: int, matches_photos_pct: ?int, delivery_speed_pct: ?int, complaints_count: int}
+     * @return array{ratings_count: int, verified_count: int, matches_photos_pct: ?int, delivery_speed_pct: ?int, complaints_count: int}
      */
     public function qualitySummary(): array
     {
-        $reviews = Review::query()
+        $rows = ListingFeedback::query()
             ->where('product_id', $this->id)
-            ->where(fn ($q) => $q->whereNull('is_visible')->orWhere('is_visible', true))
-            ->where(fn ($q) => $q->whereNotNull('matches_photos')->orWhereNotNull('delivery_speed'))
-            ->get(['matches_photos', 'delivery_speed']);
-
-        $photos = $reviews->whereNotNull('matches_photos');
-        $speed = $reviews->whereNotNull('delivery_speed');
-        $speedScore = ['fast' => 100, 'normal' => 50, 'slow' => 0];
+            ->where('is_hidden', false)
+            ->get(['matches_photos', 'delivery_speed', 'verified_purchase']);
+        $count = $rows->count();
 
         return [
-            'ratings_count' => $reviews->count(),
-            'matches_photos_pct' => $photos->isEmpty() ? null : (int) round(100 * $photos->where('matches_photos', true)->count() / $photos->count()),
-            'delivery_speed_pct' => $speed->isEmpty() ? null : (int) round($speed->avg(fn ($r) => $speedScore[$r->delivery_speed] ?? 50)),
+            'ratings_count' => $count,
+            'verified_count' => $rows->where('verified_purchase', true)->count(),
+            'matches_photos_pct' => $count ? (int) round(100 * $rows->where('matches_photos', true)->count() / $count) : null,
+            'delivery_speed_pct' => $count ? (int) round($rows->avg(fn ($r) => ListingFeedback::SPEED_SCORE[$r->delivery_speed] ?? 50)) : null,
             // Reports on this listing, except ones the admins rejected.
             'complaints_count' => ListingReport::query()
                 ->where('product_id', $this->id)

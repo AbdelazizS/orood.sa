@@ -86,6 +86,7 @@ Route::prefix('v1')->group(function () {
     Route::middleware(['optional.auth.api'])->group(function () {
         Route::get('/listings/{listing}', [ListingController::class, 'show']);
         Route::get('/listings/{listing}/reviews', [ReviewController::class, 'forListing']);
+        Route::get('/listings/{listing}/feedback/mine', [\App\Http\Controllers\Api\ListingFeedbackController::class, 'mine']);
         Route::get('/products/{product}', ProductShowController::class);
         Route::get('/companies/{company}/videos', [\App\Http\Controllers\Api\CompanyVideoController::class, 'channel']);
         Route::get('/videos/shorts/latest', [\App\Http\Controllers\Api\CompanyVideoController::class, 'latestShorts']);
@@ -263,6 +264,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/profile/cover', [ProfileController::class, 'updateCover']);
         Route::get('/users/{user}/reviews', [ReviewController::class, 'index']);
         Route::post('/reviews', [ReviewController::class, 'store'])->middleware('not.subscriber');
+        Route::post('/listings/{listing}/feedback', [\App\Http\Controllers\Api\ListingFeedbackController::class, 'store'])->middleware(['not.subscriber', 'throttle:20,1']);
         Route::put('/reviews/{review}', [ReviewController::class, 'update']);
         Route::delete('/reviews/{review}', [ReviewController::class, 'destroy']);
         Route::post('/reviews/{review}/react', [ReviewController::class, 'react']);
