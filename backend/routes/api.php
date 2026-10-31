@@ -500,6 +500,7 @@ Route::prefix('v1')->group(function () {
         Route::patch('/products/{product}/marketing-status', [AdminProductController::class, 'updateMarketingStatus']);
         Route::get('/analytics', AdminAnalyticsController::class);
         Route::get('/analytics/regions', [AdminAnalyticsController::class, 'regions']);
+        Route::get('/market-analytics', \App\Http\Controllers\Api\Admin\AdminMarketAnalyticsController::class);
         Route::get('/overview', AdminOverviewController::class);
         Route::get('/audit-logs', [AdminAuditController::class, 'index']);
         Route::get('/verifications', [AdminVerificationController::class, 'index'])->middleware('permission:compliance.review_document_verifications');

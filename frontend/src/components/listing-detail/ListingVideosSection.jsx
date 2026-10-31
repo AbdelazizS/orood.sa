@@ -29,7 +29,7 @@ export function ListingVideosSection({ productId }) {
         {t("listingVideos.title", "فيديوهات الإعلان")}
       </h2>
       {videos.length ? (
-        <div className={cn("grid grid-cols-1 gap-4", videos.length > 1 && "sm:grid-cols-2")}>
+        <div className={cn("grid grid-cols-1 gap-4", videos.length > 1 ? "sm:grid-cols-2" : "mx-auto max-w-md")}>
           {videos.map((v) => (
             <VideoCard key={v.id} video={v} />
           ))}
@@ -40,12 +40,12 @@ export function ListingVideosSection({ productId }) {
         <div
           className={cn(
             "grid gap-3",
-            shorts.length === 1 ? "grid-cols-1 justify-items-center" : "grid-cols-2 sm:grid-cols-3",
+            shorts.length === 1 ? "grid-cols-1 justify-items-center" : "grid-cols-2 justify-items-center sm:grid-cols-3 md:grid-cols-4",
             videos.length && "mt-4",
           )}
         >
           {shorts.map((v) => (
-            <ShortCard key={v.id} video={v} className={shorts.length === 1 ? "w-full max-w-[280px] sm:w-full" : "w-full sm:w-full"} />
+            <ShortCard key={v.id} video={v} className={shorts.length === 1 ? "w-full max-w-[200px] sm:w-full" : "w-full max-w-[200px] sm:w-full"} />
           ))}
         </div>
       ) : null}

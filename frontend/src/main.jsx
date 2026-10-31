@@ -19,6 +19,9 @@ import { Toaster } from "@/components/ui/sonner"
 import { fetchPublicBranding } from "@/services/brandingService"
 import { brandingQueryKey } from "@/hooks/useBranding"
 import { writeBrandingCache } from "@/lib/brandingCache"
+import { installSingleVideoPlayback } from "@/lib/video/singlePlayback"
+
+installSingleVideoPlayback()
 
 const queryClient = new QueryClient({
   defaultOptions: {

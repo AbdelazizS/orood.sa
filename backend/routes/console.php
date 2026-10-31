@@ -62,3 +62,6 @@ Schedule::command('seo:generate-sitemap')->dailyAt('02:00');
 Schedule::command('subscribers:expire-ads')->hourly();
 Schedule::command('uploads:prune-video-chunks')->daily();
 Schedule::command('listings:expire-old')->dailyAt('03:30');
+// Market analytics: keep recent numbers fresh, then (only if enabled) delete events older than 75 days.
+Schedule::command('analytics:aggregate')->everyFifteenMinutes()->withoutOverlapping();
+Schedule::command('analytics:prune')->dailyAt('04:00')->withoutOverlapping();

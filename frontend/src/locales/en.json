@@ -1597,6 +1597,7 @@
     }
   },
   "admin": {
+    "marketAnalytics": "Market intelligence",
     "accountNumber": "Account no.",
     "searchUsersHint": "Name, email, phone or account no.",
     "siteFeatures": {
@@ -3858,6 +3859,9 @@
   },
   "listingDetail": {
     "quality": {
+      "titleAfterSale": "After the sale or completion",
+      "matchesPhotosFull": "Product / service matches the photos",
+      "complaintsCount": "Complaints",
       "matchesPhotosShort": "Matches photos",
       "deliverySpeedShort": "Delivery speed",
       "complaintsShort": "Complaints",

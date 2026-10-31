@@ -46,7 +46,7 @@ export function ListingStatsRow({ product }) {
     ? [
         {
           id: "photos",
-          label: t("listingDetail.quality.matchesPhotosShort", "مطابقة للصور"),
+          label: t("listingDetail.quality.matchesPhotosFull", "المنتج / الخدمة مطابق للصور"),
           fullLabel: t("listingDetail.quality.matchesPhotos", "المنتج / الخدمة مطابقة للصور"),
           value: pct(quality.matches_photos_pct),
           percent: quality.matches_photos_pct,
@@ -55,7 +55,7 @@ export function ListingStatsRow({ product }) {
         },
         {
           id: "speed",
-          label: t("listingDetail.quality.deliverySpeedShort", "سرعة التوصيل"),
+          label: t("listingDetail.quality.deliverySpeed", "سرعة التوصيل / الإنجاز"),
           fullLabel: t("listingDetail.quality.deliverySpeed", "سرعة التوصيل / الإنجاز"),
           value: pct(quality.delivery_speed_pct),
           percent: quality.delivery_speed_pct,
@@ -64,7 +64,7 @@ export function ListingStatsRow({ product }) {
         },
         {
           id: "complaints",
-          label: t("listingDetail.quality.complaintsShort", "الشكاوى"),
+          label: t("listingDetail.quality.complaintsCount", "عدد الشكاوى"),
           fullLabel: t("listingDetail.quality.complaints", "عدد الشكاوى على المنتج / الخدمة"),
           value: quality.complaints_count ?? 0,
           percent: null,
@@ -153,13 +153,13 @@ export function ListingStatsRow({ product }) {
       </div>
 
       {!isWholesale && quality ? (
-        <section dir={direction} className="border-t border-border/60 px-4 py-5 sm:px-6 sm:py-6" aria-label={t("listingDetail.quality.title", "بعد استلام واكتمال الطلب")}>
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <section dir={direction} className="border-t border-border/60 px-4 py-4 sm:px-6" aria-label={t("listingDetail.quality.titleAfterSale", "ما بعد البيع أو إنجاز الطلب")}>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h3 className="flex items-center gap-2 text-sm font-bold text-foreground sm:text-base">
-              <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <span className="flex size-7 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <BadgeCheck className="size-4" aria-hidden />
               </span>
-              {t("listingDetail.quality.title", "بعد استلام واكتمال الطلب")}
+              {t("listingDetail.quality.titleAfterSale", "ما بعد البيع أو إنجاز الطلب")}
             </h3>
             {quality.ratings_count ? (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
@@ -179,14 +179,14 @@ export function ListingStatsRow({ product }) {
               <div
                 key={id}
                 title={fullLabel}
-                className="flex min-w-0 flex-col items-center gap-2 rounded-2xl border border-border bg-muted/25 px-2 py-3.5 text-center shadow-[0_1px_2px_rgb(0_0_0/0.04)] sm:px-3 sm:py-4"
+                className="flex min-w-0 flex-col items-center gap-1.5 rounded-xl border border-border bg-muted/25 px-2 py-2.5 text-center sm:px-3"
               >
-                <span className={cn("flex size-10 items-center justify-center rounded-full", iconWrap)}>
-                  {createElement(IconComponent, { className: "size-5", "aria-hidden": true })}
+                <span className={cn("flex size-8 items-center justify-center rounded-full", iconWrap)}>
+                  {createElement(IconComponent, { className: "size-4", "aria-hidden": true })}
                 </span>
-                <p className="text-xl font-extrabold leading-none tabular-nums text-foreground sm:text-2xl">{value}</p>
+                <p className="text-lg font-extrabold leading-none tabular-nums text-foreground">{value}</p>
                 {id !== "complaints" ? (
-                  <div className="h-1.5 w-full max-w-[7rem] overflow-hidden rounded-full bg-muted" aria-hidden>
+                  <div className="h-1 w-full max-w-[6rem] overflow-hidden rounded-full bg-muted" aria-hidden>
                     <div className={cn("h-full rounded-full transition-[width]", scoreTone(percent))} style={{ width: `${percent ?? 0}%` }} />
                   </div>
                 ) : (
@@ -194,21 +194,21 @@ export function ListingStatsRow({ product }) {
                     {note ?? t("listingDetail.quality.hasComplaints", "بلاغات قيد المتابعة")}
                   </p>
                 )}
-                <p className="max-w-full text-xs font-medium leading-snug text-muted-foreground">{label}</p>
+                <p className="max-w-full text-[11px] font-medium leading-snug text-muted-foreground sm:text-xs">{label}</p>
               </div>
             ))}
           </div>
 
           {!quality.ratings_count ? (
-            <p className="mx-auto mt-4 flex w-fit max-w-full items-center gap-1.5 rounded-full bg-muted/50 px-3 py-1.5 text-center text-[11px] text-muted-foreground sm:text-xs">
+            <p className="mx-auto mt-3 flex w-fit max-w-full items-center gap-1.5 rounded-full bg-muted/50 px-3 py-1.5 text-center text-[11px] text-muted-foreground sm:text-xs">
               <Star className="size-3.5 shrink-0 text-amber-400" aria-hidden />
               {t("listingDetail.quality.none", "لا توجد تقييمات بعد — يقيّم المشتري بعد استلام الطلب")}
             </p>
           ) : null}
 
           {feedback?.can_rate ? (
-            <div className="mt-4 flex justify-center">
-              <Button className="h-10 w-full gap-2 rounded-full sm:w-auto sm:px-6" variant={feedback.mine ? "outline" : "default"} onClick={() => setRateOpen(true)}>
+            <div className="mt-3 flex justify-center">
+              <Button className="h-9 w-full gap-2 rounded-full sm:w-auto sm:px-6" variant={feedback.mine ? "outline" : "default"} onClick={() => setRateOpen(true)}>
                 <Star className={cn("size-4", feedback.mine ? "text-amber-500" : "fill-current")} aria-hidden />
                 {feedback.mine
                   ? t("listingDetail.quality.editMine", "تعديل تقييمي")

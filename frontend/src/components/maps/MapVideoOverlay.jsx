@@ -42,7 +42,7 @@ export function MapVideoOverlay({ marker, onClose }) {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 sm:p-6" role="dialog" aria-modal="true" aria-label={marker.title}>
-      <div className="relative h-full w-full overflow-hidden bg-black sm:h-[min(88dvh,820px)] sm:w-auto sm:max-w-full sm:rounded-2xl sm:aspect-[9/16]">
+      <div className="relative h-full w-full overflow-hidden bg-black sm:h-[92dvh] sm:w-[min(94vw,1100px)] sm:rounded-2xl">
         <video
           ref={videoRef}
           src={video.url}

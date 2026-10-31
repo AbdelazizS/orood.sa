@@ -89,6 +89,9 @@ class ListingVideoController extends Controller
             'published_at' => now(),
         ]);
 
+        // Fast start + file size after the response is sent (the uploader doesn't wait).
+        dispatch(fn () => app(\App\Services\Videos\VideoFastStart::class)->process($video))->afterResponse();
+
         return response()->json([
             'data' => P::video($video->load(self::RELATIONS), $user, [], $request->header('Accept-Language')),
         ], 201);

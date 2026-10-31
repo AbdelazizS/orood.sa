@@ -73,7 +73,8 @@ export function probeVideoFile(file) {
       const duration = Number.isFinite(video.duration) ? Math.round(video.duration) : 0
       try {
         const canvas = document.createElement("canvas")
-        const scale = Math.min(1, 1280 / Math.max(width, height || 1))
+        // 640px is plenty for cards and the poster; keeps grids light.
+        const scale = Math.min(1, 640 / Math.max(width, height || 1))
         canvas.width = Math.max(1, Math.round(width * scale))
         canvas.height = Math.max(1, Math.round(height * scale))
         canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height)
@@ -83,7 +84,7 @@ export function probeVideoFile(file) {
             finish({ duration, width, height, thumbnail: blob })
           },
           "image/jpeg",
-          0.82,
+          0.78,
         )
       } catch {
         clearTimeout(fallback)

@@ -1640,6 +1640,7 @@
     }
   },
   "admin": {
+    "marketAnalytics": "ذكاء السوق",
     "accountNumber": "رقم الحساب",
     "searchUsersHint": "الاسم، البريد، الجوال أو رقم الحساب",
     "siteFeatures": {
@@ -3951,6 +3952,9 @@
   },
   "listingDetail": {
     "quality": {
+      "titleAfterSale": "ما بعد البيع أو إنجاز الطلب",
+      "matchesPhotosFull": "المنتج / الخدمة مطابق للصور",
+      "complaintsCount": "عدد الشكاوى",
       "matchesPhotosShort": "مطابقة للصور",
       "deliverySpeedShort": "سرعة التوصيل",
       "complaintsShort": "الشكاوى",

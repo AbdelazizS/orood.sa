@@ -21,6 +21,16 @@ class ListingController extends Controller
         $perPage = (int) $request->input('per_page', 20);
         $paginator = $this->productFeedService->paginatedFeed($filters, $perPage);
 
+        // Search demand analytics: one event per search (first page only, so paging isn't counted twice).
+        if (! empty($filters['search']) && (int) $request->input('page', 1) === 1) {
+            \App\Services\Analytics\SearchEventRecorder::record(
+                (string) $filters['search'],
+                isset($filters['category_id']) ? (int) $filters['category_id'] : null,
+                isset($filters['city_id']) ? (int) $filters['city_id'] : null,
+                (int) $paginator->total(),
+            );
+        }
+
         return response()->json([
             'data' => ProductResource::collection($paginator),
             'meta' => [

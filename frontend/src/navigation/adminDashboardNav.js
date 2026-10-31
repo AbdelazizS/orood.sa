@@ -25,6 +25,7 @@ import {
   Handshake,
   Clapperboard,
   FolderCheck,
+  TrendingUp,
 } from "lucide-react"
 
 /**
@@ -40,6 +41,7 @@ export const adminNavSections = [
     items: [
       { to: "/admin", labelKey: "admin.dashboardTitle", icon: LayoutDashboard },
       { to: "/admin/analytics", labelKey: "analytics.title", icon: BarChart3 },
+      { to: "/admin/market-analytics", labelKey: "admin.marketAnalytics", icon: TrendingUp },
     ],
   },
   {

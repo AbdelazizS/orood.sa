@@ -42,6 +42,8 @@ class CompanyVideo extends Model
         'likes_count' => 'integer',
         'comments_count' => 'integer',
         'published_at' => 'datetime',
+        'optimized_at' => 'datetime',
+        'file_size_kb' => 'integer',
     ];
 
     public function company(): BelongsTo

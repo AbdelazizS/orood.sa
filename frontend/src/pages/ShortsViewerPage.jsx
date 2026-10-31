@@ -12,7 +12,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { ArrowLeft, Home, MessageSquare, ThumbsUp, Volume2, VolumeX } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-function ShortSlide({ video, active, muted, onToggleMute, onOpenComments, registerPlayer }) {
+/** near = the active Short or its neighbours: only these load their video (the rest show the thumbnail). */
+function ShortSlide({ video, active, near, muted, onToggleMute, onOpenComments, registerPlayer }) {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -46,12 +47,12 @@ function ShortSlide({ video, active, muted, onToggleMute, onOpenComments, regist
     <section data-short-id={video.id} className="relative flex h-full snap-start snap-always items-center justify-center bg-black">
       <video
         ref={ref}
-        src={video.url}
+        src={near ? video.url ?? undefined : undefined}
         poster={video.thumbnail_url ?? undefined}
         loop
         muted={muted}
         playsInline
-        preload="metadata"
+        preload={active ? "auto" : near ? "metadata" : "none"}
         onClick={(e) => (e.currentTarget.paused ? e.currentTarget.play() : e.currentTarget.pause())}
         className="h-full max-h-full w-auto max-w-full object-contain sm:aspect-[9/16] sm:object-cover"
       />
@@ -161,11 +162,12 @@ export function ShortsViewerPage() {
       </div>
 
       <div ref={containerRef} className="mx-auto h-full w-full max-w-[480px] snap-y snap-mandatory overflow-y-auto [scrollbar-width:none]">
-        {list.map((v) => (
+        {list.map((v, i) => (
           <div key={v.id} className="h-full">
             <ShortSlide
               video={v}
               active={activeId === v.id}
+              near={Math.abs(i - Math.max(0, list.findIndex((x) => x.id === activeId))) <= 1}
               muted={muted}
               onToggleMute={() => setMuted((m) => !m)}
               onOpenComments={setCommentsFor}
