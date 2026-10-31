@@ -19,8 +19,8 @@ class AnalyticsPrune extends Command
     public function handle(AnalyticsRetention $retention): int
     {
         $dry = (bool) $this->option('dry-run');
-        if (! $dry && ! config('analytics.retention_enabled') && ! $this->option('force')) {
-            $this->line('Analytics retention is disabled (ANALYTICS_RETENTION_ENABLED=false). Preview: php artisan analytics:prune --dry-run');
+        if (! $dry && ! AnalyticsRetention::autoEnabled() && ! $this->option('force')) {
+            $this->line('Automatic cleanup is off (admin: إدارة البيانات, or ANALYTICS_RETENTION_ENABLED). Preview: php artisan analytics:prune --dry-run');
 
             return self::SUCCESS;
         }

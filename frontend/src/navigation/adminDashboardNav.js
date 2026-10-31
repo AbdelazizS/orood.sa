@@ -26,6 +26,7 @@ import {
   Clapperboard,
   FolderCheck,
   TrendingUp,
+  Database,
 } from "lucide-react"
 
 /**
@@ -94,6 +95,7 @@ export const adminNavSections = [
       { to: "/admin/visitors", labelKey: "admin.visitorsTitle", icon: Eye },
       { to: "/admin/roles", labelKey: "admin.roles", icon: Shield, permission: "users.assign_roles" },
       { to: "/admin/settings", labelKey: "admin.settingsTitle", icon: SlidersHorizontal, permission: "settings.view" },
+      { to: "/admin/data-management", labelKey: "admin.dataManagement", icon: Database, permission: "settings.update" },
       { to: "/admin/seo", labelKey: "admin.seo.title", icon: Search, permission: "seo.manage" },
       { to: "/admin/audit", labelKey: "dashboard.auditLogs", icon: FileText },
     ],

@@ -62,6 +62,19 @@ listing edits and deletions. Aggregates contain no IPs or user ids.
 - Before deleting, any day in the deletion range without final aggregates is aggregated first.
 - Deletes in batches of 1000 ids per table; idempotent; results and failures are logged in `analytics_job_runs`.
 
+### Admin «إدارة البيانات» (`/admin/data-management`, permission `settings.update`)
+
+- **Automatic cleanup:** on/off switch and retention days (30–1825), stored in app settings (`data.retention`);
+  these override `ANALYTICS_RETENTION_ENABLED` / `ANALYTICS_RAW_RETENTION_DAYS`. Used by the 04:00 `analytics:prune`.
+- **Manual deletion:** analytics details or videos, older than a week / month / 3 / 6 months / a year, or a custom
+  date range. Always **preview → type «حذف» → execute**.
+  - Analytics: each day is aggregated (final) first, then marked `raw_purged_at`, so its numbers are never
+    recomputed from empty tables. The last 3 days (still being aggregated) cannot be deleted.
+  - Videos, scope `inactive_listings` (default: sold / expired / archived / deleted / suspended listings + hidden
+    videos), `hidden`, or `all`. Deletes the video file, thumbnail and record; listings left without a
+    published video go back to showing their price on the map.
+- Every run is logged in `analytics_job_runs` (with the admin who ran it, shown on the page) and in the audit log.
+
 ## 6. Video delivery audit and changes
 
 | Area | Finding | Change |

@@ -57,7 +57,7 @@ class AdminMarketAnalyticsController extends Controller
             'trend' => $this->trend($range, $days, $cityFilter, $categoryFilter),
             'meta' => [
                 'timezone' => $tz,
-                'raw_retention_days' => (int) config('analytics.raw_retention_days'),
+                'raw_retention_days' => \App\Support\DataRetentionSettings::get()['raw_days'],
                 'first_aggregated_date' => DB::table('analytics_aggregated_days')->min('date'),
                 'last_aggregated_at' => DB::table('analytics_aggregated_days')->max('events_aggregated_at'),
                 'completed_statuses' => config('analytics.completed_statuses'),

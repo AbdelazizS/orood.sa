@@ -1641,6 +1641,7 @@
   },
   "admin": {
     "marketAnalytics": "ذكاء السوق",
+    "dataManagement": "إدارة البيانات",
     "accountNumber": "رقم الحساب",
     "searchUsersHint": "الاسم، البريد، الجوال أو رقم الحساب",
     "siteFeatures": {

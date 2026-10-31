@@ -2,16 +2,17 @@
 
 namespace App\Services\Analytics;
 
+use App\Support\DataRetentionSettings;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Deletes detailed analytics events older than the retention window (default 75 days), in small batches.
+ * Deletes detailed analytics events, in small batches.
  *
  * Only these raw-event tables are touched: page_visits, visitors, analytics_search_events.
  * Business records (products, purchases, payments, users, reviews, reports, audit logs…) and the
- * aggregate tables are never deleted. Raw events of a day are deleted only after that day has been
- * aggregated as final, so historical statistics always survive.
+ * aggregate tables are never deleted. Every day being deleted is aggregated first (final), so
+ * the statistics in «ذكاء السوق» always survive.
  */
 class AnalyticsRetention
 {
@@ -22,30 +23,49 @@ class AnalyticsRetention
     }
 
     /**
+     * Automatic policy: everything older than the retention window.
+     *
      * @return array{cutoff: string, dry_run: bool, deleted: array<string, int>, aggregated_first: array<int, string>}
      */
     public function prune(bool $dryRun = true): array
     {
-        $tz = $this->aggregator->timezone();
         $cutoffDate = $this->aggregator->rawCutoffDate();
-        $cutoff = CarbonImmutable::parse($cutoffDate, $tz)->startOfDay()->utc();
+        $result = $this->pruneRange(null, $cutoffDate, $dryRun);
 
-        // Safety: every day being deleted must have final aggregates — aggregate any that don't yet.
+        return ['cutoff' => $cutoffDate] + $result;
+    }
+
+    /**
+     * Delete raw events created on Saudi days [$fromDate, $toDate) — $fromDate null = from the beginning.
+     *
+     * @return array{dry_run: bool, deleted: array<string, int>, aggregated_first: array<int, string>}
+     */
+    public function pruneRange(?string $fromDate, string $toDateExclusive, bool $dryRun = true): array
+    {
+        $tz = $this->aggregator->timezone();
+        $start = $fromDate ? CarbonImmutable::parse($fromDate, $tz)->startOfDay()->utc() : null;
+        $end = CarbonImmutable::parse($toDateExclusive, $tz)->startOfDay()->utc();
+        $scope = function ($q) use ($start, $end) {
+            if ($start) {
+                $q->where('created_at', '>=', $start);
+            }
+
+            return $q->where('created_at', '<', $end);
+        };
+
+        // Safety: aggregate (final) every day in the range that has events and isn't final yet.
         $aggregatedFirst = [];
-        $oldest = collect(self::RAW_TABLES)
-            ->map(fn ($t) => DB::table($t)->where('created_at', '<', $cutoff)->min('created_at'))
-            ->filter()->min();
+        $oldest = collect(self::RAW_TABLES)->map(fn ($t) => $scope(DB::table($t))->min('created_at'))->filter()->min();
         if ($oldest) {
             $day = CarbonImmutable::parse($oldest, 'UTC')->setTimezone($tz)->startOfDay();
             $finalDays = DB::table('analytics_aggregated_days')->where('events_final', true)->pluck('date')
                 ->map(fn ($d) => substr((string) $d, 0, 10))->flip();
-            while ($day->toDateString() < $cutoffDate) {
+            while ($day->toDateString() < $toDateExclusive) {
                 $d = $day->toDateString();
                 if (! isset($finalDays[$d])) {
                     $aggregatedFirst[] = $d;
                     if (! $dryRun) {
-                        // Events are still present (not deleted yet), so aggregate them directly.
-                        $this->aggregateOldDay($d);
+                        $this->aggregator->aggregateDay($d, true, true, true);
                     }
                 }
                 $day = $day->addDay();
@@ -56,13 +76,13 @@ class AnalyticsRetention
         $batch = (int) config('analytics.cleanup_batch', 1000);
         foreach (self::RAW_TABLES as $table) {
             if ($dryRun) {
-                $deleted[$table] = DB::table($table)->where('created_at', '<', $cutoff)->count();
+                $deleted[$table] = $scope(DB::table($table))->count();
 
                 continue;
             }
             $total = 0;
             do {
-                $ids = DB::table($table)->where('created_at', '<', $cutoff)->orderBy('id')->limit($batch)->pluck('id');
+                $ids = $scope(DB::table($table))->orderBy('id')->limit($batch)->pluck('id');
                 if ($ids->isNotEmpty()) {
                     $total += DB::table($table)->whereIn('id', $ids)->delete();
                 }
@@ -70,12 +90,20 @@ class AnalyticsRetention
             $deleted[$table] = $total;
         }
 
-        return ['cutoff' => $cutoffDate, 'dry_run' => $dryRun, 'deleted' => $deleted, 'aggregated_first' => $aggregatedFirst];
+        if (! $dryRun) {
+            $purgedDays = DB::table('analytics_aggregated_days')->where('date', '<', $toDateExclusive)->whereNull('raw_purged_at');
+            if ($fromDate) {
+                $purgedDays->where('date', '>=', $fromDate);
+            }
+            $purgedDays->update(['raw_purged_at' => now()]);
+        }
+
+        return ['dry_run' => $dryRun, 'deleted' => $deleted, 'aggregated_first' => $aggregatedFirst];
     }
 
-    /** Aggregate a day that is already outside the normal window (its raw events still exist). */
-    private function aggregateOldDay(string $date): void
+    /** Is automatic cleanup on (admin setting, else config)? */
+    public static function autoEnabled(): bool
     {
-        $this->aggregator->aggregateDay($date, true, true, true);
+        return DataRetentionSettings::get()['auto_enabled'];
     }
 }

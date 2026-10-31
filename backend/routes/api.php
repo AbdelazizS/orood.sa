@@ -501,6 +501,10 @@ Route::prefix('v1')->group(function () {
         Route::get('/analytics', AdminAnalyticsController::class);
         Route::get('/analytics/regions', [AdminAnalyticsController::class, 'regions']);
         Route::get('/market-analytics', \App\Http\Controllers\Api\Admin\AdminMarketAnalyticsController::class);
+        Route::get('/data-management', [\App\Http\Controllers\Api\Admin\AdminDataManagementController::class, 'index'])->middleware('permission:settings.update');
+        Route::put('/data-management/settings', [\App\Http\Controllers\Api\Admin\AdminDataManagementController::class, 'updateSettings'])->middleware('permission:settings.update');
+        Route::post('/data-management/preview', [\App\Http\Controllers\Api\Admin\AdminDataManagementController::class, 'preview'])->middleware('permission:settings.update');
+        Route::post('/data-management/execute', [\App\Http\Controllers\Api\Admin\AdminDataManagementController::class, 'execute'])->middleware('permission:settings.update');
         Route::get('/overview', AdminOverviewController::class);
         Route::get('/audit-logs', [AdminAuditController::class, 'index']);
         Route::get('/verifications', [AdminVerificationController::class, 'index'])->middleware('permission:compliance.review_document_verifications');

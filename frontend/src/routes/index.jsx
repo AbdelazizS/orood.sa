@@ -100,6 +100,7 @@ import { AdminSubscribersPage } from "@/pages/admin/AdminSubscribersPage"
 import { AdminSubscriberListingsPage } from "@/pages/admin/AdminSubscriberListingsPage"
 import { AdminCompanyVideosPage } from "@/pages/admin/AdminCompanyVideosPage"
 import { AdminMarketAnalyticsPage } from "@/pages/admin/AdminMarketAnalyticsPage"
+import { AdminDataManagementPage } from "@/pages/admin/AdminDataManagementPage"
 import { VideoPlayerPage } from "@/pages/VideoPlayerPage"
 import { ShortsViewerPage } from "@/pages/ShortsViewerPage"
 import { VideosFeedPage } from "@/pages/VideosFeedPage"
@@ -383,6 +384,7 @@ export const router = createBrowserRouter([
       { path: "audit", element: <AdminAuditPage /> },
       { path: "analytics", element: <AdminAnalyticsPage /> },
       { path: "market-analytics", element: <AdminMarketAnalyticsPage /> },
+      { path: "data-management", element: <AdminDataManagementPage /> },
       { path: "verifications", element: <AdminVerificationsPage /> },
       { path: "companies", element: <AdminCompaniesPage /> },
       { path: "security", element: <Navigate to="/admin/settings" replace /> },

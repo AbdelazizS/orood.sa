@@ -40,7 +40,7 @@ class AnalyticsAggregator
     /** Raw events of days before this date may already have been deleted. */
     public function rawCutoffDate(): string
     {
-        return CarbonImmutable::now($this->timezone())->subDays((int) config('analytics.raw_retention_days', 75))->toDateString();
+        return CarbonImmutable::now($this->timezone())->subDays(\App\Support\DataRetentionSettings::get()['raw_days'])->toDateString();
     }
 
     /**
@@ -52,7 +52,9 @@ class AnalyticsAggregator
     {
         $date = CarbonImmutable::parse($date)->toDateString();
         // $forceEvents: the caller knows the raw events of this old day still exist (cleanup safety net).
-        $withEvents = $events && ($forceEvents || $date >= $this->rawCutoffDate());
+        // Days whose raw events were deleted keep their stored numbers (never rebuilt from empty tables).
+        $purged = DB::table('analytics_aggregated_days')->where('date', $date)->whereNotNull('raw_purged_at')->exists();
+        $withEvents = $events && ($forceEvents || ($date >= $this->rawCutoffDate() && ! $purged));
         [$from, $to] = $this->dayBounds($date);
 
         $result = ['date' => $date, 'events' => $withEvents, 'products_viewed' => 0, 'products_sold' => 0];
