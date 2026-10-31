@@ -66,7 +66,8 @@ class ListingAttributeSchemaService
         }
 
         if ($submittedKeys !== []) {
-            $keepIds = $definitions->only($submittedKeys)->pluck('id');
+            // toBase(): Eloquent's only() filters by model id, not by these field_key array keys.
+            $keepIds = $definitions->toBase()->only($submittedKeys)->pluck('id');
             ListingAttributeValue::query()
                 ->where('product_id', $product->id)
                 ->whereNotNull('category_schema_field_id')

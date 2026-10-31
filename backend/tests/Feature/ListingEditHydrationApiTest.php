@@ -122,6 +122,39 @@ class ListingEditHydrationApiTest extends TestCase
             ->assertJsonCount(1, 'data.listing_attribute_sections');
     }
 
+    public function test_creating_a_listing_keeps_its_schema_attributes(): void
+    {
+        $seller = User::factory()->create();
+        $category = Category::factory()->create(['dynamic_schema_enabled' => true]);
+        $schema = CategoryListingSchema::create([
+            'category_id' => $category->id,
+            'listing_type' => 'offer',
+            'version' => 1,
+            'status' => CategoryListingSchema::STATUS_PUBLISHED,
+            'published_at' => now(),
+        ]);
+        $section = CategorySchemaSection::create(['schema_id' => $schema->id, 'section_key' => 'specs', 'title_ar' => 'المواصفات', 'sort_order' => 0]);
+        foreach (['brand' => 'الماركة', 'model' => 'الموديل'] as $i => $label) {
+            CategorySchemaField::create([
+                'schema_id' => $schema->id, 'section_id' => $section->id, 'field_key' => $i,
+                'field_type' => 'text', 'label_ar' => $label, 'required' => false, 'sort_order' => 0,
+            ]);
+        }
+
+        $id = $this->withHeader('Authorization', 'Bearer '.$this->issueApiToken($seller))
+            ->postJson('/api/v1/products', [
+                'type' => 'offer', 'title' => 'سيارة', 'description' => 'وصف', 'price' => 1000,
+                'category_id' => $category->id, 'contact_messages' => true,
+                'listing_attributes' => ['brand' => 'تويوتا', 'model' => 'كامري'],
+            ])->assertCreated()->json('data.id');
+
+        // Saving must not delete the values it has just written.
+        $this->assertSame(2, ListingAttributeValue::query()->where('product_id', $id)->count());
+        $this->getJson("/api/v1/listings/{$id}")
+            ->assertJsonPath('data.listing_attributes.brand', 'تويوتا')
+            ->assertJsonPath('data.listing_attributes.model', 'كامري');
+    }
+
     private function issueApiToken(User $user): string
     {
         $plainTextToken = 'listing-edit-'.$user->id;
